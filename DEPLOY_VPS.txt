@@ -1,0 +1,429 @@
+════════════════════════════════════════════════════════════════════
+  RECORD NAZORAT — VPS DEPLOY QO'LLANMASI
+  Domain:  https://recordspeaking.uz
+  OS:      Ubuntu 22.04 / 24.04 LTS
+  Stack:   Node 20 + MongoDB 7 + Nginx + PM2 + Let's Encrypt
+════════════════════════════════════════════════════════════════════
+
+# ───────────────────────────────────────────────────────────────────
+# 0-QADAM — TAYYORGARLIK (lokal kompyuteringizda)
+# ───────────────────────────────────────────────────────────────────
+
+KERAKLI MA'LUMOTLAR:
+  • VPS IP manzili
+  • root yoki sudo user uchun parol/SSH key
+  • Domain recordspeaking.uz DNS'da A-record VPS IP'ga yo'naltirilgan
+    (avval tekshiring:  nslookup recordspeaking.uz   yoki   ping recordspeaking.uz)
+
+NIMALAR ALLAQACHON TAYYOR (loyihada):
+  ✓ .gitignore (root + server + client)
+  ✓ server/.env.example  — VPS'da nusxa olib ishlatamiz
+  ✓ ecosystem.config.js  — PM2 uchun
+  ✓ deploy/nginx-recordspeaking.uz.conf  — Nginx config
+
+
+# ───────────────────────────────────────────────────────────────────
+# 1-QADAM — GITHUB'GA YUKLASH (LOKAL KOMPYUTERDA)
+# ───────────────────────────────────────────────────────────────────
+
+# 1.1) Loyiha papkasiga kirib git init qiling:
+cd "C:\Users\Prime_PC\Desktop\Record Nazorat"
+git init
+git add .
+git status                            # .env yo'qligini, node_modules yo'qligini tekshiring
+git commit -m "Initial commit"
+
+# 1.2) GitHub'da YANGI PRIVATE repo yarating:
+#      https://github.com/new   →   nomi:  record-nazorat   (Private tanlang)
+#      README/license/.gitignore qo'shmang (bizda allaqachon bor)
+
+# 1.3) Remote qo'shib pushlang (USER ni o'z github username'iz bilan almashtiring):
+git branch -M main
+git remote add origin https://github.com/USER/record-nazorat.git
+git push -u origin main
+
+# Agar HTTPS push autentifikatsiya so'rasa — Personal Access Token kerak:
+#   github.com → Settings → Developer settings → PAT (classic) → repo scope
+# Yoki SSH key (ssh-keygen) sozlab git@github.com:USER/record-nazorat.git ishlating.
+
+
+# ───────────────────────────────────────────────────────────────────
+# 2-QADAM — VPS'GA SSH ORQALI ULANISH
+# ───────────────────────────────────────────────────────────────────
+
+# Windows PowerShell'da:
+ssh root@SIZNING_VPS_IP
+
+# Agar SSH key sozlamoqchi bo'lsangiz (parol o'rniga — xavfsizroq):
+#   Lokal:   ssh-keygen -t ed25519
+#   Lokal:   type $env:USERPROFILE\.ssh\id_ed25519.pub | clip
+#   VPS:     mkdir -p ~/.ssh && nano ~/.ssh/authorized_keys  (clipboarddan paste)
+#   VPS:     chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys
+
+
+# ───────────────────────────────────────────────────────────────────
+# 3-QADAM — SISTEMANI YANGILASH + ASOSIY PAKETLAR (VPS'DA)
+# ───────────────────────────────────────────────────────────────────
+
+apt update && apt upgrade -y
+apt install -y curl git build-essential ufw ca-certificates gnupg
+
+# Vaqt zonasi — Toshkent
+timedatectl set-timezone Asia/Tashkent
+
+
+# ───────────────────────────────────────────────────────────────────
+# 4-QADAM — UFW FIREWALL (asosiy portlar)
+# ───────────────────────────────────────────────────────────────────
+
+ufw allow OpenSSH
+ufw allow 'Nginx Full'        # 80 + 443
+ufw --force enable
+ufw status
+
+
+# ───────────────────────────────────────────────────────────────────
+# 5-QADAM — NODE.JS 20 LTS O'RNATISH (NodeSource)
+# ───────────────────────────────────────────────────────────────────
+
+curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+apt install -y nodejs
+
+# Tekshirish:
+node -v        # v20.x.x
+npm -v
+
+
+# ───────────────────────────────────────────────────────────────────
+# 6-QADAM — MONGODB 7 O'RNATISH
+# ───────────────────────────────────────────────────────────────────
+
+# 6.1) GPG key + repo (Ubuntu 22.04 — jammy, 24.04 — noble):
+curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | \
+  gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg --dearmor
+
+# Ubuntu 22.04 (Jammy):
+echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | \
+  tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+
+# Agar Ubuntu 24.04 (Noble) bo'lsa, yuqoridagi 'jammy' o'rniga 'noble' yozing:
+# echo "deb [ ... ] https://repo.mongodb.org/apt/ubuntu noble/mongodb-org/7.0 multiverse" | \
+#   tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+
+apt update
+apt install -y mongodb-org
+
+systemctl enable mongod
+systemctl start mongod
+systemctl status mongod          # active (running) bo'lsin
+
+# Tekshirish:
+mongosh --eval "db.runCommand({ ping: 1 })"
+
+
+# ───────────────────────────────────────────────────────────────────
+# 7-QADAM — NGINX + CERTBOT
+# ───────────────────────────────────────────────────────────────────
+
+apt install -y nginx certbot python3-certbot-nginx
+systemctl enable nginx
+systemctl start nginx
+
+# Tekshirish (brauzerda http://VPS_IP ochiladi → Nginx welcome sahifa):
+curl -I http://localhost
+
+
+# ───────────────────────────────────────────────────────────────────
+# 8-QADAM — PM2 GLOBAL O'RNATISH
+# ───────────────────────────────────────────────────────────────────
+
+npm install -g pm2
+pm2 -v
+
+
+# ───────────────────────────────────────────────────────────────────
+# 9-QADAM — LOYIHANI GITHUB'DAN KLONLASH
+# ───────────────────────────────────────────────────────────────────
+
+mkdir -p /var/www
+cd /var/www
+git clone https://github.com/USER/record-nazorat.git recordnazorat
+cd recordnazorat
+
+# Private repo bo'lsa: GitHub PAT yoki SSH deploy key kerak.
+# Eng oson — public clone uchun PAT bilan:
+# git clone https://USERNAME:PAT_TOKEN@github.com/USER/record-nazorat.git recordnazorat
+
+
+# ───────────────────────────────────────────────────────────────────
+# 10-QADAM — SERVER .env TAYYORLASH
+# ───────────────────────────────────────────────────────────────────
+
+cd /var/www/recordnazorat/server
+cp .env.example .env
+
+# JWT_SECRET uchun random qiymat generatsiya qiling:
+openssl rand -base64 48
+
+# .env ni tahrirlang — yuqorida chiqqan stringni JWT_SECRET ga qo'ying:
+nano .env
+
+# Ichida bo'lishi kerak:
+#   NODE_ENV=production
+#   MONGO_URI=mongodb://127.0.0.1:27017/recordnazorat
+#   JWT_SECRET=<openssl natijasi>
+#   CLIENT_URL=https://recordspeaking.uz
+#   CORS_ORIGINS=https://recordspeaking.uz
+#   WEBAPP_URL=https://recordspeaking.uz
+#   BOT_TOKEN=8330232872:AAGMCMznBhgXy1b-Qq-0ywHE1l5mwW2ycFI
+#   BOT_USERNAME=Record_Nazorat_Bot
+
+# Saqlash: Ctrl+O → Enter → Ctrl+X
+
+
+# ───────────────────────────────────────────────────────────────────
+# 11-QADAM — SERVER + CLIENT NPM INSTALL
+# ───────────────────────────────────────────────────────────────────
+
+cd /var/www/recordnazorat/server
+npm install --omit=dev          # production paketlar
+
+cd /var/www/recordnazorat/client
+npm install
+npm run build                   # natijasi: client/dist/
+
+# Build muvaffaqiyatli bo'lsa, client/dist/index.html paydo bo'ladi.
+
+
+# ───────────────────────────────────────────────────────────────────
+# 12-QADAM — DEMO MA'LUMOTLAR (seed)
+# ───────────────────────────────────────────────────────────────────
+
+cd /var/www/recordnazorat/server
+npm run seed
+
+# DIQQAT: seed butun bazani tozalab demo ma'lumot bilan to'ldiradi.
+# Faqat birinchi marta ishga tushganda bajaring. Real foydalanuvchilar
+# qo'shilgandan keyin QAYTA seed qilmang (data yo'qoladi).
+
+
+# ───────────────────────────────────────────────────────────────────
+# 13-QADAM — PM2 BILAN SERVERNI ISHGA TUSHIRISH
+# ───────────────────────────────────────────────────────────────────
+
+cd /var/www/recordnazorat
+mkdir -p logs
+
+pm2 start ecosystem.config.js
+pm2 status                       # recordnazorat-api  →  online
+pm2 logs recordnazorat-api       # Ctrl+C bilan chiqing
+
+# Avto-start (server reboot bo'lganda):
+pm2 save
+pm2 startup
+# Yuqoridagi komanda chiqargan oxirgi "sudo env PATH=..." komandasini KO'CHIRIB BAJARING.
+# Misol:
+#   sudo env PATH=$PATH:/usr/bin /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u root --hp /root
+
+
+# ───────────────────────────────────────────────────────────────────
+# 14-QADAM — NGINX SERVER BLOCK ULASH
+# ───────────────────────────────────────────────────────────────────
+
+# Loyihadagi tayyor configni Nginx papkasiga ko'chiring:
+cp /var/www/recordnazorat/deploy/nginx-recordspeaking.uz.conf \
+   /etc/nginx/sites-available/recordspeaking.uz
+
+# Default sahifani o'chirib, yangisini faollashtiring:
+rm -f /etc/nginx/sites-enabled/default
+ln -sf /etc/nginx/sites-available/recordspeaking.uz \
+       /etc/nginx/sites-enabled/recordspeaking.uz
+
+# Sintaksisni tekshirib qayta yuklang:
+nginx -t
+systemctl reload nginx
+
+# Hozir http://recordspeaking.uz ochilsa frontend ko'rinishi kerak
+# (lekin hali HTTPS yo'q — keyingi qadamda).
+
+
+# ───────────────────────────────────────────────────────────────────
+# 15-QADAM — LET'S ENCRYPT SSL SERTIFIKATI
+# ───────────────────────────────────────────────────────────────────
+
+# Avval DNS to'g'ri yo'naltirilganini yana tekshiring:
+dig +short recordspeaking.uz
+dig +short www.recordspeaking.uz
+# Ikkalasi ham VPS IP'ngizni qaytarishi kerak.
+
+certbot --nginx -d recordspeaking.uz -d www.recordspeaking.uz
+
+# Savol-javob:
+#   Email — siznikini kiriting (sertifikat yangilanmasidan ogohlantirish uchun)
+#   ToS    — A (Agree)
+#   Newsletter — N (yo'q)
+#   Redirect HTTP → HTTPS — 2 (yes, redirect)
+
+# Avto-yangilanish (60 kunda bir avto-renew):
+systemctl status certbot.timer
+
+# Endi https://recordspeaking.uz ochilishi kerak.
+
+
+# ───────────────────────────────────────────────────────────────────
+# 16-QADAM — TELEGRAM BOT URL'NI YANGILASH
+# ───────────────────────────────────────────────────────────────────
+
+# 16.1) BotFather'da Mini App URL ni yangilang:
+#   @BotFather → /mybots → Record_Nazorat_Bot → Bot Settings → Menu Button
+#   URL:  https://recordspeaking.uz
+#
+# Yoki:
+#   /setdomain  → Record_Nazorat_Bot → recordspeaking.uz
+
+# 16.2) Botda /start bossangiz, "Mini App" tugmasi recordspeaking.uz ni ochishi kerak.
+
+
+# ───────────────────────────────────────────────────────────────────
+# 17-QADAM — TEKSHIRISH
+# ───────────────────────────────────────────────────────────────────
+
+# Brauzerda:  https://recordspeaking.uz
+# Demo login:
+#   Admin:    admin@recordnazorat.uz   /  admin123
+#   Teacher:  aziza.k@recordnazorat.uz /  teacher123
+
+# API healthcheck:
+curl https://recordspeaking.uz/health
+#   → {"status":"ok","ts":"..."}
+
+# PM2 logs:
+pm2 logs recordnazorat-api --lines 50
+
+# MongoDB ichini ko'rish:
+mongosh recordnazorat
+> show collections
+> db.users.find().limit(3)
+> exit
+
+
+════════════════════════════════════════════════════════════════════
+  KEYINGI UPDATE'LAR (yangi versiya pushlash)
+════════════════════════════════════════════════════════════════════
+
+# LOKAL:
+cd "C:\Users\Prime_PC\Desktop\Record Nazorat"
+git add .
+git commit -m "Update: ..."
+git push
+
+# VPS'DA:
+cd /var/www/recordnazorat
+git pull
+cd server && npm install --omit=dev
+cd ../client && npm install && npm run build
+pm2 restart recordnazorat-api
+# Nginx config o'zgartirilgan bo'lsa:  systemctl reload nginx
+
+
+════════════════════════════════════════════════════════════════════
+  FOYDALI KOMANDALAR
+════════════════════════════════════════════════════════════════════
+
+# PM2:
+pm2 status
+pm2 logs recordnazorat-api          # jonli loglar
+pm2 restart recordnazorat-api
+pm2 stop recordnazorat-api
+pm2 monit                            # CPU/RAM monitor
+
+# Nginx:
+nginx -t                             # config tekshirish
+systemctl reload nginx               # restart'siz qayta yuklash
+tail -f /var/log/nginx/error.log
+
+# MongoDB:
+systemctl status mongod
+mongosh                              # ichiga kirish
+
+# Disk/RAM:
+df -h
+free -m
+htop                                 # yo'q bo'lsa: apt install htop
+
+# Firewall:
+ufw status verbose
+
+# SSL yangilashni tekshirish:
+certbot certificates
+certbot renew --dry-run
+
+
+════════════════════════════════════════════════════════════════════
+  MUAMMOLAR (TROUBLESHOOTING)
+════════════════════════════════════════════════════════════════════
+
+❌ "502 Bad Gateway"
+   → Node server ishlamayapti.  pm2 status   |   pm2 logs recordnazorat-api
+   → MongoDB ham tekshiring:  systemctl status mongod
+
+❌ "Cannot GET /api/..."  yoki API javob bermayapti
+   → Nginx config /api/ proxy_pass to'g'rimi:  /etc/nginx/sites-enabled/recordspeaking.uz
+   → curl http://127.0.0.1:5000/health   (VPS ichida, direct Node)
+
+❌ Login "401 Invalid email or password"
+   → Demo seed bajarilmagan.   cd /var/www/recordnazorat/server && npm run seed
+   → DIQQAT: seed butun bazani tozalaydi!
+
+❌ Telegram WebApp ochilmaydi yoki "auth failed"
+   → BotFather'da Mini App URL https://recordspeaking.uz ekanini tekshiring
+   → server/.env'da WEBAPP_URL va BOT_TOKEN to'g'rimi
+   → pm2 restart recordnazorat-api
+
+❌ SSL muddati tugagan
+   → certbot renew
+   → Avtomatik bo'lishi kerak edi:  systemctl status certbot.timer
+
+❌ "Permission denied" yoki "EACCES"
+   → /var/www/recordnazorat egasini tekshiring:  ls -la /var/www
+   → chown -R root:root /var/www/recordnazorat   (yoki o'z user'ingiz)
+
+❌ Disk to'lib qoldi
+   → pm2 logs juda kattalashgan:  pm2 flush
+   → MongoDB log:  /var/log/mongodb/mongod.log    →    logrotate ulang
+   → npm cache:  npm cache clean --force
+
+
+════════════════════════════════════════════════════════════════════
+  XAVFSIZLIK TAVSIYALARI
+════════════════════════════════════════════════════════════════════
+
+1) root o'rniga alohida sudo user yarating:
+   adduser deploy
+   usermod -aG sudo deploy
+   # SSH key ni shu user'ga ham nusxalang, keyin root login'ni o'chiring:
+   nano /etc/ssh/sshd_config   →   PermitRootLogin no
+   systemctl restart ssh
+
+2) fail2ban (SSH brute-force himoyasi):
+   apt install -y fail2ban
+   systemctl enable --now fail2ban
+
+3) Avtomatik xavfsizlik yangilanishlari:
+   apt install -y unattended-upgrades
+   dpkg-reconfigure --priority=low unattended-upgrades
+
+4) MongoDB tashqaridan ochiq EMASligini tekshiring:
+   ss -tlnp | grep 27017
+   # 127.0.0.1:27017 bo'lishi kerak (0.0.0.0 EMAS)
+
+5) MongoDB backup (kunlik cron):
+   mkdir -p /var/backups/mongo
+   crontab -e
+   # Quyidagi qatorni qo'shing (har kuni 03:00 da backup):
+   0 3 * * * mongodump --db recordnazorat --out /var/backups/mongo/$(date +\%F) && find /var/backups/mongo -mtime +7 -exec rm -rf {} \;
+
+6) .env va JWT_SECRET ni hech qachon GitHub'ga pushlamang.
+   Tekshirish:  git ls-files | grep -E "\.env$"   →   bo'sh bo'lishi kerak
+
+════════════════════════════════════════════════════════════════════

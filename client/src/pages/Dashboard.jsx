@@ -1,0 +1,235 @@
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area } from 'recharts';
+import { Icon, Avatar, useCountUp, ChartTooltip } from '../components/ui.jsx';
+import { Spinner, ErrorBox, listContainer, listItem } from '../components/Feedback.jsx';
+import { useFetch } from '../hooks/useFetch.js';
+import api from '../services/api.js';
+
+function KpiCard({ label, value = 0, delta, deltaDir, icon, iconBg, iconColor, idx }) {
+  const v = useCountUp(value);
+  return (
+    <motion.div className="kpi"
+      variants={listItem}
+      whileHover={{ y:-4 }}
+      transition={{ type:'spring', stiffness:300 }}
+    >
+      <div className="kpi-row">
+        <span className="kpi-label">{label}</span>
+        <div className="kpi-icon" style={{ background:iconBg, color:iconColor }}><Icon name={icon} size={16}/></div>
+      </div>
+      <div className="kpi-val">{v.toLocaleString()}</div>
+      {delta != null && (
+        <div className={`kpi-delta ${deltaDir}`}>
+          <Icon name={deltaDir === 'up' ? 'arrowUp' : 'arrowDown'} size={11}/>{delta} o'tgan haftaga nisbatan
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+function ProblemTeacherCard({ t, onOpenTeacher }) {
+  const [expanded, setExpanded] = useState(false);
+  const items = t.pendingItems || [];
+  const preview = items.slice(0, expanded ? items.length : 3);
+  const remaining = items.length - preview.length;
+
+  return (
+    <motion.div className="card" variants={listItem}
+      style={{ padding:0, overflow:'hidden' }}>
+      <button
+        onClick={() => onOpenTeacher(t._id)}
+        style={{
+          width:'100%', display:'flex', alignItems:'center', gap:11, padding:'12px 14px',
+          background:'transparent', border:'none', textAlign:'left', cursor:'pointer',
+        }}>
+        <Avatar name={t.name} hue={t.hue} size="sm"/>
+        <div style={{ flex:1, minWidth:0 }}>
+          <div style={{ fontSize:13.5, fontWeight:600 }}>{t.name}</div>
+          <div style={{ fontSize:11, color:'var(--text-3)', marginTop:1 }}>{t.subject}</div>
+        </div>
+        <span style={{
+          background:'var(--rose-bg)', color:'var(--rose)',
+          fontSize:11.5, fontWeight:700, padding:'4px 10px', borderRadius:8,
+          flexShrink:0,
+        }}>
+          {t.pendingReview} ta
+        </span>
+      </button>
+
+      {items.length > 0 && (
+        <div style={{ borderTop:'1px solid var(--border)', background:'var(--bg-subtle)' }}>
+          <div style={{ padding:'8px 14px', display:'flex', flexDirection:'column', gap:5 }}>
+            {preview.map((p, i) => (
+              <div key={i} style={{ display:'flex', alignItems:'center', gap:8, fontSize:12 }}>
+                <Avatar name={p.studentName} hue={p.studentHue} size="xs"/>
+                <span style={{ fontWeight:500, flex:1, minWidth:0, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                  {p.studentName}
+                </span>
+                <span style={{ fontSize:10.5, color:'var(--text-3)', whiteSpace:'nowrap' }}>
+                  {p.homeworkTitle}
+                </span>
+              </div>
+            ))}
+          </div>
+          {items.length > 3 && (
+            <button
+              onClick={() => setExpanded(e => !e)}
+              style={{
+                width:'100%', padding:'7px 14px',
+                background:'transparent', border:'none', borderTop:'1px solid var(--border)',
+                fontSize:11.5, color:'var(--text-2)', fontWeight:600, cursor:'pointer',
+                display:'flex', alignItems:'center', justifyContent:'center', gap:5,
+              }}>
+              <Icon name={expanded ? 'chevronUp' : 'chevronDown'} size={11}/>
+              {expanded ? 'Yopish' : `+${remaining} ta yana`}
+            </button>
+          )}
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+export default function DashboardPage({ onOpenTeacher, onNav }) {
+  const { data, loading, error, refetch } = useFetch(() => api.dashboard.get());
+
+  // Real-time uchun har 12s da refetch
+  useEffect(() => {
+    const t = setInterval(() => refetch(), 12_000);
+    return () => clearInterval(t);
+  }, [refetch]);
+
+  if (loading) return <div className="page"><Spinner/></div>;
+  if (error)   return <div className="page"><ErrorBox message={error} onRetry={refetch}/></div>;
+
+  const { kpis, problemTeachers, activityData, attendanceTrend } = data;
+  const hasActivity = (activityData ?? []).some(d => (d.lessons ?? 0) + (d.hw ?? 0) > 0);
+  const hasTrend    = (attendanceTrend ?? []).length > 0;
+  const trendDelta  = hasTrend
+    ? attendanceTrend[attendanceTrend.length - 1].val - attendanceTrend[0].val
+    : 0;
+
+  return (
+    <motion.div className="page"
+      initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35 }}>
+      <div className="page-hd">
+        <div>
+          <h1 className="page-title">Dashboard</h1>
+          <div className="page-sub">
+            {new Date().toLocaleDateString('uz-UZ',{ weekday:'long', month:'long', day:'numeric' })} · {kpis.activeTeachers}/{kpis.totalTeachers} faol o'qituvchi
+          </div>
+        </div>
+        <div className="page-acts">
+          <button className="btn btn-primary" onClick={() => onNav('teachers')}><Icon name="plus" size={13}/> O'qituvchi taklif qilish</button>
+        </div>
+      </div>
+
+      <motion.div className="kpi-grid" variants={listContainer} initial="hidden" animate="show">
+        <KpiCard label="Jami o'qituvchilar"  value={kpis.totalTeachers}    icon="teachers" iconBg="var(--primary-bg)" iconColor="var(--primary-l)"/>
+        <KpiCard label="Faol o'qituvchilar"  value={kpis.activeTeachers}   icon="activity" iconBg="var(--accent-bg)"  iconColor="var(--accent-l)"/>
+        <KpiCard label="Faol bo'lmaganlar"   value={kpis.inactiveTeachers} icon="user"     iconBg="var(--rose-bg)"    iconColor="var(--rose)"/>
+        <KpiCard label="Tekshirilmagan"      value={kpis.totalUnchecked}   icon="homework" iconBg="var(--amber-bg)"   iconColor="var(--amber)"/>
+      </motion.div>
+
+      <motion.div className="chart-grid" variants={listContainer} initial="hidden" animate="show">
+        <motion.div className="card" variants={listItem}>
+          <div className="card-head">
+            <div>
+              <div className="card-title">O'qituvchi faolligi</div>
+              <div className="card-sub">Darslar va tekshirilgan vazifalar · shu hafta</div>
+            </div>
+            <div style={{ display:'flex', gap:14, fontSize:11.5, color:'var(--text-2)', alignItems:'center' }}>
+              {[['#6366f1','Darslar'],['#a78bfa','Vazifalar']].map(([c,l]) => (
+                <span key={l} style={{ display:'flex', alignItems:'center', gap:5 }}>
+                  <span style={{ width:8,height:8,borderRadius:2,background:c,display:'inline-block'}}/>{l}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div style={{ padding:'14px 16px 16px', height:230 }}>
+            {hasActivity ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={activityData} barSize={11} barGap={3}>
+                  <CartesianGrid strokeDasharray="3 6" stroke="var(--border)" vertical={false}/>
+                  <XAxis dataKey="day" tick={{ fontSize:11.5, fill:'var(--text-2)' }} axisLine={false} tickLine={false}/>
+                  <YAxis tick={{ fontSize:11, fill:'var(--text-3)' }} axisLine={false} tickLine={false} width={28} allowDecimals={false}/>
+                  <Tooltip content={<ChartTooltip/>} cursor={{ fill:'var(--bg-subtle)', radius:4 }}/>
+                  <Bar dataKey="lessons" name="Darslar"  fill="#6366f1" radius={[4,4,0,0]}/>
+                  <Bar dataKey="hw"      name="Vazifalar" fill="#a78bfa" radius={[4,4,0,0]}/>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div style={{ height:'100%', display:'grid', placeItems:'center', color:'var(--text-3)', fontSize:13 }}>
+                Hozircha vazifa ma'lumotlari yo'q
+              </div>
+            )}
+          </div>
+        </motion.div>
+
+        <motion.div className="card" variants={listItem}>
+          <div className="card-head">
+            <div>
+              <div className="card-title">Vazifa bajarilish dinamikasi</div>
+              <div className="card-sub">12 haftalik bajarilgan/berilgan nisbati</div>
+            </div>
+            {hasTrend && trendDelta !== 0 && (
+              <span className={`chip ${trendDelta >= 0 ? 'chip-success' : 'chip-danger'}`}>
+                {trendDelta >= 0 ? '↑' : '↓'} {Math.abs(trendDelta)}%
+              </span>
+            )}
+          </div>
+          <div style={{ padding:'14px 16px 16px', height:230 }}>
+          {hasTrend ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={attendanceTrend}>
+                <defs>
+                  <linearGradient id="attGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%"  stopColor="#6366f1" stopOpacity={0.35}/>
+                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 6" stroke="var(--border)" vertical={false}/>
+                <XAxis dataKey="week" tick={{ fontSize:10.5, fill:'var(--text-2)' }} axisLine={false} tickLine={false}/>
+                <YAxis domain={[80,100]} tick={{ fontSize:11, fill:'var(--text-3)' }} axisLine={false} tickLine={false} width={34} tickFormatter={v=>`${v}%`}/>
+                <Tooltip content={<ChartTooltip/>}/>
+                <Area type="monotone" dataKey="val" name="Bajarilgan" stroke="#6366f1" strokeWidth={2.5} fill="url(#attGrad)"
+                  dot={{ r:3.5, fill:'var(--bg-card-s)', stroke:'#6366f1', strokeWidth:2 }}/>
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div style={{ height:'100%', display:'grid', placeItems:'center', color:'var(--text-3)', fontSize:13 }}>
+              Hozircha trend uchun yetarli ma'lumot yo'q
+            </div>
+          )}
+          </div>
+        </motion.div>
+      </motion.div>
+
+      {problemTeachers?.length > 0 && (
+        <motion.div className="card" variants={listItem} initial="hidden" animate="show">
+          <div className="card-head">
+            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+              <div style={{ width:32,height:32,borderRadius:9,background:'var(--rose-bg)',color:'var(--rose)',display:'grid',placeItems:'center' }}>
+                <Icon name="alert" size={15}/>
+              </div>
+              <div>
+                <div className="card-title">Tekshirilmagan vazifalar</div>
+                <div className="card-sub">{problemTeachers.length} o'qituvchi · jami {problemTeachers.reduce((s,t)=>s+(t.pendingReview||0),0)} ta</div>
+              </div>
+            </div>
+          </div>
+          <motion.div
+            className="problem-grid"
+            variants={listContainer} initial="hidden" animate="show"
+            style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:10, padding:14 }}
+          >
+            {problemTeachers.map(t => (
+              <ProblemTeacherCard key={t._id} t={t} onOpenTeacher={onOpenTeacher}/>
+            ))}
+          </motion.div>
+        </motion.div>
+      )}
+    </motion.div>
+  );
+}

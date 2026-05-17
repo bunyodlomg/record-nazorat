@@ -1,0 +1,163 @@
+============================================================
+  RECORD NAZORAT — ISHGA TUSHIRISH QO'LLANMASI
+============================================================
+
+Loyiha 3 qismdan iborat va har birini ALOHIDA terminal'da
+ishlatish kerak:
+
+  1) MongoDB        — ma'lumotlar bazasi (port 27017)
+  2) Server (API)   — Express, port 5000
+  3) Client (UI)    — React + Vite, port 5173
+  4) ngrok          — public URL (telefondan ham ochish uchun)
+
+------------------------------------------------------------
+  0. BIRINCHI MARTA (faqat bir marta) O'RNATISH
+------------------------------------------------------------
+
+Loyiha papkasini ochib (PowerShell):
+
+  cd "C:\Users\Prime_PC\Desktop\Record Nazorat\server"
+  npm install
+  npm run seed         <-- demo ma'lumotlarni Mongo ga yozadi
+
+  cd "C:\Users\Prime_PC\Desktop\Record Nazorat\client"
+  npm install
+
+DIQQAT: `npm run seed` Mongo'dagi BARCHA datani o'chiradi va
+demo teachers/groups/users bilan to'ldiradi. Faqat birinchi
+marta yoki "noldan boshlash" kerak bo'lganda ishlat.
+
+------------------------------------------------------------
+  1. MONGODB ISHLAYAPTIMI — TEKSHIRISH
+------------------------------------------------------------
+
+PowerShell'da:
+
+  Get-Service MongoDB
+
+`Status: Running` bo'lsa OK. Bo'lmasa:
+
+  Start-Service MongoDB
+
+(Admin huquqi kerak bo'lishi mumkin — PowerShell'ni "Run as
+Administrator" qilib oching.)
+
+------------------------------------------------------------
+  2. SERVERNI ISHGA TUSHIRISH (1-terminal)
+------------------------------------------------------------
+
+  cd "C:\Users\Prime_PC\Desktop\Record Nazorat\server"
+  npm run dev
+
+Quyidagi xabarlar chiqsa OK:
+  - "MongoDB connected"
+  - "Server running on port 5000"
+  - "Telegram bot @Record_Nazorat_Bot started"
+
+Tekshirish: brauzerda http://localhost:5000/api/health
+ochib ko'ring.
+
+------------------------------------------------------------
+  3. CLIENTNI ISHGA TUSHIRISH (2-terminal — yangi oyna)
+------------------------------------------------------------
+
+  cd "C:\Users\Prime_PC\Desktop\Record Nazorat\client"
+  npm run dev
+
+Quyidagi xabar chiqadi:
+  Local:   http://localhost:5173/
+
+Brauzerda http://localhost:5173 ochiladi. Demo akkaunt:
+  Admin   : admin@recordnazorat.uz   / admin123
+  Teacher : aziza.k@recordnazorat.uz / teacher123
+
+------------------------------------------------------------
+  4. NGROK — PUBLIC URL (3-terminal — yangi oyna)
+------------------------------------------------------------
+
+ngrok client ishlab turgan portni (5173) internetga chiqaradi.
+Telefondan, do'stga ulashish yoki Telegram WebApp uchun kerak.
+
+A) Birinchi marta — auth token o'rnatish (faqat 1 marta):
+   1. https://dashboard.ngrok.com/get-started/your-authtoken
+      ga kiring (Google bilan login).
+   2. Token'ni nusxalang.
+   3. PowerShell'da:
+
+      ngrok config add-authtoken <SIZNING_TOKEN>
+
+B) Tunnel ochish (har safar):
+
+   ngrok http 5173
+
+Natija konsolda shunday ko'rinadi:
+
+   Forwarding   https://abcd-1234.ngrok-free.dev -> http://localhost:5173
+
+Shu HTTPS URL public manzil — istalgan qurilmadan ochsa
+bo'ladi. URL har safar `ngrok http 5173` qayta ishga
+tushganda YANGISIga o'zgaradi (free planda).
+
+C) ngrok web inspector (debug uchun):
+   http://127.0.0.1:4040
+
+------------------------------------------------------------
+  5. NGROK + VITE — MUHIM SOZLAMA
+------------------------------------------------------------
+
+Agar ngrok URL'ni ochganda Vite "Blocked request. This host
+is not allowed" desa — `client/vite.config.js` ichida
+`server.allowedHosts` ga ngrok domenini qo'shish kerak.
+Hozir loyihada `allowedHosts: 'all'` (yoki '.ngrok-free.dev')
+allaqachon sozlangan bo'lsa, hech narsa qilmaslik kerak.
+
+------------------------------------------------------------
+  6. TO'XTATISH
+------------------------------------------------------------
+
+Har bir terminal oynasida `Ctrl + C` bosing.
+Tartib muhim emas, lekin odatda: ngrok -> client -> server.
+
+------------------------------------------------------------
+  7. TEZ-TEZ UCHRAYDIGAN MUAMMOLAR
+------------------------------------------------------------
+
+> "MongoNetworkError" yoki server ulanmaydi
+  -> Mongo ishlamayapti. `Start-Service MongoDB` qiling.
+
+> Login'da "401 Invalid email or password"
+  -> Baza seed qilinmagan. Server papkasida:
+     npm run seed
+
+> Vite: "Port 5173 is in use"
+  -> Eski Vite jarayoni qolib ketgan. Task Manager'dan
+     "node.exe" larni yoping yoki:
+     Get-Process node | Stop-Process -Force
+
+> ngrok: "ERR_NGROK_4018" (authtoken kerak)
+  -> 4-A bo'limga qarang, authtoken qo'shing.
+
+> ngrok URL'da CORS xato chiqadi
+  -> `server/.env` ichidagi `CLIENT_URL` ni ngrok URL'ga
+     o'zgartiring va serverni qayta ishga tushiring.
+
+------------------------------------------------------------
+  8. QISQA "HAR KUNGI" KETMA-KETLIK
+------------------------------------------------------------
+
+Terminal 1:
+  cd "C:\Users\Prime_PC\Desktop\Record Nazorat\server"
+  npm run dev
+
+Terminal 2:
+  cd "C:\Users\Prime_PC\Desktop\Record Nazorat\client"
+  npm run dev
+
+Terminal 3 (ngrok kerak bo'lsa):
+  ngrok http 5173
+
+Brauzerda: http://localhost:5173  yoki  ngrok HTTPS URL.
+
+============================================================
+  Tayyor. Savol bo'lsa — Claude'ga yozing.
+============================================================
