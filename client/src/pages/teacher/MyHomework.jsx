@@ -175,14 +175,16 @@ export default function MyHomework({ onOpenHomework }) {
     return () => clearInterval(t);
   }, [refetch]);
 
-  if (loading) return <div className="page"><Spinner/></div>;
-  if (error)   return <div className="page"><ErrorBox message={error} onRetry={refetch}/></div>;
-
-  const items = Array.isArray(data) ? data : (data?.data ?? []);
-  const counts = {
+  // ❗ Hook'lar har gal bir xil tartibda chaqirilishi kerak — useMemo'lar
+  // shartli return'dan oldin.
+  const items = useMemo(
+    () => Array.isArray(data) ? data : (data?.data ?? []),
+    [data],
+  );
+  const counts = useMemo(() => ({
     pending: items.filter(i => i.col !== 'done').length,
     done:    items.filter(i => i.col === 'done').length,
-  };
+  }), [items]);
 
   const tabItems = useMemo(() => {
     return items.filter(i => {
@@ -198,6 +200,9 @@ export default function MyHomework({ onOpenHomework }) {
     items.forEach(i => { if (i.col === 'done') set.add(dateKey(i.dueDate)); });
     return Array.from(set).sort().reverse();
   }, [items]);
+
+  if (loading) return <div className="page"><Spinner/></div>;
+  if (error)   return <div className="page"><ErrorBox message={error} onRetry={refetch}/></div>;
 
   return (
     <div className="page">
