@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '../../components/ui.jsx';
 import { Spinner, ErrorBox } from '../../components/Feedback.jsx';
 import { useFetch } from '../../hooks/useFetch.js';
@@ -32,102 +31,129 @@ function formatDueDate(d) {
   if (diffDays === -1) return 'Kecha';
   if (diffDays === 1) return 'Ertaga';
   if (diffDays < 0) return `${-diffDays} kun oldin`;
-  return dt.toLocaleDateString('uz-UZ', { day:'numeric', month:'short' });
+  return dt.toLocaleDateString('uz-UZ', { day:'numeric', month:'long' });
 }
 
-/* List-style card — HomeworkDetail tekshirish UI'dan butunlay farqli
-   (chap tomonda kitob icon, o'ng tomonda progress ring) */
-function Card({ it, tab, onOpen }) {
-  const total = it.total || 0;
+/* Katta bo'sh karta — vazifa-fokusli dizayn (HomeworkDetail tekshirish UI'dan tubdan farqli).
+   Motion yo'q — polling'da miltillamasligi uchun. */
+function HomeworkCard({ it, tab, onOpen }) {
+  const total    = it.total || 0;
   const reviewed = it.submissions || 0;
-  const pending = Math.max(total - reviewed, 0);
-  const ratio = total > 0 ? Math.round((reviewed / total) * 100) : 0;
-  const isDone = tab === 'done';
-  const accent = isDone ? 'var(--primary)' : 'var(--amber)';
-  const accentBg = isDone ? 'var(--primary-bg)' : 'var(--amber-bg)';
-  const accentLight = isDone ? 'var(--primary-l)' : 'var(--amber)';
-
-  // Progress ring
-  const R = 16, C = 2 * Math.PI * R;
+  const pending  = Math.max(total - reviewed, 0);
+  const ratio    = total > 0 ? Math.round((reviewed / total) * 100) : 0;
+  const isDone   = tab === 'done';
+  const accent   = isDone ? 'var(--primary)'   : 'var(--amber)';
+  const accentL  = isDone ? 'var(--primary-l)' : 'var(--amber)';
+  const accentBg = isDone ? 'var(--primary-bg)': 'var(--amber-bg)';
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity:0, y:6 }}
-      animate={{ opacity:1, y:0 }}
-      exit={{ opacity:0, scale:0.96 }}
-      transition={{ type:'spring', stiffness:300, damping:30 }}
+    <div
       onClick={() => onOpen?.(it)}
-      whileTap={{ scale:0.99 }}
       style={{
-        display:'flex', alignItems:'center', gap:12,
-        padding:'13px 14px', marginBottom:9,
+        padding:'18px 18px 16px',
+        marginBottom:12,
         background:'var(--bg-card)',
-        borderRadius:14, border:'1px solid var(--border)',
+        borderRadius:16,
+        border:'1px solid var(--border)',
         borderLeft: `4px solid ${accent}`,
         cursor:'pointer',
         boxShadow:'var(--shadow-xs)',
       }}>
-      {/* Kitob ikoni — vazifaga aniq ishora */}
-      <div style={{
-        width:42, height:42, flexShrink:0, borderRadius:12,
-        background: accentBg, color: accentLight,
-        display:'grid', placeItems:'center',
-        border: `1px solid ${accent}33`,
-      }}>
-        <Icon name="book" size={20}/>
-      </div>
-
-      {/* Kontent */}
-      <div style={{ flex:1, minWidth:0 }}>
+      {/* Yuqori qator: ikon + title + sana */}
+      <div style={{ display:'flex', alignItems:'flex-start', gap:13, marginBottom:16 }}>
         <div style={{
-          fontSize:13.5, fontWeight:600, marginBottom:3, lineHeight:1.3,
-          overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
-        }}>{it.title}</div>
-        <div style={{
-          fontSize:11, color:'var(--text-3)',
-          display:'flex', gap:5, alignItems:'center', flexWrap:'wrap',
+          width:50, height:50, borderRadius:14, flexShrink:0,
+          background: accentBg, color: accentL,
+          display:'grid', placeItems:'center',
+          border:`1px solid ${accent}33`,
         }}>
-          {it.group?.name && (
-            <span style={{ color:'var(--text-2)', fontWeight:500 }}>{it.group.name}</span>
-          )}
-          <span>·</span>
-          <span style={{ display:'inline-flex', alignItems:'center', gap:3 }}>
-            <Icon name="clock" size={10}/> {formatDueDate(it.dueDate)}
-          </span>
-          {total > 0 && (
-            <>
-              <span>·</span>
-              <span>
-                <strong style={{ color: accentLight }}>
-                  {isDone ? `${total}/${total}` : `${pending}/${total}`}
-                </strong>
-                <span style={{ marginLeft:3 }}>
-                  {isDone ? 'tekshirildi' : 'qoldi'}
-                </span>
-              </span>
-            </>
-          )}
+          <Icon name="book" size={24}/>
+        </div>
+        <div style={{ flex:1, minWidth:0 }}>
+          <div style={{
+            fontSize:16, fontWeight:700, marginBottom:4, lineHeight:1.25,
+            color:'var(--text)',
+            overflow:'hidden', display:'-webkit-box',
+            WebkitLineClamp:2, WebkitBoxOrient:'vertical',
+          }}>{it.title}</div>
+          <div style={{
+            fontSize:12, color:'var(--text-3)',
+            display:'flex', alignItems:'center', gap:6, flexWrap:'wrap',
+          }}>
+            {it.group?.name && (
+              <span style={{ color:'var(--text-2)', fontWeight:500 }}>{it.group.name}</span>
+            )}
+            {it.group?.name && <span>·</span>}
+            <span style={{ display:'inline-flex', alignItems:'center', gap:3 }}>
+              <Icon name="clock" size={11}/> {formatDueDate(it.dueDate)}
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Progress ring */}
-      <div style={{ position:'relative', width:38, height:38, flexShrink:0 }}>
-        <svg width="38" height="38" viewBox="0 0 38 38">
-          <circle cx="19" cy="19" r={R} fill="none" stroke="var(--border)" strokeWidth="3"/>
-          <circle cx="19" cy="19" r={R} fill="none"
-            stroke={accent} strokeWidth="3" strokeLinecap="round"
-            strokeDasharray={`${(ratio/100)*C} ${C}`}
-            transform="rotate(-90 19 19)"
-            style={{ transition:'stroke-dasharray 0.5s ease' }}/>
-        </svg>
-        <span style={{
-          position:'absolute', inset:0, display:'grid', placeItems:'center',
-          fontSize:9.5, fontWeight:700, color: accentLight,
-          fontVariantNumeric:'tabular-nums',
-        }}>{ratio}%</span>
-      </div>
-    </motion.div>
+      {/* Katta progress lenta */}
+      {total > 0 && (
+        <div style={{ marginBottom:14 }}>
+          <div style={{
+            height:10, borderRadius:6,
+            background:'var(--bg-subtle)',
+            overflow:'hidden',
+            border:'1px solid var(--border)',
+          }}>
+            <div style={{
+              height:'100%', width:`${ratio}%`,
+              background: isDone
+                ? `linear-gradient(90deg, var(--primary), var(--primary-l))`
+                : `linear-gradient(90deg, var(--amber), #fde68a)`,
+              borderRadius:5,
+              transition:'width 0.4s ease',
+            }}/>
+          </div>
+          <div style={{
+            display:'flex', justifyContent:'space-between', alignItems:'center',
+            marginTop:8, fontSize:13,
+          }}>
+            <span style={{ color:'var(--text-2)', fontWeight:500 }}>
+              {isDone
+                ? <>Hammasi tekshirildi · <strong style={{ color:accentL }}>{total}/{total}</strong></>
+                : <><strong style={{ color:accentL, fontSize:15 }}>{pending}/{total}</strong> qoldi</>}
+            </span>
+            <span style={{
+              color: accentL, fontWeight:700,
+              fontFamily:'var(--display)', fontSize:15,
+              fontVariantNumeric:'tabular-nums',
+            }}>
+              {ratio}%
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Katta tugma */}
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onOpen?.(it); }}
+        style={{
+          width:'100%', padding:'12px 14px',
+          borderRadius:12,
+          background: isDone
+            ? accentBg
+            : 'linear-gradient(135deg, var(--primary), var(--primary-d))',
+          color: isDone ? accentL : '#fff',
+          border: `1px solid ${isDone ? 'var(--border)' : 'transparent'}`,
+          fontSize:13.5, fontWeight:600,
+          cursor:'pointer',
+          display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+          boxShadow: isDone ? 'none' : '0 3px 12px rgba(99,102,241,0.30)',
+          transition:'transform 120ms',
+        }}
+        onMouseDown={e => e.currentTarget.style.transform = 'scale(0.98)'}
+        onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+        onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
+        <Icon name={isDone ? 'eye' : 'chevronRight'} size={14}/>
+        {isDone ? "Ko'rib chiqish" : 'Tekshirishni boshlash'}
+      </button>
+    </div>
   );
 }
 
@@ -143,7 +169,7 @@ export default function MyHomework({ onOpenHomework }) {
     [teacherId]
   );
 
-  // Real-time uchun har 10s da silent auto-refresh (loading state'siz)
+  // Real-time uchun har 10s da silent auto-refresh (loading state'siz, miltillamasdan)
   useEffect(() => {
     const t = setInterval(() => refetch({ silent: true }), 10_000);
     return () => clearInterval(t);
@@ -158,18 +184,15 @@ export default function MyHomework({ onOpenHomework }) {
     done:    items.filter(i => i.col === 'done').length,
   };
 
-  // Tab + sana filter
   const tabItems = useMemo(() => {
     return items.filter(i => {
       if (tab === 'pending') return i.col !== 'done';
       if (i.col !== 'done') return false;
-      // done tab — sana filter
       if (!pickedDate) return true;
       return dateKey(i.dueDate) === pickedDate;
     });
   }, [items, tab, pickedDate]);
 
-  // Tekshirilgan tab uchun ko'rinadigan sanalar (helper)
   const doneDates = useMemo(() => {
     const set = new Set();
     items.forEach(i => { if (i.col === 'done') set.add(dateKey(i.dueDate)); });
@@ -177,8 +200,7 @@ export default function MyHomework({ onOpenHomework }) {
   }, [items]);
 
   return (
-    <motion.div className="page"
-      initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.32 }}>
+    <div className="page">
       <div className="page-hd">
         <div>
           <h1 className="page-title">Vazifalarim</h1>
@@ -211,15 +233,12 @@ export default function MyHomework({ onOpenHomework }) {
         })}
       </div>
 
-      {/* Sana filter — faqat "Tekshirilgan" tabda */}
       {tab === 'done' && (
-        <motion.div
-          initial={{ opacity:0, y:-4 }} animate={{ opacity:1, y:0 }}
-          style={{
-            display:'flex', alignItems:'center', gap:8, marginBottom:12,
-            padding:'10px 12px', background:'var(--bg-subtle)', borderRadius:11,
-            border:'1px solid var(--border)', flexWrap:'wrap',
-          }}>
+        <div style={{
+          display:'flex', alignItems:'center', gap:8, marginBottom:12,
+          padding:'10px 12px', background:'var(--bg-subtle)', borderRadius:11,
+          border:'1px solid var(--border)', flexWrap:'wrap',
+        }}>
           <Icon name="calendar" size={13} color="var(--primary-l)"/>
           <span style={{ fontSize:12, color:'var(--text-2)', fontWeight:500 }}>Sana:</span>
           <input
@@ -233,19 +252,22 @@ export default function MyHomework({ onOpenHomework }) {
               colorScheme:'dark',
             }}/>
           <button
+            type="button"
             onClick={() => setPickedDate(todayKey())}
             disabled={pickedDate === todayKey()}
             style={{
               padding:'5px 9px', borderRadius:7, fontSize:11.5,
               background: pickedDate === todayKey() ? 'transparent' : 'var(--primary-bg)',
               color: pickedDate === todayKey() ? 'var(--text-3)' : 'var(--primary-l)',
-              border:'1px solid var(--border)', cursor: pickedDate === todayKey() ? 'default' : 'pointer',
+              border:'1px solid var(--border)',
+              cursor: pickedDate === todayKey() ? 'default' : 'pointer',
               fontWeight:600,
             }}>
             Bugun
           </button>
           {pickedDate && (
             <button
+              type="button"
               onClick={() => setPickedDate('')}
               style={{
                 padding:'5px 9px', borderRadius:7, fontSize:11.5,
@@ -258,39 +280,33 @@ export default function MyHomework({ onOpenHomework }) {
           <span style={{ fontSize:11, color:'var(--text-3)', marginLeft:'auto' }}>
             {tabItems.length} ta vazifa
           </span>
-        </motion.div>
+        </div>
       )}
 
-      <AnimatePresence mode="wait">
-        <motion.div key={tab + pickedDate}
-          initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-6 }}
-          transition={{ duration:0.2 }}>
-          {tabItems.length === 0 ? (
-            <div style={{ padding:'50px 20px', textAlign:'center', color:'var(--text-3)' }}>
-              <div style={{ fontSize:36, marginBottom:8 }}>{tab === 'pending' ? '✅' : '📭'}</div>
-              <div style={{ fontSize:13.5, color:'var(--text-2)' }}>
-                {tab === 'pending'
-                  ? "Tekshirilmagan vazifa yo'q"
-                  : (pickedDate
-                      ? "Bu kuni tekshirilgan vazifa yo'q"
-                      : "Tugatilgan vazifalar yo'q")}
-              </div>
-              {tab === 'done' && pickedDate && doneDates.length > 0 && (
-                <div style={{ fontSize:11.5, color:'var(--text-3)', marginTop:8 }}>
-                  Eng yaqin sana: {formatDueDate(doneDates[0])}
-                </div>
-              )}
+      {tabItems.length === 0 ? (
+        <div style={{ padding:'50px 20px', textAlign:'center', color:'var(--text-3)' }}>
+          <div style={{ fontSize:36, marginBottom:8 }}>{tab === 'pending' ? '✅' : '📭'}</div>
+          <div style={{ fontSize:13.5, color:'var(--text-2)' }}>
+            {tab === 'pending'
+              ? "Tekshirilmagan vazifa yo'q"
+              : (pickedDate
+                  ? "Bu kuni tekshirilgan vazifa yo'q"
+                  : "Tugatilgan vazifalar yo'q")}
+          </div>
+          {tab === 'done' && pickedDate && doneDates.length > 0 && (
+            <div style={{ fontSize:11.5, color:'var(--text-3)', marginTop:8 }}>
+              Eng yaqin sana: {formatDueDate(doneDates[0])}
             </div>
-          ) : (
-            <AnimatePresence>
-              {tabItems.map(it => (
-                <Card key={it._id} it={it} tab={tab}
-                  onOpen={() => onOpenHomework?.(it._id)}/>
-              ))}
-            </AnimatePresence>
           )}
-        </motion.div>
-      </AnimatePresence>
-    </motion.div>
+        </div>
+      ) : (
+        <div>
+          {tabItems.map(it => (
+            <HomeworkCard key={it._id} it={it} tab={tab}
+              onOpen={() => onOpenHomework?.(it._id)}/>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
