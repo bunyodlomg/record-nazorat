@@ -1,7 +1,9 @@
 const express = require('express');
 const { body, param, validationResult } = require('express-validator');
-const Group   = require('../models/Group');
-const Student = require('../models/Student');
+const Group      = require('../models/Group');
+const Student    = require('../models/Student');
+const Homework   = require('../models/Homework');
+const Submission = require('../models/Submission');
 const { protect, requireRole, requireActive } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { ensureLessonHomeworkForGroup } = require('../utils/ensureLessonHomework');
@@ -130,15 +132,29 @@ router.patch('/:id', param('id').isMongoId(), ok, asyncHandler(async (req,res) =
   res.json({ success:true, data:g });
 }));
 
-// DELETE
+// DELETE — guruh + bog'liq o'quvchilar + vazifalar + submissionlar hammasi o'chiriladi (cascade)
 router.delete('/:id', param('id').isMongoId(), ok, asyncHandler(async (req,res) => {
   const existing = await Group.findById(req.params.id);
   if (!existing) return res.status(404).json({ success:false, message:'Guruh topilmadi' });
   if (!canEditGroup(req, existing)) return res.status(403).json({ success:false, message:'Ruxsat yo\'q' });
-  await Group.findByIdAndDelete(req.params.id);
-  // Studentlarni inactive qilish (yo'qotmaslik uchun)
-  await Student.updateMany({ group: req.params.id }, { $set: { status:'inactive' } });
-  res.json({ success:true, message:"O'chirildi" });
+
+  const groupId = existing._id;
+  const [subRes, hwRes, stRes] = await Promise.all([
+    Submission.deleteMany({ group: groupId }),
+    Homework.deleteMany({ group: groupId }),
+    Student.deleteMany({ group: groupId }),
+  ]);
+  await Group.findByIdAndDelete(groupId);
+
+  res.json({
+    success: true,
+    message: "O'chirildi",
+    data: {
+      students:    stRes.deletedCount  || 0,
+      homework:    hwRes.deletedCount  || 0,
+      submissions: subRes.deletedCount || 0,
+    },
+  });
 }));
 
 module.exports = router;

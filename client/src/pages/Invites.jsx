@@ -32,14 +32,10 @@ function statusOf(inv) {
 function CreateInviteModal({ open, onClose, onCreated }) {
   const [role, setRole] = useState('teacher');
   const [label, setLabel] = useState('');
-  const [groupId, setGroupId] = useState('');
   const [maxUses, setMaxUses] = useState(10);
   const [expiresInHours, setExpires] = useState(168); // 7 kun default
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState('');
-
-  const { data: groupsData } = useFetch(() => api.groups.list({ limit:100 }), []);
-  const groups = groupsData?.data ?? [];
 
   const submit = async () => {
     setError(''); setSaving(true);
@@ -50,18 +46,10 @@ function CreateInviteModal({ open, onClose, onCreated }) {
         maxUses: Number(maxUses) || 1,
         expiresInHours: expiresInHours ? Number(expiresInHours) : undefined,
       };
-      if (role === 'student') {
-        if (!groupId) {
-          setError("O'quvchi uchun guruhni tanlang");
-          setSaving(false);
-          return;
-        }
-        payload.groupId = groupId;
-      }
       const res = await api.invites.create(payload);
       onCreated?.(res.data);
       onClose();
-      setLabel(''); setRole('teacher'); setMaxUses(10); setExpires(168); setGroupId('');
+      setLabel(''); setRole('teacher'); setMaxUses(10); setExpires(168);
     } catch (e) {
       setError(e.message || 'Xatolik');
     } finally { setSaving(false); }
@@ -87,19 +75,10 @@ function CreateInviteModal({ open, onClose, onCreated }) {
       <Field label="Kim uchun">
         <Select value={role} onChange={e => setRole(e.target.value)}>
           <option value="teacher">O'qituvchi</option>
-          <option value="student">O'quvchi</option>
           <option value="admin">Administrator</option>
         </Select>
       </Field>
-      {role === 'student' && (
-        <Field label="Guruh" hint="O'quvchi tasdiqlangach shu guruhga qo'shiladi">
-          <Select value={groupId} onChange={e => setGroupId(e.target.value)}>
-            <option value="">— Guruhni tanlang —</option>
-            {groups.map(g => <option key={g._id} value={g._id}>{g.code} · {g.name}</option>)}
-          </Select>
-        </Field>
-      )}
-      <Field label="Belgi (ixtiyoriy)" hint="Masalan: '9-A guruh' yoki shaxs ismi">
+      <Field label="Belgi (ixtiyoriy)" hint="Masalan: ismi yoki tushuntirish matni">
         <Input value={label} onChange={e => setLabel(e.target.value)} placeholder="Belgi"/>
       </Field>
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>

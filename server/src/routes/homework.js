@@ -88,18 +88,33 @@ router.get('/:id', param('id').isMongoId(), ok, asyncHandler(async (req,res) => 
 
 // SUBMISSIONS  GET /api/homework/:id/submissions
 router.get('/:id/submissions', param('id').isMongoId(), ok, asyncHandler(async (req,res) => {
+  const hw = await Homework.findById(req.params.id).select('dueDate').lean();
+  if (!hw) return res.status(404).json({ success:false, message:'Not found' });
+  const due = hw.dueDate ? new Date(hw.dueDate) : null;
+  const now = new Date();
+
   const subs = await Submission.find({ homework: req.params.id })
     .populate('student', 'name hue photoUrl telegramUsername')
     .lean();
-  // Sort by status (pending first → submitted → reviewed → returned), then by name
+
+  // Har bir submission uchun "kech" flag — reviewedAt > dueDate yoki status=pending && now > dueDate
+  const withLate = subs.map(s => {
+    let isLate = false;
+    if (due) {
+      if (s.reviewedAt && new Date(s.reviewedAt) > due) isLate = true;
+      else if ((s.status === 'pending' || s.status === 'submitted') && now > due) isLate = true;
+    }
+    return { ...s, isLate };
+  });
+
   const order = { pending:0, submitted:1, returned:2, reviewed:3 };
-  subs.sort((a, b) => {
+  withLate.sort((a, b) => {
     const sa = order[a.status] ?? 99;
     const sb = order[b.status] ?? 99;
     if (sa !== sb) return sa - sb;
     return (a.student?.name || '').localeCompare(b.student?.name || '');
   });
-  res.json({ success:true, data: subs });
+  res.json({ success:true, data: withLate });
 }));
 
 // CREATE

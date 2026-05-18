@@ -6,10 +6,10 @@ const AuthContext = createContext(null);
 
 /**
  * Auth boot oqimi:
- *  1) Agar Telegram WebApp ichida bo'lsak — initData ni serverga yuboramiz.
- *     Server javobiga qarab status: 'active' | 'pending' | 'rejected' | 'no-invite' | 'error'.
- *  2) Aks holda — localStorage'dagi token bo'lsa, /auth/me chaqiramiz.
- *  3) Hech qanday auth yo'q — login formaga o'tamiz (status: 'guest').
+ *  1) Telegram WebApp ichida bo'lsak — initData (+ start_param/invite token)
+ *     ni serverga yuboramiz. Status: active | pending | rejected | no-invite | error.
+ *  2) Aks holda — localStorage'dagi token bo'lsa /auth/me chaqiramiz.
+ *  3) Hech narsa — login formaga o'tamiz (status: 'guest').
  */
 export function AuthProvider({ children }) {
   const [user,    setUser]    = useState(null);
@@ -21,18 +21,14 @@ export function AuthProvider({ children }) {
     setStatus('booting');
     setError(null);
     try {
-      // start_param Telegram'dan kelishi mumkin (Direct Link Mini App), yoki
-      // bot URL ga ?invite=xxx qo'shgan bo'lsa, location.search'dan o'qiymiz.
       const urlInvite = new URLSearchParams(window.location.search).get('invite');
       const startParam = tg?.initDataUnsafe?.start_param || urlInvite || null;
       const res = await api.auth.telegram(tg.initData, startParam);
-      // 200 active
       if (res.token) localStorage.setItem('ep_token', res.token);
       setUser(res.data);
       setStatus(res.status === 'pending' ? 'pending' : 'active');
       return true;
     } catch (err) {
-      // 202 — pending (axios success branch handles 2xx, so won't reach here normally)
       const p = err.payload;
       if (p?.token) localStorage.setItem('ep_token', p.token);
       if (p?.data)  setUser(p.data);

@@ -101,7 +101,7 @@ export default function HomeworkPage({ onOpenHomework, onOpenTeacher }) {
 
   // Real-time uchun 12s poll
   useEffect(() => {
-    const t = setInterval(() => refetch(), 12_000);
+    const t = setInterval(() => refetch({ silent: true }), 12_000);
     return () => clearInterval(t);
   }, [refetch]);
 

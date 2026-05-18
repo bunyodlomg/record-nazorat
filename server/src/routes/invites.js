@@ -22,19 +22,15 @@ const buildLink = (token) => {
   return `https://t.me/${username}?start=invite_${token}`;
 };
 
-router.use(protect, requireActive, requireRole('admin','teacher'));
+// Faqat admin yangi taklif yarata oladi (admin yoki teacher uchun).
+// Student uchun invite link mexanizmi olib tashlangan — o'quvchilar manual qo'shiladi.
+router.use(protect, requireActive, requireRole('admin'));
 
 // GET /api/invites
 router.get('/', asyncHandler(async (req, res) => {
-  const filter = {};
-  // Teacher faqat o'zining yaratganlari va o'zining guruhi uchun student invitelarini ko'radi
-  if (req.user.role === 'teacher') {
-    filter.createdBy = req.user.id;
-  }
-  const invites = await Invite.find(filter).sort('-createdAt')
+  const invites = await Invite.find({}).sort('-createdAt')
     .populate('createdBy', 'name')
-    .populate('uses', 'name telegramUsername status photoUrl')
-    .populate('group', 'name code');
+    .populate('uses', 'name telegramUsername status photoUrl');
   const data = invites.map(inv => ({
     ...inv.toObject(),
     link: buildLink(inv.token),
@@ -42,52 +38,26 @@ router.get('/', asyncHandler(async (req, res) => {
   res.json({ success:true, data });
 }));
 
-// POST /api/invites
+// POST /api/invites — faqat admin yoki teacher rollari uchun
 router.post('/',
   [
-    body('role').isIn(['admin','teacher','student']),
+    body('role').isIn(['admin','teacher']).withMessage("Faqat admin yoki o'qituvchi uchun taklif yaratish mumkin"),
     body('label').optional({ nullable:true }).isString().trim().isLength({ max:80 }),
-    body('groupId').optional({ nullable:true }).isString().trim(),
     body('maxUses').optional().isInt({ min:1, max:1000 }),
     body('expiresInHours').optional().isInt({ min:1, max:24*365 }),
   ],
   ok,
   asyncHandler(async (req, res) => {
-    const { role, label = null, groupId = null, maxUses = 1, expiresInHours = null } = req.body;
-
-    // Teacher faqat o'zining guruhiga student invite yarata oladi
-    if (req.user.role === 'teacher') {
-      if (role !== 'student') {
-        return res.status(403).json({ success:false, message:"O'qituvchi faqat o'quvchilar uchun taklif yarata oladi" });
-      }
-      if (!groupId) {
-        return res.status(400).json({ success:false, message:"Guruhni tanlang" });
-      }
-      const group = await Group.findById(groupId);
-      if (!group || String(group.teacher) !== String(req.user.teacherRef)) {
-        return res.status(403).json({ success:false, message:"Bu guruh sizniki emas" });
-      }
-    }
-
-    // Admin uchun: agar student invite bo'lsa, group majburiy
-    if (role === 'student' && !groupId) {
-      return res.status(400).json({ success:false, message:"Student uchun guruh ko'rsatilishi kerak" });
-    }
-    if (groupId) {
-      const group = await Group.findById(groupId);
-      if (!group) return res.status(404).json({ success:false, message:'Guruh topilmadi' });
-    }
+    const { role, label = null, maxUses = 1, expiresInHours = null } = req.body;
 
     const invite = await Invite.create({
       token: Invite.generateToken(),
       role,
       label,
-      group: groupId || null,
       maxUses,
       createdBy: req.user.id,
       expiresAt: expiresInHours ? new Date(Date.now() + expiresInHours*3600*1000) : null,
     });
-    await invite.populate('group', 'name code');
     res.status(201).json({
       success:true,
       data: { ...invite.toObject(), link: buildLink(invite.token) },

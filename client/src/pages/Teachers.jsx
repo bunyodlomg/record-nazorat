@@ -333,7 +333,7 @@ function TeachersListView({ onOpenTeacher }) {
 
   // Avto-refresh — online holatlari real-time yangilanishi uchun
   useEffect(() => {
-    const t = setInterval(refetch, 12_000);
+    const t = setInterval(() => refetch({ silent: true }), 12_000);
     return () => clearInterval(t);
   }, [refetch]);
   const counts = {
@@ -384,7 +384,7 @@ function TeachersListView({ onOpenTeacher }) {
           <div style={{ padding:'60px 0', textAlign:'center', color:'var(--text-3)' }}>
             <div style={{ fontSize:40, marginBottom:8 }}>👤</div>
             <div style={{ fontSize:14, fontWeight:600, color:'var(--text-2)' }}>Hozircha o'qituvchilar yo'q</div>
-            <div style={{ fontSize:12.5, marginTop:5 }}>"Invites" tabidan invite link yarating va o'qituvchini taklif qiling.</div>
+            <div style={{ fontSize:12.5, marginTop:5 }}>"Takliflar" tabidan invite link yaratib, o'qituvchini taklif qiling.</div>
           </div>
         ) : view === 'chat' ? (
           <motion.div key="c" variants={listContainer} initial="hidden" animate="show"

@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon, Avatar } from '../components/ui.jsx';
 import { Spinner, ErrorBox, listContainer, listItem } from '../components/Feedback.jsx';
-import { Modal, Field, Input, Select, TimePicker, UserPicker } from '../components/Modal.jsx';
+import { Modal, Field, Input, Select, UserPicker } from '../components/Modal.jsx';
 import { useFetch } from '../hooks/useFetch.js';
 import api from '../services/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -24,7 +24,7 @@ const DAYS = [
 
 const EMPTY_FORM = {
   name:'', teacher:'',
-  scheduleDays:[], scheduleTime:'',
+  scheduleDays:[],
 };
 
 function GroupForm({ open, onClose, initial, onSaved, teachers, isAdmin }) {
@@ -33,7 +33,6 @@ function GroupForm({ open, onClose, initial, onSaved, teachers, isAdmin }) {
       ...EMPTY_FORM, ...initial,
       teacher: initial.teacher?._id || initial.teacher || '',
       scheduleDays: initial.scheduleDays || [],
-      scheduleTime: initial.scheduleTime || '',
     };
     return EMPTY_FORM;
   });
@@ -55,7 +54,6 @@ function GroupForm({ open, onClose, initial, onSaved, teachers, isAdmin }) {
       const payload = {
         name: form.name.trim(),
         scheduleDays: form.scheduleDays,
-        scheduleTime: form.scheduleTime.trim() || null,
       };
       if (isAdmin && form.teacher) payload.teacher = form.teacher;
       if (isEdit) await api.groups.update(initial._id, payload);
@@ -98,7 +96,7 @@ function GroupForm({ open, onClose, initial, onSaved, teachers, isAdmin }) {
         </Field>
       )}
 
-      <Field label="Dars kunlari" hint="Belgilang — bir nechta kun tanlash mumkin">
+      <Field label="Dars kunlari" hint="Dars bor kunlari avtomatik vazifa yaratiladi">
         <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
           {DAYS.map(d => {
             const active = form.scheduleDays.includes(d.id);
@@ -108,9 +106,9 @@ function GroupForm({ open, onClose, initial, onSaved, teachers, isAdmin }) {
                   width:42, height:42, borderRadius:10,
                   background: active ? 'linear-gradient(135deg, var(--primary), var(--primary-d))' : 'var(--bg-subtle)',
                   color: active ? '#fff' : 'var(--text-2)',
-                  border: active ? '1px solid rgba(45,212,191,0.4)' : '1px solid var(--border)',
+                  border: active ? '1px solid var(--primary)' : '1px solid var(--border)',
                   fontWeight:600, fontSize:13, cursor:'pointer',
-                  boxShadow: active ? '0 2px 10px rgba(20,184,166,0.30)' : 'none',
+                  boxShadow: active ? '0 2px 10px rgba(99,102,241,0.30)' : 'none',
                   transition:'all 180ms',
                 }}>
                 {d.label}
@@ -120,18 +118,13 @@ function GroupForm({ open, onClose, initial, onSaved, teachers, isAdmin }) {
         </div>
       </Field>
 
-      <Field label="Dars vaqti (ixtiyoriy)">
-        <TimePicker value={form.scheduleTime} onChange={e=>upd('scheduleTime', e.target.value)}/>
-      </Field>
-
       <div style={{
         marginTop:6, padding:'10px 12px', background:'var(--primary-bg)',
-        border:'1px solid rgba(45,212,191,0.18)', borderRadius:10,
+        border:'1px solid var(--border)', borderRadius:10,
         fontSize:12, color:'var(--text-2)', lineHeight:1.6,
       }}>
         <Icon name="sparkles" size={12} style={{ verticalAlign:-1, marginRight:4, color:'var(--primary-l)' }}/>
-        Davomat, ball va o'quvchilar soni avtomatik hisoblanadi.
-        Yaratgandan so'ng, "Mening guruhlarim"dan invite link orqali o'quvchilarni qo'shing.
+        Guruh kodi avtomatik beriladi. Yaratgandan so'ng o'quvchilarni qo'lda qo'shasiz.
       </div>
     </Modal>
   );

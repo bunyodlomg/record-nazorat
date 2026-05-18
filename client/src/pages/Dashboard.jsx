@@ -96,7 +96,7 @@ export default function DashboardPage({ onOpenTeacher, onNav }) {
 
   // Real-time uchun har 12s da refetch
   useEffect(() => {
-    const t = setInterval(() => refetch(), 12_000);
+    const t = setInterval(() => refetch({ silent: true }), 12_000);
     return () => clearInterval(t);
   }, [refetch]);
 

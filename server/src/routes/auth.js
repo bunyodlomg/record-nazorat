@@ -81,7 +81,8 @@ router.post('/telegram', asyncHandler(async (req, res) => {
     if (dirty) await user.save({ validateBeforeSave:false });
   }
 
-  // Birinchi marta — yangi user
+  // Birinchi marta — yangi user. Faqat invite link orqali (admin/teacher rollari uchun)
+  // yoki TELEGRAM_ADMIN_ID hard-coded admin sifatida kira oladi.
   if (!user) {
     let invite = null;
     if (param && param.startsWith('invite_')) {
@@ -90,10 +91,14 @@ router.post('/telegram', asyncHandler(async (req, res) => {
       if (!invite || !invite.isValid) {
         return res.status(403).json({ success:false, message:'Taklif link yaroqsiz yoki muddati tugagan' });
       }
+      // Student rolidagi invite endi qabul qilinmaydi
+      if (invite.role === 'student') {
+        return res.status(403).json({ success:false, message:"O'quvchilar tizimga kira olmaydi" });
+      }
     } else {
       const isHardcodedAdmin = process.env.TELEGRAM_ADMIN_ID && tgId === String(process.env.TELEGRAM_ADMIN_ID);
       if (!isHardcodedAdmin) {
-        return res.status(403).json({ success:false, message:"Sizga ruxsat berilmagan. Admin yoki o'qituvchidan taklif link oling." });
+        return res.status(403).json({ success:false, message:"Sizga ruxsat berilmagan. Administratordan taklif link oling." });
       }
     }
 
@@ -112,17 +117,14 @@ router.post('/telegram', asyncHandler(async (req, res) => {
       lastName:  v.user.last_name  || null,
       photoUrl:  v.user.photo_url  || null,
       inviteRef: invite?._id || null,
-      pendingGroupRef: (invite?.role === 'student' && invite.group) ? invite.group : null,
     });
 
     if (invite) {
       invite.uses.push(user._id);
       await invite.save();
-      // Cache'dan ham o'chiramiz — bir martalik
       inviteCache.consume(tgId);
     }
 
-    // Pending bo'lsa adminlar va guruh teacher'iga xabar
     if (user.status === 'pending') {
       notifyPending(user).catch(() => {});
     }

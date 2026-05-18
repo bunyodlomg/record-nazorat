@@ -133,9 +133,19 @@ export function StudentRow({ sub, onUpdate, canEdit, busy }) {
           <div style={{
             fontSize:13.5, fontWeight:600,
             whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis',
-            color: isReviewed ? 'var(--text)' : 'var(--text)',
-            textDecoration: isReviewed ? 'none' : 'none',
-          }}>{s.name || '—'}</div>
+            color:'var(--text)',
+            display:'flex', alignItems:'center', gap:6,
+          }}>
+            <span style={{ overflow:'hidden', textOverflow:'ellipsis' }}>{s.name || '—'}</span>
+            {sub.isLate && (
+              <span style={{
+                fontSize:9.5, fontWeight:700, padding:'1px 6px', borderRadius:5,
+                background:'var(--rose-bg)', color:'var(--rose)',
+                border:'1px solid var(--rose)', textTransform:'uppercase', letterSpacing:'0.04em',
+                flexShrink:0,
+              }}>Kech</span>
+            )}
+          </div>
           <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:2 }}>
             <span style={{
               fontSize:11, color: isReviewed ? 'var(--primary-l)' : 'var(--text-3)',

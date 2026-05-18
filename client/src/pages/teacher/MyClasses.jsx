@@ -2,30 +2,19 @@ import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Icon } from '../../components/ui.jsx';
 import { Spinner, ErrorBox, listContainer, listItem } from '../../components/Feedback.jsx';
-import { Modal, Field, Input, Select, TimePicker } from '../../components/Modal.jsx';
+import { Modal, Field, Input } from '../../components/Modal.jsx';
 import { useFetch } from '../../hooks/useFetch.js';
 import api from '../../services/api.js';
 import { sfx } from '../../hooks/useSound.js';
 import StudentsPage from '../Students.jsx';
 
-const LVL_CHIP = {
-  A1:'chip-neutral', A2:'chip-neutral',
-  B1:'chip-info',    B2:'chip-info',
-  C1:'chip-accent',  C2:'chip-success',
-  Beginner:'chip-neutral', Intermediate:'chip-info',
-  Advanced:'chip-accent',  Olympiad:'chip-success',
-};
-const LVL_LABEL = {
-  A1:'A1', A2:'A2', B1:'B1', B2:'B2', C1:'C1', C2:'C2',
-  Beginner:"Boshlang'ich", Intermediate:"O'rta", Advanced:'Yuqori', Olympiad:'Olimpiada',
-};
 const DAYS = [
   { id:'mon', label:'Du' },{ id:'tue', label:'Se' },{ id:'wed', label:'Ch' },
   { id:'thu', label:'Pa' },{ id:'fri', label:'Ju' },{ id:'sat', label:'Sh' },{ id:'sun', label:'Ya' },
 ];
 const dayLabels = (days = []) => DAYS.filter(d => days.includes(d.id)).map(d => d.label).join(' · ');
 
-const EMPTY_FORM = { name:'', level:'A1', scheduleDays:[], scheduleTime:'' };
+const EMPTY_FORM = { name:'', scheduleDays:[] };
 
 function GroupCreateForm({ open, onClose, onSaved }) {
   const [form, setForm] = useState(EMPTY_FORM);
@@ -45,9 +34,7 @@ function GroupCreateForm({ open, onClose, onSaved }) {
     try {
       await api.groups.create({
         name: form.name.trim(),
-        level: form.level,
         scheduleDays: form.scheduleDays,
-        scheduleTime: form.scheduleTime.trim() || null,
       });
       sfx.success();
       onSaved?.();
@@ -71,18 +58,8 @@ function GroupCreateForm({ open, onClose, onSaved }) {
       </>}>
       {error && <div style={{ marginBottom:12, padding:'10px 12px', background:'var(--rose-bg)', borderRadius:8, color:'var(--rose)', fontSize:12.5 }}>{error}</div>}
 
-      <Field label="Guruh nomi" hint="Masalan: Speaking Club B2, IELTS Prep">
-        <Input value={form.name} onChange={e=>upd('name', e.target.value)} placeholder="Speaking Club B2" autoFocus/>
-      </Field>
-      <Field label="Daraja (CEFR)">
-        <Select value={form.level} onChange={e=>upd('level', e.target.value)}>
-          <option value="A1">A1 · Boshlang'ich</option>
-          <option value="A2">A2 · Elementary</option>
-          <option value="B1">B1 · Pre-Intermediate</option>
-          <option value="B2">B2 · Intermediate</option>
-          <option value="C1">C1 · Advanced</option>
-          <option value="C2">C2 · Proficiency</option>
-        </Select>
+      <Field label="Guruh nomi" hint="Masalan: Speaking Club, IELTS Prep">
+        <Input value={form.name} onChange={e=>upd('name', e.target.value)} placeholder="Speaking Club" autoFocus/>
       </Field>
       <Field label="Dars kunlari" hint="Dars bor kunlari avtomatik vazifa yaratiladi">
         <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
@@ -103,9 +80,6 @@ function GroupCreateForm({ open, onClose, onSaved }) {
             );
           })}
         </div>
-      </Field>
-      <Field label="Dars vaqti (ixtiyoriy)">
-        <TimePicker value={form.scheduleTime} onChange={e=>upd('scheduleTime', e.target.value)}/>
       </Field>
     </Modal>
   );
@@ -214,18 +188,12 @@ function GroupCard({ g, onAddStudents, onRemove }) {
             <span style={{ fontSize:10.5, fontFamily:'var(--mono)', color:'var(--text-2)', background:'var(--bg-subtle)', padding:'2px 7px', borderRadius:5, fontWeight:500 }}>
               {g.code}
             </span>
-            {g.level && (
-              <span className={`chip ${LVL_CHIP[g.level] || 'chip-neutral'}`} style={{ fontSize:10.5 }}>
-                {LVL_LABEL[g.level] || g.level}
-              </span>
-            )}
           </div>
           <div style={{ fontFamily:'var(--display)', fontSize:15, fontWeight:700, letterSpacing:'-0.02em', lineHeight:1.3 }}>
             {g.name}
           </div>
           <div style={{ fontSize:11.5, color:'var(--text-2)', marginTop:3 }}>
             {dayLabels(g.scheduleDays) || "Kun belgilanmagan"}
-            {g.scheduleTime ? ` · ${g.scheduleTime}` : ''}
           </div>
         </div>
       </div>

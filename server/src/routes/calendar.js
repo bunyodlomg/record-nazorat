@@ -1,6 +1,9 @@
 const express    = require('express');
+const mongoose   = require('mongoose');
 const Group      = require('../models/Group');
 const Submission = require('../models/Submission');
+const Homework   = require('../models/Homework');
+const Teacher    = require('../models/Teacher');
 const { protect, requireActive } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
 
@@ -13,11 +16,13 @@ const fmtKey = d =>
   `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
 /**
- * GET /api/calendar/events?from=YYYY-MM-DD&to=YYYY-MM-DD
+ * GET /api/calendar/events?from=YYYY-MM-DD&to=YYYY-MM-DD&teacherId=
  *
- * Admin   → har kun uchun submission statistikasi (reviewedCount, submittedCount, returnedCount).
- *           Maqsad: shu kunda nechta tekshirilgan, nechta tekshirilmagan ko'rinsin.
+ * Admin   → har kun uchun har teacher bo'yicha breakdown:
+ *           - kun ichida shu teacher nechta vazifa berdi (homework.createdAt yoki dueDate)
+ *           - nechta tekshirildi / qoldi
  * Teacher → o'zining darsi bor kunlari (group.scheduleDays bo'yicha hafta-hafta).
+ *           scheduleTime ixtiyoriy — bo'lmasa "Dars" sifatida ko'rsatiladi.
  */
 router.get('/events', asyncHandler(async (req, res) => {
   const isAdmin = req.user.role === 'admin';
@@ -33,52 +38,86 @@ router.get('/events', asyncHandler(async (req, res) => {
   const byDate = {};
   const push = (key, ev) => { (byDate[key] ||= []).push(ev); };
 
+  // ── ADMIN REJIM: har teacher uchun har kun submission breakdown ──
   if (isAdmin) {
-    // Admin rejimi: har kun uchun submission statistikasi (ixtiyoriy teacherId filter)
-    const baseFilter = {
+    // Submission filter — kun oralig'idagi yaratilgan/tekshirilgan/topshirilgan
+    let teacherFilter = null;
+    if (req.query.teacherId) {
+      try { teacherFilter = new mongoose.Types.ObjectId(req.query.teacherId); } catch {}
+    }
+
+    // 1) Homework yaratilganlar (kun-by-kun, per-teacher) — "berildi"
+    const hwFilter = { dueDate: { $gte: rangeStart, $lte: rangeEnd } };
+    if (teacherFilter) hwFilter.teacher = teacherFilter;
+    const homeworks = await Homework.find(hwFilter).select('teacher dueDate total submissions').lean();
+
+    // 2) Submission reviewedAt / submittedAt kun bo'yicha
+    const subFilter = {
       $or: [
         { reviewedAt:  { $gte: rangeStart, $lte: rangeEnd } },
         { submittedAt: { $gte: rangeStart, $lte: rangeEnd } },
       ],
     };
-    if (req.query.teacherId) {
-      const mongoose = require('mongoose');
-      try {
-        baseFilter.teacher = new mongoose.Types.ObjectId(req.query.teacherId);
-      } catch { /* invalid id — filter ignored */ }
-    }
-    const subs = await Submission.find(baseFilter).select('status reviewedAt submittedAt').lean();
+    if (teacherFilter) subFilter.teacher = teacherFilter;
+    const subs = await Submission.find(subFilter).select('teacher status reviewedAt submittedAt').lean();
 
-    const stats = {}; // { 'YYYY-MM-DD': { reviewed, submitted, returned } }
-    const bump = (key, field) => {
-      (stats[key] ||= { reviewed:0, submitted:0, returned:0 })[field]++;
+    // 3) Teacher info
+    const teachers = await Teacher.find({}).select('name hue').lean();
+    const teacherMap = Object.fromEntries(teachers.map(t => [String(t._id), t]));
+
+    // Aggregate: stats[date][teacherId] = { assigned, reviewed, pending }
+    const stats = {};
+    const bump = (key, tid, field, val = 1) => {
+      stats[key] ||= {};
+      stats[key][tid] ||= { assigned:0, reviewed:0, pending:0 };
+      stats[key][tid][field] += val;
     };
+
+    for (const hw of homeworks) {
+      const k = fmtKey(new Date(hw.dueDate));
+      bump(k, String(hw.teacher), 'assigned', hw.total || 0);
+    }
     for (const s of subs) {
-      // Tekshirilgan
+      const tid = String(s.teacher);
       if (s.reviewedAt && s.reviewedAt >= rangeStart && s.reviewedAt <= rangeEnd) {
         const k = fmtKey(new Date(s.reviewedAt));
-        if (s.status === 'reviewed') bump(k, 'reviewed');
-        else if (s.status === 'returned') bump(k, 'returned');
+        if (s.status === 'reviewed' || s.status === 'returned') bump(k, tid, 'reviewed');
       }
-      // Topshirilgan (lekin tekshirilmagan)
       if (s.submittedAt && s.submittedAt >= rangeStart && s.submittedAt <= rangeEnd && s.status === 'submitted') {
         const k = fmtKey(new Date(s.submittedAt));
-        bump(k, 'submitted');
+        bump(k, tid, 'pending');
       }
     }
 
-    for (const [key, v] of Object.entries(stats)) {
-      // "Qaytarilgan" ham teacher tomonidan ko'rib chiqilgan deb hisoblanadi
-      const reviewed  = (v.reviewed || 0) + (v.returned || 0);
-      const submitted = v.submitted || 0;
-      if (reviewed)  push(key, { type:'stats-reviewed', count:reviewed,  tone:'green', title:`${reviewed} tekshirildi`,  time:'' });
-      if (submitted) push(key, { type:'stats-pending',  count:submitted, tone:'amber', title:`${submitted} kutilmoqda`,  time:'' });
+    // Plus — agar dueDate o'tib ketgan + tekshirilmagan submission'lar ham "kech qoldi" sifatida hisoblansin
+    // Buni "pending" hisobiga qo'shsak adashish kelib chiqadi — alohida 'overdue' qilamiz
+    // Hozircha soddalashtirib pending ichida qoldiramiz.
+
+    // byDate'ga teacher-day eventlar qo'shamiz
+    for (const [date, perTeacher] of Object.entries(stats)) {
+      for (const [tid, v] of Object.entries(perTeacher)) {
+        const t = teacherMap[tid];
+        if (!t) continue;
+        // assigned-reviewed = qolgan tekshirilmaganlar (shu kun vazifalari)
+        const remaining = Math.max((v.assigned || 0) - (v.reviewed || 0), 0);
+        push(date, {
+          type: 'teacher-day',
+          teacherId: tid,
+          teacherName: t.name,
+          hue: t.hue,
+          assigned: v.assigned || 0,
+          reviewed: v.reviewed || 0,
+          pending:  v.pending  || 0,
+          remaining,
+          tone: remaining > 0 ? 'amber' : 'green',
+        });
+      }
     }
 
     return res.json({ success:true, data: byDate, mode:'admin' });
   }
 
-  // Teacher rejimi: faqat darsi bor kunlari (group lessons)
+  // ── TEACHER REJIM: o'zining dars kunlari ──
   if (!req.user.teacherRef) {
     return res.json({ success:true, data:{}, mode:'teacher' });
   }
@@ -86,7 +125,7 @@ router.get('/events', asyncHandler(async (req, res) => {
     .populate('teacher', 'name').lean();
 
   for (const g of groups) {
-    if (!g.scheduleDays?.length || !g.scheduleTime) continue;
+    if (!g.scheduleDays?.length) continue; // scheduleTime endi majburiy emas
     const days = g.scheduleDays.map(d => DAY_MAP[d]).filter(d => d !== undefined);
     if (!days.length) continue;
 
@@ -96,7 +135,7 @@ router.get('/events', asyncHandler(async (req, res) => {
         push(fmtKey(cur), {
           type:     'lesson',
           title:    g.name,
-          time:     g.scheduleTime,
+          time:     g.scheduleTime || '',
           tone:     'green',
           subtitle: g.code || '',
         });

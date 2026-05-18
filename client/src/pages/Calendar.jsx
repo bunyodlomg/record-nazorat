@@ -286,7 +286,7 @@ export default function CalendarPage({ onOpenTeacher }) {
       {/* Legend */}
       <div style={{ display:'flex', gap:14, fontSize:12, color:'var(--text-2)', marginBottom:14, alignItems:'center', flexWrap:'wrap' }}>
         {(isAdmin
-          ? [['green','Tekshirilgan'],['amber','Tekshirilmagan']]
+          ? [['indigo','Berildi'],['green','Tekshirildi'],['amber','Qoldi']]
           : [['green','Darslar']]
         ).map(([t, lbl]) => (
           <span key={lbl} style={{ display:'flex', alignItems:'center', gap:6 }}>
@@ -323,6 +323,7 @@ export default function CalendarPage({ onOpenTeacher }) {
           ? (isAdmin
               ? (() => {
                   const s = dayStats(picked.events);
+                  if (s.assigned > 0) return `${s.reviewed}/${s.assigned} tekshirildi · ${s.remaining} qoldi`;
                   return `${s.reviewed + s.submitted} ta submission`;
                 })()
               : `${picked.events.length} ta dars`)
@@ -342,14 +343,37 @@ export default function CalendarPage({ onOpenTeacher }) {
   );
 }
 
-/* Admin uchun shu kunning stats summary'sini olish */
+/* Admin uchun shu kun teacher-day event'laridan umumiy stats — endi har teacher uchun {assigned,reviewed,remaining}.
+   Eskirgan stats-reviewed/stats-pending eventlarini ham qoldiramiz (backward-compat). */
 function dayStats(events) {
-  const out = { reviewed:0, submitted:0 };
+  const out = { assigned:0, reviewed:0, remaining:0, submitted:0 };
   for (const e of events || []) {
-    if (e.type === 'stats-reviewed') out.reviewed  += e.count || 0;
-    if (e.type === 'stats-pending')  out.submitted += e.count || 0;
+    if (e.type === 'teacher-day') {
+      out.assigned  += e.assigned  || 0;
+      out.reviewed  += e.reviewed  || 0;
+      out.remaining += e.remaining || 0;
+      out.submitted += e.pending   || 0;
+    } else if (e.type === 'stats-reviewed') {
+      out.reviewed += e.count || 0;
+    } else if (e.type === 'stats-pending') {
+      out.submitted += e.count || 0;
+    }
   }
   return out;
+}
+
+/* Admin uchun kun ichida har teacher uchun breakdown ro'yxati */
+function teacherDayBreakdown(events) {
+  const list = [];
+  for (const e of (events || [])) {
+    if (e.type === 'teacher-day') list.push(e);
+  }
+  // Tekshirilmaganlar (remaining > 0) tepada, keyin assigned bo'yicha desc
+  list.sort((a, b) => {
+    if ((b.remaining || 0) !== (a.remaining || 0)) return (b.remaining || 0) - (a.remaining || 0);
+    return (b.assigned || 0) - (a.assigned || 0);
+  });
+  return list;
 }
 
 /* ── OY KO'RINISHI ── */
@@ -432,9 +456,30 @@ function StatBar({ tone, label, n }) {
   );
 }
 
-/* Admin uchun kun cell'idagi mini stats */
+/* Admin uchun kun cell'idagi mini stats — "tekshirildi/qoldi" format */
 function AdminCellSummary({ events }) {
   const s = dayStats(events);
+  // assigned bo'lsa "reviewed / assigned" format, yo'q bo'lsa eski tarz
+  if (s.assigned > 0) {
+    const tone = s.remaining > 0 ? 'amber' : 'green';
+    const t = TONE[tone];
+    return (
+      <motion.div
+        initial={{ opacity:0, y:4 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.15 }}
+        style={{ display:'flex', gap:3, flexWrap:'wrap', marginTop:4 }}>
+        <span style={{
+          display:'inline-flex', alignItems:'center', gap:3,
+          padding:'1px 6px', borderRadius:5,
+          background: t.bg, color: t.color,
+          border:`1px solid ${t.border}`,
+          fontSize:10.5, fontWeight:700, fontVariantNumeric:'tabular-nums',
+          lineHeight:1.3,
+        }}>
+          {s.reviewed}/{s.assigned}
+        </span>
+      </motion.div>
+    );
+  }
   const items = [];
   if (s.reviewed)  items.push(['green', s.reviewed]);
   if (s.submitted) items.push(['amber', s.submitted]);
@@ -487,8 +532,7 @@ function WeekView({ cursor, today, eventsByDate, onPick, nowF, isAdmin }) {
         style={{ display:'flex', flexDirection:'column', gap:8 }}>
         {days.map((d, i) => {
           const s = dayStats(d.events);
-          const totalSubs = s.reviewed + s.submitted;
-          const hasData = totalSubs > 0;
+          const hasData = s.assigned > 0 || s.reviewed > 0 || s.submitted > 0;
           return (
             <motion.button key={i}
               onClick={() => hasData && onPick({ y:d.date.getFullYear(), m:d.date.getMonth(), d:d.date.getDate(), dow:i, events:d.events })}
@@ -503,11 +547,9 @@ function WeekView({ cursor, today, eventsByDate, onPick, nowF, isAdmin }) {
                 cursor: hasData ? 'pointer' : 'default',
                 textAlign:'left', width:'100%',
               }}>
-              {/* Sana ustuni */}
               <div style={{
                 display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-                minWidth:46, flexShrink:0,
-                padding:'4px 0',
+                minWidth:46, flexShrink:0, padding:'4px 0',
                 borderRight:'1px solid var(--border)', paddingRight:14,
               }}>
                 <div style={{ fontSize:10, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:'0.05em', fontWeight:600 }}>
@@ -521,29 +563,37 @@ function WeekView({ cursor, today, eventsByDate, onPick, nowF, isAdmin }) {
                 </div>
               </div>
 
-              {/* Stats yoki bo'sh */}
               {hasData ? (
-                <div style={{ flex:1, minWidth:0, display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
-                  {s.reviewed > 0 && (
+                <div style={{ flex:1, minWidth:0, display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' }}>
+                  {s.assigned > 0 && (
                     <div style={{
-                      display:'inline-flex', alignItems:'center', gap:6,
-                      padding:'5px 10px', borderRadius:8,
-                      background: TONE.green.bg, border:`1px solid ${TONE.green.border}`,
+                      display:'inline-flex', alignItems:'center', gap:5,
+                      padding:'4px 9px', borderRadius:8,
+                      background: TONE.indigo.bg, border:`1px solid ${TONE.indigo.border}`,
                     }}>
-                      <Icon name="check" size={12} color={TONE.green.color}/>
-                      <span style={{ fontSize:12, color:TONE.green.color, fontWeight:700 }}>{s.reviewed}</span>
-                      <span style={{ fontSize:11, color:TONE.green.color }}>tekshirildi</span>
+                      <span style={{ fontSize:11.5, color:TONE.indigo.color, fontWeight:700 }}>{s.assigned}</span>
+                      <span style={{ fontSize:10.5, color:TONE.indigo.color }}>berildi</span>
                     </div>
                   )}
-                  {s.submitted > 0 && (
+                  {s.reviewed > 0 && (
                     <div style={{
-                      display:'inline-flex', alignItems:'center', gap:6,
-                      padding:'5px 10px', borderRadius:8,
+                      display:'inline-flex', alignItems:'center', gap:5,
+                      padding:'4px 9px', borderRadius:8,
+                      background: TONE.green.bg, border:`1px solid ${TONE.green.border}`,
+                    }}>
+                      <Icon name="check" size={11} color={TONE.green.color}/>
+                      <span style={{ fontSize:11.5, color:TONE.green.color, fontWeight:700 }}>{s.reviewed}</span>
+                    </div>
+                  )}
+                  {s.remaining > 0 && (
+                    <div style={{
+                      display:'inline-flex', alignItems:'center', gap:5,
+                      padding:'4px 9px', borderRadius:8,
                       background: TONE.amber.bg, border:`1px solid ${TONE.amber.border}`,
                     }}>
-                      <Icon name="clock" size={12} color={TONE.amber.color}/>
-                      <span style={{ fontSize:12, color:TONE.amber.color, fontWeight:700 }}>{s.submitted}</span>
-                      <span style={{ fontSize:11, color:TONE.amber.color }}>kutilmoqda</span>
+                      <Icon name="clock" size={11} color={TONE.amber.color}/>
+                      <span style={{ fontSize:11.5, color:TONE.amber.color, fontWeight:700 }}>{s.remaining}</span>
+                      <span style={{ fontSize:10.5, color:TONE.amber.color }}>qoldi</span>
                     </div>
                   )}
                 </div>
@@ -730,67 +780,112 @@ function TeacherMiniRow({ t, onClick }) {
   );
 }
 
-/* Admin uchun kun modali */
+/* Admin uchun kun modali — per-teacher breakdown */
 function AdminDayDetails({ events, teachers = [], onOpenTeacher }) {
   const s = dayStats(events);
-  const total = s.reviewed + s.submitted;
-
-  // Faqat pending > 0 yoki chala guruh bor teacherlar — yuqorida
-  const sortedTeachers = useMemo(() => {
-    const list = [...teachers];
-    list.sort((a, b) => {
-      const ap = (a.submissions?.pending || 0) + (a.groupsStats?.partial || 0);
-      const bp = (b.submissions?.pending || 0) + (b.groupsStats?.partial || 0);
-      return bp - ap;
-    });
-    return list;
-  }, [teachers]);
+  const teacherBreakdown = teacherDayBreakdown(events);
+  const hasBreakdown = teacherBreakdown.length > 0;
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-      {/* Kun stat'i — agar bor bo'lsa */}
-      {total > 0 && (
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:9 }}>
+      {/* Kun umumiy stat'i */}
+      {s.assigned > 0 ? (
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:8 }}>
           {[
-            ['green', 'Tekshirildi', s.reviewed],
-            ['amber', 'Kutilmoqda',  s.submitted],
+            ['indigo', 'Berildi',     s.assigned],
+            ['green',  'Tekshirildi', s.reviewed],
+            ['amber',  'Qoldi',       s.remaining],
           ].map(([tone, label, n], i) => {
             const t = TONE[tone];
             return (
               <motion.div key={i}
                 initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }} transition={{ delay:i*0.05 }}
                 style={{
-                  padding:'10px 12px', borderRadius:10,
+                  padding:'9px 11px', borderRadius:10,
                   background: t.bg, border:`1px solid ${t.border}`,
                 }}>
+                <div style={{ fontSize:10, color:t.color, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em' }}>{label}</div>
+                <div style={{ fontFamily:'var(--display)', fontSize:20, fontWeight:700, color:t.color, marginTop:2 }}>{n}</div>
+              </motion.div>
+            );
+          })}
+        </div>
+      ) : (s.reviewed + s.submitted) > 0 ? (
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:9 }}>
+          {[['green', 'Tekshirildi', s.reviewed], ['amber', 'Kutilmoqda', s.submitted]].map(([tone, label, n], i) => {
+            const t = TONE[tone];
+            return (
+              <motion.div key={i}
+                initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }} transition={{ delay:i*0.05 }}
+                style={{ padding:'10px 12px', borderRadius:10, background: t.bg, border:`1px solid ${t.border}` }}>
                 <div style={{ fontSize:10.5, color:t.color, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em' }}>{label}</div>
                 <div style={{ fontFamily:'var(--display)', fontSize:22, fontWeight:700, color:t.color, marginTop:3 }}>{n}</div>
               </motion.div>
             );
           })}
         </div>
-      )}
+      ) : null}
 
-      {/* O'qituvchilar — joriy holat */}
-      {sortedTeachers.length > 0 ? (
+      {/* Per-teacher breakdown — har teacher uchun "reviewed/assigned" */}
+      {hasBreakdown && (
         <div>
-          <div style={{ fontSize:10.5, fontWeight:700, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:8, marginTop: total > 0 ? 4 : 0 }}>
-            O'qituvchilar
+          <div style={{ fontSize:10.5, fontWeight:700, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:8 }}>
+            O'qituvchilar bo'yicha
           </div>
           <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-            {sortedTeachers.map(t => (
-              <TeacherMiniRow key={t._id} t={t}
-                onClick={() => onOpenTeacher?.(t._id)}/>
-            ))}
+            {teacherBreakdown.map(td => {
+              const tone = td.remaining > 0 ? 'amber' : 'green';
+              const t = TONE[tone];
+              const ratio = td.assigned > 0 ? Math.round((td.reviewed / td.assigned) * 100) : 0;
+              return (
+                <motion.button key={td.teacherId}
+                  onClick={() => onOpenTeacher?.(td.teacherId)}
+                  whileTap={{ scale:0.99 }}
+                  initial={{ opacity:0, x:-6 }} animate={{ opacity:1, x:0 }}
+                  style={{
+                    display:'flex', alignItems:'center', gap:11,
+                    padding:'10px 12px', borderRadius:10,
+                    background:'var(--bg-subtle)',
+                    border:'1px solid var(--border)',
+                    borderLeft: `3px solid ${t.solid}`,
+                    textAlign:'left', cursor:'pointer', width:'100%',
+                  }}>
+                  <Avatar name={td.teacherName} hue={td.hue} size="sm"/>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{
+                      fontSize:13, fontWeight:600, color:'var(--text)',
+                      whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis',
+                    }}>{td.teacherName}</div>
+                    <div style={{
+                      fontSize:11, color:'var(--text-3)', marginTop:2,
+                      display:'flex', alignItems:'center', gap:5, flexWrap:'wrap',
+                    }}>
+                      <span><strong style={{ color:'var(--text-2)' }}>{td.reviewed}</strong>/{td.assigned} tekshirildi</span>
+                      {td.remaining > 0 && (
+                        <span style={{ color:t.color, fontWeight:600 }}>· {td.remaining} qoldi</span>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{
+                    minWidth:46, textAlign:'right', flexShrink:0,
+                    fontFamily:'var(--display)', fontSize:16, fontWeight:700, color:t.color,
+                    fontVariantNumeric:'tabular-nums',
+                  }}>
+                    {ratio}%
+                  </div>
+                  <Icon name="chevronRight" size={12} color="var(--text-3)" style={{ flexShrink:0 }}/>
+                </motion.button>
+              );
+            })}
           </div>
         </div>
-      ) : (
-        total === 0 && (
-          <div style={{ padding:'20px 0', textAlign:'center', color:'var(--text-3)' }}>
-            <div style={{ fontSize:30, marginBottom:6 }}>📭</div>
-            <div style={{ fontSize:13 }}>Ma'lumot yo'q</div>
-          </div>
-        )
+      )}
+
+      {!hasBreakdown && s.reviewed === 0 && s.submitted === 0 && (
+        <div style={{ padding:'20px 0', textAlign:'center', color:'var(--text-3)' }}>
+          <div style={{ fontSize:30, marginBottom:6 }}>📭</div>
+          <div style={{ fontSize:13 }}>Ma'lumot yo'q</div>
+        </div>
       )}
     </div>
   );
