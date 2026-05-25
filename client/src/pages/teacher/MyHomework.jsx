@@ -9,6 +9,10 @@ const TABS = [
   { id:'pending', label:'Topshirilgan',  icon:'clock', tone:'warning' },
   { id:'done',    label:'Baholangan',    icon:'check', tone:'success' },
 ];
+const KINDS = [
+  { id:'lesson',   label:'Kunlik vazifalar', icon:'book' },
+  { id:'speaking', label:'🎤 Speaking' },
+];
 const TONE = {
   warning:['var(--amber-bg)','var(--amber)'],
   success:['var(--primary-bg)','var(--primary-l)'],
@@ -162,6 +166,7 @@ function HomeworkCard({ it, tab, onOpen }) {
 export default function MyHomework({ onOpenHomework }) {
   const { user } = useAuth();
   const teacherId = user?.teacherRef?._id || user?.teacherRef;
+  const [kind, setKind] = useState('lesson');
   const [tab, setTab] = useState('pending');
   // "Baholangan" tab uchun sana filter
   const [pickedDate, setPickedDate] = useState(todayKey());
@@ -177,16 +182,27 @@ export default function MyHomework({ onOpenHomework }) {
     return () => clearInterval(t);
   }, [refetch]);
 
-  // Lesson + speaking — hammasi bitta ro'yxatda. Speaking faqat 🎤 ikoni bilan farqlanadi.
-  const items = useMemo(
+  const allItems = useMemo(
     () => Array.isArray(data) ? data : (data?.data ?? []),
     [data],
+  );
+
+  // Kind bo'yicha bo'lish (default 'lesson' — kind yo'q bo'lsa ham lesson hisoblanadi)
+  const items = useMemo(
+    () => allItems.filter(i => (i.kind || 'lesson') === kind),
+    [allItems, kind]
   );
 
   const counts = useMemo(() => ({
     pending: items.filter(i => i.col !== 'done').length,
     done:    items.filter(i => i.col === 'done').length,
   }), [items]);
+
+  // Boshqa kind dagi pending count (kind-tab badge uchun)
+  const otherKindPending = useMemo(() => {
+    const otherKind = kind === 'lesson' ? 'speaking' : 'lesson';
+    return allItems.filter(i => (i.kind || 'lesson') === otherKind && i.col !== 'done').length;
+  }, [allItems, kind]);
 
   const tabItems = useMemo(() => {
     return items.filter(i => {
@@ -213,10 +229,32 @@ export default function MyHomework({ onOpenHomework }) {
           <h1 className="page-title">Vazifalar</h1>
           <div className="page-sub">
             {counts.pending > 0
-              ? `${counts.pending} ta vazifa tekshirish kutmoqda`
+              ? `${counts.pending} ta ${kind === 'speaking' ? 'speaking' : 'kunlik'} vazifa kutmoqda`
               : "Yangi topshiriq yo'q 🎉"}
           </div>
         </div>
+      </div>
+
+      {/* Kunlik / Speaking — asosiy tab */}
+      <div className="tabs" style={{ marginBottom:10 }}>
+        {KINDS.map(k => {
+          const isActive = kind === k.id;
+          const badge = !isActive ? otherKindPending : 0;
+          return (
+            <button key={k.id} className={`tab ${isActive?'active':''}`}
+              onClick={() => { setKind(k.id); setTab('pending'); }}>
+              {k.icon && <Icon name={k.icon} size={12} style={{ marginRight:5, verticalAlign:-1 }}/>}
+              {k.label}
+              {badge > 0 && (
+                <span style={{
+                  marginLeft:6, padding:'1px 7px', borderRadius:8,
+                  background:'var(--amber-bg)', color:'var(--amber)',
+                  fontSize:10.5, fontWeight:700,
+                }}>{badge}</span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       <div className="tabs" style={{ marginBottom:12 }}>
@@ -293,11 +331,11 @@ export default function MyHomework({ onOpenHomework }) {
       {tabItems.length === 0 ? (
         <div style={{ padding:'50px 20px', textAlign:'center', color:'var(--text-3)' }}>
           <div style={{ fontSize:36, marginBottom:8 }}>
-            {tab === 'pending' ? '✅' : '📭'}
+            {kind === 'speaking' ? (tab === 'pending' ? '🎤' : '🎉') : (tab === 'pending' ? '✅' : '📭')}
           </div>
           <div style={{ fontSize:13.5, color:'var(--text-2)' }}>
             {tab === 'pending'
-              ? "Hozircha topshiriq yo'q"
+              ? (kind === 'speaking' ? "Hozircha topshirilgan speaking yo'q" : "Hozircha topshiriq yo'q")
               : (pickedDate
                   ? "Bu kuni baholangan vazifa yo'q"
                   : "Baholangan vazifalar yo'q")}
