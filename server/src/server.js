@@ -45,6 +45,7 @@ app.use('/api/homework',    require('./routes/homework'));
 app.use('/api/submissions', require('./routes/submissions'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/calendar',    require('./routes/calendar'));
+app.use('/api/settings',    require('./routes/settings'));
 
 app.get('/health', (_req, res) => res.json({ status:'ok', ts:new Date() }));
 app.use((_req, res) => res.status(404).json({ success:false, message:'Route not found' }));

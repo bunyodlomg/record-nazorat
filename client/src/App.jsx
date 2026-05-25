@@ -17,6 +17,7 @@ import LeaderboardPage from './pages/Leaderboard.jsx';
 import HomeworkPage from './pages/Homework.jsx';
 import HomeworkDetailPage from './pages/HomeworkDetail.jsx';
 import CalendarPage from './pages/Calendar.jsx';
+import SettingsPage from './pages/Settings.jsx';
 
 // Teacher pages
 import MyDashboard from './pages/teacher/MyDashboard.jsx';
@@ -32,6 +33,7 @@ const ADMIN_DOCK = [
   { divider:true },
   { id:'leaderboard', label:'Reyting',       icon:'trophy' },
   { id:'calendar',    label:'Kalendar',      icon:'calendar' },
+  { id:'settings',    label:'Sozlamalar',    icon:'settings' },
 ];
 
 const TEACHER_DOCK = [
@@ -74,6 +76,7 @@ function AdminApp() {
   else if (page === 'leaderboard')   content = <LeaderboardPage onOpenTeacher={setDetailId} onOpenStudent={setStudentId}/>;
   else if (page === 'homework')      content = <HomeworkPage onOpenHomework={setHomeworkId} onOpenTeacher={setDetailId}/>;
   else if (page === 'calendar')      content = <CalendarPage onOpenTeacher={setDetailId}/>;
+  else if (page === 'settings')      content = <SettingsPage/>;
 
   return (
     <>

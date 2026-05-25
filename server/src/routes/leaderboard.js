@@ -15,9 +15,11 @@ router.get('/teachers', asyncHandler(async (req, res) => {
   res.json({ success:true, data: teachers });
 }));
 
-// GET /api/leaderboard/students?groupId=
+// GET /api/leaderboard/students?groupId=&sortBy=gems|score
+// Default: gems (yangi reyting o'lchovi). Eski 'score'ga ham qo'llanishi mumkin.
 router.get('/students', asyncHandler(async (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 100, 500);
+  const sortBy = req.query.sortBy === 'score' ? '-score' : '-gems';
   const filter = { status: 'active' };
   if (req.query.groupId) filter.group = req.query.groupId;
   // Teacher faqat o'zining studentlari
@@ -25,7 +27,7 @@ router.get('/students', asyncHandler(async (req, res) => {
     const groups = await Group.find({ teacher: req.user.teacherRef }).select('_id');
     filter.group = { $in: groups.map(g => g._id) };
   }
-  const students = await Student.find(filter).sort('-score').limit(limit)
+  const students = await Student.find(filter).sort(sortBy).limit(limit)
     .populate('group', 'name code')
     .populate('teacher', 'name hue');
   res.json({ success:true, data: students });
@@ -47,6 +49,8 @@ router.get('/groups', asyncHandler(async (req, res) => {
       _id: '$group',
       avgScore:      { $avg: '$score' },
       avgAttendance: { $avg: '$attendance' },
+      totalGems:     { $sum: '$gems' },
+      avgGems:       { $avg: '$gems' },
       count:         { $sum: 1 },
     }},
   ]);
@@ -60,7 +64,9 @@ router.get('/groups', asyncHandler(async (req, res) => {
     studentCount: map[String(g._id)]?.count || 0,
     avgScore:      Math.round(map[String(g._id)]?.avgScore      || 0),
     avgAttendance: Math.round(map[String(g._id)]?.avgAttendance || 0),
-  })).sort((a, b) => b.avgScore - a.avgScore);
+    totalGems:     Math.round(map[String(g._id)]?.totalGems     || 0),
+    avgGems:       Math.round(map[String(g._id)]?.avgGems       || 0),
+  })).sort((a, b) => b.totalGems - a.totalGems);
 
   res.json({ success:true, data });
 }));

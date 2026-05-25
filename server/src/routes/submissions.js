@@ -65,27 +65,39 @@ router.patch('/:id',
     await sub.save();
     await Submission.recomputeHomework(sub.homework);
 
+    // Gem berish/qaytarib olish + bot xabari
+    let gemInfo = null;
+    let hwForGem = null;
+    if (status !== undefined) {
+      try {
+        const Homework = require('../models/Homework');
+        const { applyGemForSubmission } = require('../utils/gemAward');
+        hwForGem = await Homework.findById(sub.homework).populate('group','name').select('title group kind').lean();
+        gemInfo = await applyGemForSubmission(sub, hwForGem);
+      } catch (e) { /* sukut */ }
+    }
+
     if (status === 'reviewed' || status === 'returned') {
       Teacher.updateOne({ _id: sub.teacher }, { $set: { lastReviewedAt: new Date() } }).catch(() => {});
 
-      // Student'ga bot orqali xabar
+      // Student'ga bot orqali xabar (gem ma'lumotlari bilan)
       try {
         const Student  = require('../models/Student');
-        const Homework = require('../models/Homework');
         const { notifyHomeworkReviewed } = require('../bot/notifications');
-        const [st, hw] = await Promise.all([
-          Student.findById(sub.student).select('telegramId name status').lean(),
-          Homework.findById(sub.homework).populate('group','name').select('title group').lean(),
-        ]);
+        const st = gemInfo?.studentTgId
+          ? { telegramId: gemInfo.studentTgId, name: gemInfo.studentName, status: 'active' }
+          : await Student.findById(sub.student).select('telegramId name status').lean();
         if (st?.telegramId && st.status === 'active') {
           notifyHomeworkReviewed({
             studentTgId: st.telegramId,
             studentName: st.name,
-            homeworkTitle: hw?.title,
-            groupName: hw?.group?.name,
+            homeworkTitle: hwForGem?.title,
+            groupName: hwForGem?.group?.name,
             status: sub.status,
             score: sub.score,
             feedback: sub.feedback,
+            gemDelta:  gemInfo?.delta || 0,
+            totalGems: gemInfo?.totalGems || 0,
           }).catch(() => {});
         }
       } catch {}
@@ -93,7 +105,7 @@ router.patch('/:id',
 
     const updated = await Submission.findById(sub._id)
       .populate('student','name hue photoUrl telegramUsername').lean();
-    res.json({ success:true, data: updated });
+    res.json({ success:true, data: updated, gem: gemInfo });
   })
 );
 
@@ -122,33 +134,39 @@ router.patch('/bulk',
     const hwIds = [...new Set(subs.map(s => String(s.homework)))];
     await Promise.all(hwIds.map(id => Submission.recomputeHomework(id)));
 
+    // Gem awarding — har submission alohida hisoblanadi
+    const gemResults = [];
+    try {
+      const Homework = require('../models/Homework');
+      const { applyGemForSubmission } = require('../utils/gemAward');
+      const subDocs = await Submission.find(filter);
+      const hwIdsList = [...new Set(subDocs.map(s => String(s.homework)))];
+      const hwList = await Homework.find({ _id:{ $in:hwIdsList } }).populate('group','name').select('title group kind').lean();
+      const hwMap = Object.fromEntries(hwList.map(h => [String(h._id), h]));
+      for (const sd of subDocs) {
+        const hw = hwMap[String(sd.homework)];
+        const info = await applyGemForSubmission(sd, hw);
+        gemResults.push({ subId: String(sd._id), studentId: String(sd.student), hw, info });
+      }
+    } catch {}
+
     if (status === 'reviewed' || status === 'returned') {
       const teacherIds = [...new Set(subs.map(s => String(s.teacher)))];
       Teacher.updateMany({ _id:{ $in:teacherIds } }, { $set:{ lastReviewedAt:new Date() } }).catch(() => {});
 
-      // Har student uchun bot xabari (parallel)
+      // Bot xabarlari — gem ma'lumotlari bilan
       try {
-        const Student  = require('../models/Student');
-        const Homework = require('../models/Homework');
         const { notifyHomeworkReviewed } = require('../bot/notifications');
-        const fullSubs = await Submission.find(filter)
-          .populate('student',  'telegramId name status')
-          .populate('homework', 'title group')
-          .lean();
-        const groupIds = [...new Set(fullSubs.map(s => String(s.group)))];
-        const Group = require('../models/Group');
-        const groups = await Group.find({ _id:{ $in:groupIds } }).select('name').lean();
-        const groupMap = Object.fromEntries(groups.map(g => [String(g._id), g.name]));
-        for (const s of fullSubs) {
-          if (s.student?.telegramId && s.student.status === 'active') {
+        for (const r of gemResults) {
+          if (r.info?.studentTgId) {
             notifyHomeworkReviewed({
-              studentTgId: s.student.telegramId,
-              studentName: s.student.name,
-              homeworkTitle: s.homework?.title,
-              groupName: groupMap[String(s.group)],
+              studentTgId: r.info.studentTgId,
+              studentName: r.info.studentName,
+              homeworkTitle: r.hw?.title,
+              groupName: r.hw?.group?.name,
               status,
-              score: s.score,
-              feedback: s.feedback,
+              gemDelta:  r.info.delta || 0,
+              totalGems: r.info.totalGems || 0,
             }).catch(() => {});
           }
         }

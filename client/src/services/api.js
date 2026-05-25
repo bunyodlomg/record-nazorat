@@ -87,6 +87,10 @@ const api = {
   notifications: {
     list: (params = {}) => http.get('/notifications', { params }),
   },
+  settings: {
+    get:    ()    => http.get('/settings'),
+    update: data  => http.patch('/settings', data),
+  },
   calendar: {
     events: (from, to, teacherId) => http.get('/calendar/events', { params: { from, to, teacherId } }),
   },

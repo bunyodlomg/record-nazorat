@@ -16,10 +16,11 @@ const BAR_BG = {
   3:'linear-gradient(180deg,#fed7aa,#ea580c)',
 };
 
-function PodiumCard({ entry, place, height, subtitleKey = 'subject', onClick }) {
+function PodiumCard({ entry, place, height, subtitleKey = 'subject', metricKey = 'score', metricLabel = 'Ball', metricIcon = null, onClick }) {
   const [anim, setAnim] = useState(false);
   useEffect(() => { const id = setTimeout(() => setAnim(true), 200 + place*100); return () => clearTimeout(id); }, []);
-  const score = useCountUp(anim ? entry.score : 0, 1000);
+  const target = entry[metricKey] || 0;
+  const score = useCountUp(anim ? target : 0, 1000);
   const m = MEDALS[place];
 
   const subtitle =
@@ -51,19 +52,23 @@ function PodiumCard({ entry, place, height, subtitleKey = 'subject', onClick }) 
           display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
           color:'#fff', boxShadow:'inset 0 1px 0 rgba(255,255,255,0.2)' }}>
         {anim && <>
-          <div style={{ fontFamily:'var(--display)', fontSize:place===1?38:26, fontWeight:800, letterSpacing:'-0.04em' }}>{score}</div>
-          <div style={{ fontSize:10.5, textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:700, opacity:0.9 }}>Ball</div>
+          <div style={{ fontFamily:'var(--display)', fontSize:place===1?38:26, fontWeight:800, letterSpacing:'-0.04em', display:'flex', alignItems:'center', gap:5 }}>
+            {metricIcon && <span style={{ fontSize:place===1?28:20 }}>{metricIcon}</span>}
+            {score}
+          </div>
+          <div style={{ fontSize:10.5, textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:700, opacity:0.9 }}>{metricLabel}</div>
         </>}
       </motion.div>
     </motion.div>
   );
 }
 
-function LeaderRow({ entry, idx, subtitleKey, onClick }) {
+function LeaderRow({ entry, idx, subtitleKey, metricKey = 'score', metricIcon = null, showBar = true, onClick }) {
   const subtitle =
     subtitleKey === 'group' ? (entry.group?.name || entry.group?.code || '—') :
     subtitleKey === 'count' ? `${entry.studentCount || 0} ta o'quvchi` :
                               (entry.subject || '—');
+  const value = entry[metricKey] || 0;
   return (
     <motion.button variants={listItem}
       onClick={() => onClick?.(entry)}
@@ -86,20 +91,23 @@ function LeaderRow({ entry, idx, subtitleKey, onClick }) {
         </div>
       </div>
       <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-        <div className="prog" style={{ width:60, height:6 }}>
-          <motion.div className="prog-fill"
-            initial={{ width:0 }} animate={{ width:`${entry.score || 0}%` }}
-            transition={{ duration:0.8, delay: Math.min(0.1 + idx*0.04, 1.2), ease:[0.22,1,0.36,1] }}/>
-        </div>
-        <div style={{ fontFamily:'var(--display)', fontSize:16, fontWeight:700, minWidth:36, textAlign:'right' }}>
-          {entry.score || 0}
+        {showBar && (
+          <div className="prog" style={{ width:60, height:6 }}>
+            <motion.div className="prog-fill"
+              initial={{ width:0 }} animate={{ width:`${Math.min(100, value)}%` }}
+              transition={{ duration:0.8, delay: Math.min(0.1 + idx*0.04, 1.2), ease:[0.22,1,0.36,1] }}/>
+          </div>
+        )}
+        <div style={{ fontFamily:'var(--display)', fontSize:16, fontWeight:700, minWidth:36, textAlign:'right', display:'flex', alignItems:'center', gap:4 }}>
+          {metricIcon && <span style={{ fontSize:14 }}>{metricIcon}</span>}
+          {value}
         </div>
       </div>
     </motion.button>
   );
 }
 
-function PodiumSection({ items, subtitleKey, onClick }) {
+function PodiumSection({ items, subtitleKey, metricKey, metricLabel, metricIcon, onClick }) {
   const top3 = items.slice(0, 3);
   return (
     <motion.div className="card-glass"
@@ -107,15 +115,15 @@ function PodiumSection({ items, subtitleKey, onClick }) {
       style={{ padding:'24px 16px', marginBottom:14, position:'relative', overflow:'hidden' }}>
       <div style={{ position:'absolute', inset:0, background:'radial-gradient(ellipse at top, rgba(20,184,166,0.10), transparent 60%)', pointerEvents:'none' }}/>
       <div className="podium" style={{ position:'relative', maxWidth:680, margin:'0 auto' }}>
-        {top3[1] && <PodiumCard entry={top3[1]} place={2} height={150} subtitleKey={subtitleKey} onClick={onClick}/>}
-        {top3[0] && <PodiumCard entry={top3[0]} place={1} height={200} subtitleKey={subtitleKey} onClick={onClick}/>}
-        {top3[2] && <PodiumCard entry={top3[2]} place={3} height={120} subtitleKey={subtitleKey} onClick={onClick}/>}
+        {top3[1] && <PodiumCard entry={top3[1]} place={2} height={150} subtitleKey={subtitleKey} metricKey={metricKey} metricLabel={metricLabel} metricIcon={metricIcon} onClick={onClick}/>}
+        {top3[0] && <PodiumCard entry={top3[0]} place={1} height={200} subtitleKey={subtitleKey} metricKey={metricKey} metricLabel={metricLabel} metricIcon={metricIcon} onClick={onClick}/>}
+        {top3[2] && <PodiumCard entry={top3[2]} place={3} height={120} subtitleKey={subtitleKey} metricKey={metricKey} metricLabel={metricLabel} metricIcon={metricIcon} onClick={onClick}/>}
       </div>
     </motion.div>
   );
 }
 
-function FullList({ items, title, sub, subtitleKey, onClick }) {
+function FullList({ items, title, sub, subtitleKey, metricKey = 'score', metricLabel = 'Ball', metricIcon = null, showBar = true, onClick }) {
   if (items.length === 0) {
     return (
       <div style={{ padding:'60px 0', textAlign:'center', color:'var(--text-3)' }}>
@@ -129,7 +137,7 @@ function FullList({ items, title, sub, subtitleKey, onClick }) {
   const useStagger = rest.length <= 20;
   return (
     <>
-      <PodiumSection items={items} subtitleKey={subtitleKey} onClick={onClick}/>
+      <PodiumSection items={items} subtitleKey={subtitleKey} metricKey={metricKey} metricLabel={metricLabel} metricIcon={metricIcon} onClick={onClick}/>
       {rest.length > 0 && (
         <div className="card">
           <div style={{ padding:'14px 16px', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 }}>
@@ -150,7 +158,9 @@ function FullList({ items, title, sub, subtitleKey, onClick }) {
             }}
             initial="hidden" animate="show">
             {rest.map((entry, i) => (
-              <LeaderRow key={entry._id} entry={entry} idx={i} subtitleKey={subtitleKey} onClick={onClick}/>
+              <LeaderRow key={entry._id} entry={entry} idx={i} subtitleKey={subtitleKey}
+                metricKey={metricKey} metricIcon={metricIcon} showBar={showBar}
+                onClick={onClick}/>
             ))}
           </motion.div>
         </div>
@@ -184,8 +194,8 @@ export default function LeaderboardPage({ onOpenTeacher, onOpenStudent }) {
           <h1 className="page-title">Reyting 🏆</h1>
           <div className="page-sub">
             {tab === 'teachers' && "Eng yaxshi o'qituvchilar"}
-            {tab === 'groups'   && "Guruhlar bo'yicha o'rtacha ko'rsatkich"}
-            {tab === 'students' && (groupId ? "Tanlangan guruh ichida" : "Barcha o'quvchilar")}
+            {tab === 'groups'   && "Guruhlar bo'yicha jami olmoslar"}
+            {tab === 'students' && (groupId ? "Tanlangan guruh ichida — olmos bo'yicha" : "Barcha o'quvchilar — olmos bo'yicha")}
           </div>
         </div>
       </div>
@@ -243,15 +253,17 @@ export default function LeaderboardPage({ onOpenTeacher, onOpenStudent }) {
           {tab === 'groups' && (
             gLoad ? <Spinner/> :
             gErr  ? <ErrorBox message={gErr} onRetry={gRefetch}/> :
-            <FullList items={groups.map(g => ({ ...g, score: g.avgScore }))}
-              title="Guruhlar reytingi" sub="O'rtacha ball asosida"
-              subtitleKey="count"/>
+            <FullList items={groups}
+              title="Guruhlar reytingi" sub="Guruhdagi o'quvchilar jami olmoslari"
+              subtitleKey="count"
+              metricKey="totalGems" metricLabel="Olmos" metricIcon="💎" showBar={false}/>
           )}
           {tab === 'students' && (
             sLoad ? <Spinner/> :
             sErr  ? <ErrorBox message={sErr} onRetry={sRefetch}/> :
-            <FullList items={students} title="O'quvchilar reytingi" sub="Faollik va davomat asosida"
+            <FullList items={students} title="O'quvchilar reytingi" sub="Tekshirilgan vazifalardan to'plangan olmoslar"
               subtitleKey="group"
+              metricKey="gems" metricLabel="Olmos" metricIcon="💎" showBar={false}
               onClick={onOpenStudent ? (e) => onOpenStudent(e._id) : null}/>
           )}
         </motion.div>

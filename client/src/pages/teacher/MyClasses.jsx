@@ -310,13 +310,30 @@ function GroupCard({ g, onAddStudents, onShareLink, onRemove }) {
       <div style={{
         display:'flex', alignItems:'center', justifyContent:'space-between',
         padding:'8px 11px', background:'var(--primary-bg)', borderRadius:9,
-        border:'1px solid var(--border)', marginBottom:10,
+        border:'1px solid var(--border)', marginBottom:8,
       }}>
         <span style={{ fontSize:11.5, color:'var(--text-2)' }}>O'quvchilar</span>
         <span style={{ fontFamily:'var(--display)', fontSize:17, fontWeight:700, color:'var(--primary-l)' }}>
           {g.studentCount || 0}
         </span>
       </div>
+
+      {g.topStudent && (
+        <div style={{
+          display:'flex', alignItems:'center', gap:8,
+          padding:'7px 10px', borderRadius:9,
+          background:'var(--bg-subtle)', border:'1px solid var(--border)',
+          marginBottom:10, fontSize:11.5,
+        }} title="Eng ko'p olmos to'plagan o'quvchi">
+          <span style={{ fontSize:13 }}>🏆</span>
+          <span style={{ flex:1, color:'var(--text-2)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+            {g.topStudent.name}
+          </span>
+          <span style={{ fontWeight:700, color:'var(--primary-l)', display:'flex', alignItems:'center', gap:3 }}>
+            💎 {g.topStudent.gems}
+          </span>
+        </div>
+      )}
 
       <div style={{ display:'flex', gap:6, marginTop:'auto' }}>
         <button className="btn btn-primary btn-sm" style={{ flex:1, justifyContent:'center', fontSize:12 }}

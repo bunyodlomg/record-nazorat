@@ -17,6 +17,9 @@ const submissionSchema = new mongoose.Schema({
 
   submittedAt: { type:Date, default:null },
   reviewedAt:  { type:Date, default:null },
+
+  // Reviewed bo'lganda berilgan 💎 qiymati — qaytarilsa olib qo'yish uchun saqlanadi
+  gemsAwarded: { type:Number, default:0, min:0 },
 }, { timestamps:true });
 
 // Bir vazifaga bir o'quvchidan faqat bitta submission

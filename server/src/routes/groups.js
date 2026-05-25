@@ -36,18 +36,33 @@ router.get('/', asyncHandler(async (req,res) => {
     Group.countDocuments(filter),
   ]);
 
-  // Students count har bir guruh uchun
+  // Students count va top gem oluvchi har bir guruh uchun
   const groupIds = data.map(g => g._id);
-  const counts = await Student.aggregate([
-    { $match: { group: { $in: groupIds }, status: 'active' } },
-    { $group: { _id: '$group', n: { $sum: 1 } } },
+  const [counts, topStudents] = await Promise.all([
+    Student.aggregate([
+      { $match: { group: { $in: groupIds }, status: 'active' } },
+      { $group: { _id: '$group', n: { $sum: 1 }, totalGems: { $sum: '$gems' } } },
+    ]),
+    // Har guruh uchun eng yuqori gem oluvchi (gems > 0)
+    Student.aggregate([
+      { $match: { group: { $in: groupIds }, status: 'active', gems: { $gt: 0 } } },
+      { $sort: { group: 1, gems: -1 } },
+      { $group: { _id: '$group', topName: { $first: '$name' }, topGems: { $first: '$gems' }, topHue: { $first: '$hue' }, topId: { $first: '$_id' } } },
+    ]),
   ]);
-  const countMap = Object.fromEntries(counts.map(c => [String(c._id), c.n]));
-  const enriched = data.map(g => ({
-    ...g.toObject({ virtuals:false }),
-    teacher: g.teacher,
-    studentCount: countMap[String(g._id)] || 0,
-  }));
+  const countMap = Object.fromEntries(counts.map(c => [String(c._id), c]));
+  const topMap   = Object.fromEntries(topStudents.map(t => [String(t._id), t]));
+  const enriched = data.map(g => {
+    const id = String(g._id);
+    const top = topMap[id];
+    return {
+      ...g.toObject({ virtuals:false }),
+      teacher: g.teacher,
+      studentCount: countMap[id]?.n || 0,
+      totalGems:    countMap[id]?.totalGems || 0,
+      topStudent:   top ? { _id: top.topId, name: top.topName, gems: top.topGems, hue: top.topHue } : null,
+    };
+  });
 
   res.json({ success:true, data: enriched, pagination:{ total, page:Number(page), limit:Number(limit) } });
 }));

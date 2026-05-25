@@ -126,19 +126,29 @@ async function notifyHomeworkAssigned(homework, group, students) {
 }
 
 /**
- * Student vazifasi tekshirildi — ball va izoh bilan.
+ * Student vazifasi tekshirildi — ball, izoh va olmos.
  */
-async function notifyHomeworkReviewed({ studentTgId, studentName, homeworkTitle, groupName, status, score, feedback }) {
+async function notifyHomeworkReviewed({ studentTgId, studentName, homeworkTitle, groupName, status, score, feedback, gemDelta, totalGems }) {
   if (!studentTgId) return;
   const statusLabel = status === 'reviewed' ? '✅ Tekshirildi'
                     : status === 'returned' ? '🔄 Qaytarildi'
                     : status;
+
+  // Olmos qatori
+  let gemLine = '';
+  if (gemDelta && gemDelta > 0) {
+    gemLine = `\n💎 *+${gemDelta} olmos*` + (Number.isFinite(totalGems) ? ` _(jami: ${totalGems})_` : '');
+  } else if (gemDelta && gemDelta < 0) {
+    gemLine = `\n💎 ${gemDelta} olmos` + (Number.isFinite(totalGems) ? ` _(jami: ${totalGems})_` : '');
+  }
+
   const text =
     `${statusLabel}\n\n` +
     `Vazifa: *${escapeMd(homeworkTitle || '—')}*\n` +
     (groupName ? `Guruh: ${escapeMd(groupName)}\n` : '') +
     (Number.isFinite(score) ? `Ball: *${score}/100*\n` : '') +
-    (feedback ? `\nIzoh: ${escapeMd(feedback)}` : '');
+    gemLine +
+    (feedback ? `\n\nIzoh: ${escapeMd(feedback)}` : '');
   await sendTo(studentTgId, text);
 }
 

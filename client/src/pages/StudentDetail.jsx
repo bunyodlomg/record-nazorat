@@ -93,9 +93,9 @@ export default function StudentDetailPage({ studentId, onBack }) {
   if (error || !s) return <div className="page"><ErrorBox message={error || 'Topilmadi'} onRetry={refetch}/></div>;
 
   const stats = [
-    { label: 'Faollik bali', val: s.score, suffix: '/100' },
-    { label: 'Davomat',      val: s.attendance, suffix: '%' },
-    { label: 'Vazifa',       val: s.homeworkRate, suffix: '%' },
+    { label: '💎 Olmos (jami)',    val: s.gems ?? 0,         suffix: '',     accent: true },
+    { label: '💎 Bu hafta',        val: s.gemsThisWeek ?? 0, suffix: '',     accent: true },
+    { label: 'Vazifa',             val: s.homeworkRate,      suffix: '%' },
   ];
 
   const remove = async () => {
@@ -163,11 +163,22 @@ export default function StudentDetailPage({ studentId, onBack }) {
         initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.1 }}
         style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))', gap:10, marginBottom:14 }}>
         {stats.map((st, i) => (
-          <div key={st.label} className="card" style={{ padding:'14px 16px' }}>
-            <div style={{ fontSize:11, fontWeight:600, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:8 }}>
+          <div key={st.label} className="card" style={{
+            padding:'14px 16px',
+            background: st.accent ? 'var(--primary-bg)' : undefined,
+            border: st.accent ? '1px solid var(--primary)' : '1px solid var(--border)',
+          }}>
+            <div style={{
+              fontSize:11, fontWeight:600,
+              color: st.accent ? 'var(--primary-l)' : 'var(--text-3)',
+              textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:8,
+            }}>
               {st.label}
             </div>
-            <div style={{ fontFamily:'var(--display)', fontSize:30, fontWeight:700, letterSpacing:'-0.04em', color:'var(--text)', lineHeight:1 }}>
+            <div style={{
+              fontFamily:'var(--display)', fontSize:30, fontWeight:700, letterSpacing:'-0.04em',
+              color: st.accent ? 'var(--primary-l)' : 'var(--text)', lineHeight:1,
+            }}>
               {st.val ?? 0}<span style={{ fontSize:14, color:'var(--text-3)' }}>{st.suffix}</span>
             </div>
           </div>
