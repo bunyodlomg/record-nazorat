@@ -13,7 +13,19 @@ const homeworkSchema = new mongoose.Schema({
   dueDate:     { type:Date, required:true },
   description: { type:String, maxlength:1000, default:'' },
   autoLesson:  { type:Boolean, default:false, index:true },
+
+  // Vazifa turi: 'lesson' — dars vazifasi (kunlik), 'speaking' — haftalik speaking kvota
+  kind:        { type:String, enum:['lesson','speaking'], default:'lesson', index:true },
+  // Speaking uchun haftaning boshi (dushanba) — bir guruh+hafta+ketma-ket raqam uniq
+  weekStart:   { type:Date, default:null, index:true },
+  weekSeq:     { type:Number, default:null, min:1, max:10 },
 }, { timestamps:true, toJSON:{ virtuals:true } });
+
+// Speaking unique: (group, weekStart, weekSeq) bir guruh hafta-da ikki marta yaratilmasin
+homeworkSchema.index(
+  { group:1, weekStart:1, weekSeq:1 },
+  { unique:true, partialFilterExpression: { kind:'speaking' } },
+);
 
 homeworkSchema.virtual('dueLabel').get(function() {
   const diff  = this.dueDate - new Date();

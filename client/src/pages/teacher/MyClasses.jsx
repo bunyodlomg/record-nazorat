@@ -14,7 +14,7 @@ const DAYS = [
 ];
 const dayLabels = (days = []) => DAYS.filter(d => days.includes(d.id)).map(d => d.label).join(' · ');
 
-const EMPTY_FORM = { name:'', scheduleDays:[] };
+const EMPTY_FORM = { name:'', scheduleDays:[], speakingPerWeek:2 };
 
 function GroupCreateForm({ open, onClose, onSaved }) {
   const [form, setForm] = useState(EMPTY_FORM);
@@ -35,6 +35,7 @@ function GroupCreateForm({ open, onClose, onSaved }) {
       await api.groups.create({
         name: form.name.trim(),
         scheduleDays: form.scheduleDays,
+        speakingPerWeek: form.speakingPerWeek,
       });
       sfx.success();
       onSaved?.();
@@ -79,6 +80,19 @@ function GroupCreateForm({ open, onClose, onSaved }) {
               </button>
             );
           })}
+        </div>
+      </Field>
+      <Field label="Haftalik speaking soni" hint="Har hafta avto-yaratiladi (yakshanbagacha topshiriladi)">
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <button type="button" onClick={() => upd('speakingPerWeek', Math.max(0, (form.speakingPerWeek || 0) - 1))}
+            className="btn btn-ghost btn-icon" style={{ width:38, height:38, fontSize:18, fontWeight:700 }}>−</button>
+          <div style={{
+            flex:1, textAlign:'center', padding:'10px 12px', borderRadius:10,
+            background:'var(--bg-subtle)', border:'1px solid var(--border)',
+            fontFamily:'var(--display)', fontSize:18, fontWeight:700, color:'var(--primary-l)',
+          }}>{form.speakingPerWeek ?? 2}</div>
+          <button type="button" onClick={() => upd('speakingPerWeek', Math.min(7, (form.speakingPerWeek || 0) + 1))}
+            className="btn btn-ghost btn-icon" style={{ width:38, height:38, fontSize:18, fontWeight:700 }}>+</button>
         </div>
       </Field>
     </Modal>

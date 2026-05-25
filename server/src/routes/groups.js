@@ -94,6 +94,7 @@ router.post('/',
     body('scheduleDays').optional().isArray(),
     body('scheduleTime').optional({ nullable:true }).isString().trim(),
     body('teacher').optional({ nullable:true }).isMongoId(),
+    body('speakingPerWeek').optional().isInt({ min:0, max:7 }),
   ],
   ok, asyncHandler(async (req,res) => {
     const payload = { ...req.body };

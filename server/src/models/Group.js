@@ -13,6 +13,9 @@ const groupSchema = new mongoose.Schema({
   startDate:  { type:Date, default:Date.now },
   isActive:   { type:Boolean, default:true, index:true },
 
+  // Haftalik speaking vazifalar soni — har dushanba auto-yaratiladi (dueDate=yakshanba)
+  speakingPerWeek: { type:Number, default:2, min:0, max:7 },
+
   // Student'lar uchun umumiy invite token — Telegram bot orqali ulanish uchun
   // Link: https://t.me/<bot>?start=g_<token>
   inviteToken: { type:String, default:null, index:true, sparse:true, unique:true },

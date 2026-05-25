@@ -7,6 +7,7 @@ const Student    = require('../models/Student');
 const { protect, requireActive } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { ensureLessonHomeworkForTeacher, ensureLessonHomeworkForAll } = require('../utils/ensureLessonHomework');
+const { ensureSpeakingHomeworkForTeacher, ensureSpeakingHomeworkForAll } = require('../utils/ensureSpeakingHomework');
 
 const router = express.Router();
 router.use(protect, requireActive);
@@ -17,26 +18,39 @@ const ok = (req,res,next) => {
   next();
 };
 
-// LIST  GET /api/homework?col=pending&teacherId=&groupId=
+// LIST  GET /api/homework?col=pending&teacherId=&groupId=&kind=
 router.get('/', asyncHandler(async (req,res) => {
-  const { col, teacherId, groupId, page=1, limit=50 } = req.query;
+  const { col, teacherId, groupId, kind, page=1, limit=50 } = req.query;
   const filter = {};
   if (col)       filter.col     = col;
   if (teacherId) filter.teacher = teacherId;
   if (groupId)   filter.group   = groupId;
+  if (kind && ['lesson','speaking'].includes(kind)) filter.kind = kind;
   // Teacher faqat o'zining vazifalarini ko'radi
   if (req.user.role === 'teacher' && !teacherId) {
     if (!req.user.teacherRef) return res.json({ success:true, data:[] });
     filter.teacher = req.user.teacherRef;
   }
 
-  // Avto vazifa yaratish — dars kunlari bo'yicha yetishmagan vazifalar
+  // Avto vazifa yaratish — dars kunlari va haftalik speaking bo'yicha yetishmagan vazifalar
   try {
     if (req.user.role === 'teacher' && req.user.teacherRef) {
-      await ensureLessonHomeworkForTeacher(req.user.teacherRef);
+      await Promise.all([
+        ensureLessonHomeworkForTeacher(req.user.teacherRef),
+        ensureSpeakingHomeworkForTeacher(req.user.teacherRef),
+      ]);
     } else if (req.user.role === 'admin') {
-      if (teacherId)      await ensureLessonHomeworkForTeacher(teacherId);
-      else if (!groupId)  await ensureLessonHomeworkForAll();
+      if (teacherId) {
+        await Promise.all([
+          ensureLessonHomeworkForTeacher(teacherId),
+          ensureSpeakingHomeworkForTeacher(teacherId),
+        ]);
+      } else if (!groupId) {
+        await Promise.all([
+          ensureLessonHomeworkForAll(),
+          ensureSpeakingHomeworkForAll(),
+        ]);
+      }
     }
   } catch (e) { /* sukut — list'ni baribir qaytaramiz */ }
 
