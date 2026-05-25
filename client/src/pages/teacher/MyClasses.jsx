@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Icon } from '../../components/ui.jsx';
 import { Spinner, ErrorBox, listContainer, listItem } from '../../components/Feedback.jsx';
-import { Modal, Field, Input } from '../../components/Modal.jsx';
+import { Modal, Field } from '../../components/Modal.jsx';
 import { useFetch } from '../../hooks/useFetch.js';
 import api from '../../services/api.js';
 import { sfx } from '../../hooks/useSound.js';
@@ -95,98 +95,6 @@ function GroupCreateForm({ open, onClose, onSaved }) {
             className="btn btn-ghost btn-icon" style={{ width:38, height:38, fontSize:18, fontWeight:700 }}>+</button>
         </div>
       </Field>
-    </Modal>
-  );
-}
-
-function AddStudentsModal({ open, onClose, group, onSaved }) {
-  const [name, setName] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [added, setAdded] = useState([]); // shu sessiya'da qo'shilganlar
-  const inputRef = useRef(null);
-
-  useEffect(() => {
-    if (open) { setName(''); setError(''); setAdded([]); }
-  }, [open]);
-
-  // Modal ochilgach yoki qo'shilgandan keyin input'ga focus
-  useEffect(() => {
-    if (open && !saving) {
-      const t = setTimeout(() => inputRef.current?.focus(), 100);
-      return () => clearTimeout(t);
-    }
-  }, [open, saving, added.length]);
-
-  const submit = async () => {
-    const n = name.trim();
-    if (!n || !group?._id || saving) return;
-    setError(''); setSaving(true);
-    try {
-      await api.students.create({ name: n, group: group._id });
-      sfx.success();
-      setAdded(a => [...a, n]);
-      setName('');
-      onSaved?.();
-    } catch (e) {
-      setError(e.message || 'Xatolik');
-    } finally { setSaving(false); }
-  };
-
-  const onKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      submit();
-    }
-  };
-
-  if (!group) return null;
-  return (
-    <Modal open={open} onClose={onClose}
-      title={`${group.name} — o'quvchi qo'shish`}
-      subtitle={`Bittadan kiriting · ${group.code}`}
-      width={420}
-      footer={<>
-        <button className="btn btn-ghost" onClick={onClose}>
-          {added.length > 0 ? 'Yopish' : 'Bekor'}
-        </button>
-        <button className="btn btn-primary" onClick={submit} disabled={saving || !name.trim()}>
-          {saving ? 'Qo\'shilmoqda...' : "+ Qo'shish"}
-        </button>
-      </>}>
-      {error && <div style={{ marginBottom:12, padding:'10px 12px', background:'var(--rose-bg)', borderRadius:8, color:'var(--rose)', fontSize:12.5 }}>{error}</div>}
-
-      <Field label="Ism familya">
-        <Input
-          ref={inputRef}
-          value={name}
-          onChange={e => setName(e.target.value)}
-          onKeyDown={onKeyDown}
-          placeholder="Ali Valiyev"
-          autoFocus/>
-      </Field>
-      <div style={{ fontSize:11.5, color:'var(--text-3)', marginTop:-6, marginBottom:14 }}>
-        Enter — qo'shish va keyingisi
-      </div>
-
-      {added.length > 0 && (
-        <div style={{
-          padding:'10px 12px', background:'var(--primary-bg)',
-          border:'1px solid var(--border)', borderRadius:10,
-        }}>
-          <div style={{ fontSize:11, fontWeight:700, color:'var(--primary-l)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:7 }}>
-            Bu safar qo'shildi · {added.length}
-          </div>
-          <div style={{ display:'flex', flexDirection:'column', gap:5, maxHeight:160, overflowY:'auto' }}>
-            {added.map((nm, i) => (
-              <div key={i} style={{ fontSize:12.5, display:'flex', alignItems:'center', gap:7 }}>
-                <Icon name="check" size={12} color="var(--primary-l)"/>
-                <span>{nm}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </Modal>
   );
 }
@@ -286,7 +194,7 @@ function InviteLinkModal({ open, onClose, group }) {
   );
 }
 
-function GroupCard({ g, onAddStudents, onShareLink, onRemove, onOpenGroup }) {
+function GroupCard({ g, onShareLink, onRemove, onOpenGroup }) {
   return (
     <motion.div className="card card-hov" variants={listItem}
       whileHover={{ y:-2 }}
@@ -338,12 +246,8 @@ function GroupCard({ g, onAddStudents, onShareLink, onRemove, onOpenGroup }) {
 
       <div style={{ display:'flex', gap:6, marginTop:'auto' }} onClick={e => e.stopPropagation()}>
         <button className="btn btn-primary btn-sm" style={{ flex:1, justifyContent:'center', fontSize:12 }}
-          onClick={() => onAddStudents(g)}>
-          <Icon name="plus" size={11}/> Qo'lda
-        </button>
-        <button className="btn btn-ghost btn-sm" style={{ flex:1, justifyContent:'center', fontSize:12 }}
-          onClick={() => onShareLink(g)} title="Telegram orqali ulashish">
-          🔗 Link
+          onClick={() => onShareLink(g)} title="O'quvchilar shu link orqali qo'shiladi">
+          🔗 Taklif linki
         </button>
         <button className="btn btn-ghost btn-icon" style={{ width:30, height:30, color:'var(--rose)' }}
           onClick={() => onRemove(g)} title="O'chirish">
@@ -423,7 +327,6 @@ function PendingStudentsPanel({ onChange }) {
 export default function MyClasses({ onOpenStudent, onOpenGroup }) {
   const [tab, setTab] = useState('groups');
   const [createOpen, setCreateOpen] = useState(false);
-  const [addForGroup, setAddForGroup] = useState(null);
   const [linkForGroup, setLinkForGroup] = useState(null);
   const { data, loading, error, refetch } = useFetch(() => api.groups.list({ limit:100 }));
   const { data: pendingData, refetch: refetchPending } = useFetch(() => api.students.pending());
@@ -505,7 +408,6 @@ export default function MyClasses({ onOpenStudent, onOpenGroup }) {
         <motion.div className="groups-grid" variants={listContainer} initial="hidden" animate="show">
           {groups.map(g => (
             <GroupCard key={g._id} g={g}
-              onAddStudents={setAddForGroup}
               onShareLink={setLinkForGroup}
               onRemove={remove}
               onOpenGroup={onOpenGroup}/>
@@ -516,12 +418,6 @@ export default function MyClasses({ onOpenStudent, onOpenGroup }) {
       <GroupCreateForm
         open={createOpen}
         onClose={() => setCreateOpen(false)}
-        onSaved={refetch}/>
-
-      <AddStudentsModal
-        open={!!addForGroup}
-        group={addForGroup}
-        onClose={() => setAddForGroup(null)}
         onSaved={refetch}/>
 
       <InviteLinkModal

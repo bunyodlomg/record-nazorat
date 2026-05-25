@@ -71,7 +71,7 @@ router.get('/:id', param('id').isMongoId(), ok, asyncHandler(async (req, res) =>
   res.json({ success:true, data: s });
 }));
 
-// CREATE /api/students  (admin yoki guruh teacheri)
+// CREATE /api/students  (faqat admin — teacher endi faqat link orqali qo'sha oladi)
 router.post('/',
   [
     body('name').notEmpty().withMessage('Ism majburiy').isLength({ max:120 }).trim(),
@@ -83,10 +83,8 @@ router.post('/',
     const group = await Group.findById(req.body.group);
     if (!group) return res.status(404).json({ success:false, message:"Guruh topilmadi" });
 
-    const isOwnerTeacher = req.user.role === 'teacher' && req.user.teacherRef
-      && String(group.teacher) === String(req.user.teacherRef);
-    if (req.user.role !== 'admin' && !isOwnerTeacher) {
-      return res.status(403).json({ success:false, message:"Ruxsat yo'q" });
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ success:false, message:"O'quvchini faqat admin qo'lda qo'sha oladi. Teacher link orqali qo'shadi." });
     }
 
     const payload = {

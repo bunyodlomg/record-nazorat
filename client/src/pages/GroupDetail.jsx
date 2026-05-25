@@ -208,7 +208,7 @@ export default function GroupDetailPage({ groupId, onBack, onOpenStudent, onOpen
       <motion.div className="card-glass"
         initial={{ opacity:0, scale:0.97 }} animate={{ opacity:1, scale:1 }} transition={{ delay:0.05, duration:0.4 }}
         style={{ padding:20, marginBottom:12, position:'relative', overflow:'hidden' }}>
-        <div style={{ position:'absolute', inset:0, background:`radial-gradient(ellipse at top right, oklch(0.74 0.16 ${g.hue ?? 200} / 0.18), transparent 60%)`, pointerEvents:'none' }}/>
+        <div style={{ position:'absolute', inset:0, background:`radial-gradient(ellipse at top right, oklch(0.74 0.16 ${g.teacher?.hue ?? 200} / 0.18), transparent 60%)`, pointerEvents:'none' }}/>
         <div style={{ display:'flex', alignItems:'flex-start', gap:14, flexWrap:'wrap' }}>
           <div style={{
             width:60, height:60, borderRadius:14, flexShrink:0,
