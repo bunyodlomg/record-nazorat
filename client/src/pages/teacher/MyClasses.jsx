@@ -99,102 +99,7 @@ function GroupCreateForm({ open, onClose, onSaved }) {
   );
 }
 
-function InviteLinkModal({ open, onClose, group }) {
-  const [link, setLink] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    if (!open || !group?._id) return;
-    setError(''); setCopied(false); setLoading(true);
-    api.groups.inviteLink(group._id)
-      .then(r => setLink(r?.data?.link || ''))
-      .catch(e => setError(e.message || 'Xatolik'))
-      .finally(() => setLoading(false));
-  }, [open, group?._id]);
-
-  const rotate = async () => {
-    if (!group?._id) return;
-    if (!confirm('Yangi link yaratilsa eski havola bekor bo\'ladi. Davom etamizmi?')) return;
-    setLoading(true); setError(''); setCopied(false);
-    try {
-      const r = await api.groups.rotateInviteLink(group._id);
-      setLink(r?.data?.link || '');
-      sfx.success();
-    } catch (e) { setError(e.message || 'Xatolik'); }
-    finally { setLoading(false); }
-  };
-
-  const copy = async () => {
-    if (!link) return;
-    try { await navigator.clipboard.writeText(link); setCopied(true); sfx.success(); setTimeout(() => setCopied(false), 1500); }
-    catch { setError('Nusxalab bo\'lmadi'); }
-  };
-
-  const share = () => {
-    if (!link) return;
-    const text = `${group?.name || 'Guruh'}ga qo'shilish uchun:`;
-    if (navigator.share) {
-      navigator.share({ title: group?.name, text, url: link }).catch(() => {});
-    } else {
-      window.open(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`, '_blank');
-    }
-  };
-
-  if (!group) return null;
-  return (
-    <Modal open={open} onClose={onClose}
-      title={`${group.name} — taklif linki`}
-      subtitle="O'quvchilar bot orqali ulanadi. Tasdiqlash sizga keladi."
-      width={460}
-      footer={<>
-        <button className="btn btn-ghost" onClick={rotate} disabled={loading} title="Eski linkni bekor qilib yangisini yaratish">
-          🔄 Yangi link
-        </button>
-        <button className="btn btn-primary" onClick={onClose}>Yopish</button>
-      </>}>
-      {error && <div style={{ marginBottom:12, padding:'10px 12px', background:'var(--rose-bg)', borderRadius:8, color:'var(--rose)', fontSize:12.5 }}>{error}</div>}
-
-      {loading ? (
-        <div style={{ padding:'30px 0', textAlign:'center', color:'var(--text-3)', fontSize:13 }}>Yuklanmoqda…</div>
-      ) : (
-        <>
-          <div style={{
-            padding:'12px 14px', background:'var(--bg-subtle)', border:'1px dashed var(--border)',
-            borderRadius:10, fontSize:12.5, fontFamily:'var(--mono)', wordBreak:'break-all',
-            color:'var(--text-1)', marginBottom:12,
-          }}>
-            {link || '—'}
-          </div>
-
-          <div style={{ display:'flex', gap:8, marginBottom:14 }}>
-            <button className="btn btn-primary" style={{ flex:1, justifyContent:'center' }} onClick={copy} disabled={!link}>
-              <Icon name="check" size={12}/> {copied ? 'Nusxalandi' : 'Nusxalash'}
-            </button>
-            <button className="btn btn-ghost" style={{ flex:1, justifyContent:'center' }} onClick={share} disabled={!link}>
-              Ulashish
-            </button>
-          </div>
-
-          <div style={{
-            padding:'10px 12px', background:'var(--primary-bg)', borderRadius:10,
-            border:'1px solid var(--border)', fontSize:12, color:'var(--text-2)', lineHeight:1.55,
-          }}>
-            <div style={{ fontWeight:700, color:'var(--primary-l)', marginBottom:4, fontSize:11, textTransform:'uppercase', letterSpacing:'0.05em' }}>
-              Qanday ishlaydi
-            </div>
-            1. O'quvchi linkni bosadi — bot ochiladi<br/>
-            2. Ismini yozadi — siz bu yerda "Yangi o'quvchilar"da ko'rasiz<br/>
-            3. Siz tasdiqlaganingizdan keyin u bot orqali vazifa va baholaringizni oladi
-          </div>
-        </>
-      )}
-    </Modal>
-  );
-}
-
-function GroupCard({ g, onShareLink, onRemove, onOpenGroup }) {
+function GroupCard({ g, onRemove, onOpenGroup }) {
   return (
     <motion.div className="card card-hov" variants={listItem}
       whileHover={{ y:-2 }}
@@ -244,14 +149,10 @@ function GroupCard({ g, onShareLink, onRemove, onOpenGroup }) {
         </div>
       )}
 
-      <div style={{ display:'flex', gap:6, marginTop:'auto' }} onClick={e => e.stopPropagation()}>
-        <button className="btn btn-primary btn-sm" style={{ flex:1, justifyContent:'center', fontSize:12 }}
-          onClick={() => onShareLink(g)} title="O'quvchilar shu link orqali qo'shiladi">
-          🔗 Taklif linki
-        </button>
+      <div style={{ display:'flex', gap:6, marginTop:'auto', justifyContent:'flex-end' }} onClick={e => e.stopPropagation()}>
         <button className="btn btn-ghost btn-icon" style={{ width:30, height:30, color:'var(--rose)' }}
           onClick={() => onRemove(g)} title="O'chirish">
-          <Icon name="alert" size={12}/>
+          <Icon name="trash" size={12}/>
         </button>
       </div>
     </motion.div>
@@ -327,7 +228,6 @@ function PendingStudentsPanel({ onChange }) {
 export default function MyClasses({ onOpenStudent, onOpenGroup }) {
   const [tab, setTab] = useState('groups');
   const [createOpen, setCreateOpen] = useState(false);
-  const [linkForGroup, setLinkForGroup] = useState(null);
   const { data, loading, error, refetch } = useFetch(() => api.groups.list({ limit:100 }));
   const { data: pendingData, refetch: refetchPending } = useFetch(() => api.students.pending());
   const groups = Array.isArray(data) ? data : (data?.data ?? []);
@@ -408,7 +308,6 @@ export default function MyClasses({ onOpenStudent, onOpenGroup }) {
         <motion.div className="groups-grid" variants={listContainer} initial="hidden" animate="show">
           {groups.map(g => (
             <GroupCard key={g._id} g={g}
-              onShareLink={setLinkForGroup}
               onRemove={remove}
               onOpenGroup={onOpenGroup}/>
           ))}
@@ -419,11 +318,6 @@ export default function MyClasses({ onOpenStudent, onOpenGroup }) {
         open={createOpen}
         onClose={() => setCreateOpen(false)}
         onSaved={refetch}/>
-
-      <InviteLinkModal
-        open={!!linkForGroup}
-        group={linkForGroup}
-        onClose={() => setLinkForGroup(null)}/>
     </motion.div>
   );
 }

@@ -4,6 +4,7 @@ const Student = require('../models/Student');
 const inviteCache = require('./inviteCache');
 const { startStudentJoin, startStudentJoinByInvite, completeStudentJoin, getSession, clearSession } = require('./studentJoin');
 const { notifyStudentPending } = require('./notifications');
+const { handleStudentMessage } = require('./studentSubmit');
 
 /**
  * WebApp tugma — agar inviteToken berilgan bo'lsa, URL'ga ?invite=xxx
@@ -164,54 +165,72 @@ module.exports = function attach(bot) {
     await ctx.replyWithMarkdown(text);
   });
 
-  // Boshqa har qanday matn — turli holatlar:
+  // Boshqa har qanday xabar — text yoki media (voice/photo/video/file):
   bot.on('message', async (ctx) => {
-    if (!ctx.message?.text || ctx.message.text.startsWith('/')) return;
+    const text = ctx.message?.text;
+    // /command bo'lsa o'tkazib yuboramiz (yuqorida bot.command bilan handle qilingan)
+    if (text && text.startsWith('/')) return;
     const tgId = String(ctx.from.id);
-    const text = ctx.message.text.trim();
 
-    // ── 1) Student join sessiyasi (ism kutilmoqda)
-    const session = getSession(tgId);
-    if (session) {
-      const result = await completeStudentJoin(tgId, text, ctx.from);
-      if (result.error) {
-        await ctx.reply(`❌ ${result.error}`);
+    // ── 1) Student join sessiyasi (ism kutilmoqda — faqat text)
+    if (text) {
+      const session = getSession(tgId);
+      if (session) {
+        const result = await completeStudentJoin(tgId, text.trim(), ctx.from);
+        if (result.error) {
+          await ctx.reply(`❌ ${result.error}`);
+          return;
+        }
+        await ctx.replyWithMarkdown(
+          `✅ *${result.student.name}*, ro'yxatdan o'tdingiz!\n\n` +
+          `Guruh: *${result.group.name}* (${result.group.code})\n` +
+          `Holat: ⏳ *O'qituvchi tasdiqlashini kuting*\n\n` +
+          `Tasdiqlangach, vazifa va baholaringiz haqida shu botga xabar keladi.`
+        );
+        if (result.teacherTgId) {
+          notifyStudentPending(result.teacherTgId, {
+            studentName: result.student.name,
+            groupName:   result.group.name,
+            groupCode:   result.group.code,
+            telegramUsername: ctx.from.username || null,
+          }).catch(() => {});
+        }
         return;
       }
-      await ctx.replyWithMarkdown(
-        `✅ *${result.student.name}*, ro'yxatdan o'tdingiz!\n\n` +
-        `Guruh: *${result.group.name}* (${result.group.code})\n` +
-        `Holat: ⏳ *O'qituvchi tasdiqlashini kuting*\n\n` +
-        `Tasdiqlangach, vazifa va baholaringiz haqida shu botga xabar keladi.`
-      );
-      // Teacher'ga xabar
-      if (result.teacherTgId) {
-        notifyStudentPending(result.teacherTgId, {
-          studentName: result.student.name,
-          groupName:   result.group.name,
-          groupCode:   result.group.code,
-          telegramUsername: ctx.from.username || null,
-        }).catch(() => {});
-      }
-      return;
     }
 
-    // ── 2) Student rolli bot foydalanuvchisi — Mini App'ga yo'naltirmaymiz
-    const student = await Student.findOne({ telegramId: tgId }).select('status group').lean();
+    // ── 2) Student bo'lsa — pending/active holatga qarab
+    const student = await Student.findOne({ telegramId: tgId }).lean();
     if (student) {
-      await ctx.reply(
-        student.status === 'pending'
-          ? "⏳ O'qituvchi tasdiqlashini kuting. Tasdiqlangach xabarlar shu botga keladi."
-          : "📬 Vazifa va baholaringiz haqida xabarlar shu botga avtomatik keladi."
-      );
+      if (student.status === 'pending') {
+        await ctx.reply("⏳ O'qituvchi tasdiqlashini kuting. Tasdiqlangach xabarlar shu botga keladi.");
+        return;
+      }
+      if (student.status === 'active') {
+        // Vazifa topshirish — har qanday xabar (text yoki media) teacher'ga forward qilinadi
+        try {
+          const res = await handleStudentMessage(ctx, student);
+          if (res?.replyText) {
+            await ctx.replyWithMarkdown(res.replyText);
+          }
+        } catch (e) {
+          console.error('[bot] student submit error:', e);
+          await ctx.reply("Yuborishda xatolik. Birozdan keyin qaytadan urinib ko'ring.");
+        }
+        return;
+      }
+      // rejected / inactive
+      await ctx.reply("Sizning hisobingiz faol emas. O'qituvchingiz bilan bog'laning.");
       return;
     }
 
-    // ── 3) Boshqa hollar (admin/teacher yoki noma'lum) — Mini App tugmasi
-    const kb = webAppButton('🚀 Mini App ochish');
-    await ctx.reply(
-      'Mini App orqali tizimni boshqarishingiz mumkin. /help — yordam',
-      kb || {}
-    );
+    // ── 3) Boshqa hollar (admin/teacher yoki noma'lum) — faqat textga javob
+    if (text) {
+      const kb = webAppButton('🚀 Mini App ochish');
+      await ctx.reply(
+        'Mini App orqali tizimni boshqarishingiz mumkin. /help — yordam',
+        kb || {}
+      );
+    }
   });
 };

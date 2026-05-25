@@ -83,17 +83,13 @@ export default function SettingsPage() {
       initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.32 }}>
       <div className="page-hd">
         <div>
-          <h1 className="page-title">Sozlamalar ⚙️</h1>
-          <div className="page-sub">Olmos qiymatlari va boshqa global parametrlar</div>
+          <h1 className="page-title">💎 Olmoslar</h1>
+          <div className="page-sub">Har vazifa uchun qancha olmos berilishini sozlang</div>
         </div>
       </div>
 
       <div style={{ marginBottom:14, padding:'14px 16px', background:'var(--primary-bg)', borderRadius:12, border:'1px solid var(--border)' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:6 }}>
-          <span style={{ fontSize:22 }}>💎</span>
-          <div style={{ fontSize:14, fontWeight:700 }}>Olmos tizimi</div>
-        </div>
-        <div style={{ fontSize:12.5, color:'var(--text-2)', lineHeight:1.5 }}>
+        <div style={{ fontSize:12.5, color:'var(--text-2)', lineHeight:1.55 }}>
           O'quvchi har tekshirilgan vazifa uchun olmos oladi. Tekshirilmagan yoki qaytarilgan vazifa uchun olmos berilmaydi.
           Reyting va Leaderboard olmos bo'yicha tartiblanadi.
         </div>

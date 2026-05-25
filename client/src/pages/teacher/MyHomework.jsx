@@ -9,10 +9,6 @@ const TABS = [
   { id:'pending', label:'Topshirilgan',  icon:'clock', tone:'warning' },
   { id:'done',    label:'Baholangan',    icon:'check', tone:'success' },
 ];
-const KINDS = [
-  { id:'lesson',   label:'Dars vazifalari' },
-  { id:'speaking', label:'🎤 Speaking' },
-];
 const TONE = {
   warning:['var(--amber-bg)','var(--amber)'],
   success:['var(--primary-bg)','var(--primary-l)'],
@@ -166,7 +162,6 @@ function HomeworkCard({ it, tab, onOpen }) {
 export default function MyHomework({ onOpenHomework }) {
   const { user } = useAuth();
   const teacherId = user?.teacherRef?._id || user?.teacherRef;
-  const [kind, setKind] = useState('lesson');
   const [tab, setTab] = useState('pending');
   // "Baholangan" tab uchun sana filter
   const [pickedDate, setPickedDate] = useState(todayKey());
@@ -182,34 +177,16 @@ export default function MyHomework({ onOpenHomework }) {
     return () => clearInterval(t);
   }, [refetch]);
 
-  // ❗ Hook'lar har gal bir xil tartibda chaqirilishi kerak — useMemo'lar
-  // shartli return'dan oldin.
-  const allItems = useMemo(
+  // Lesson + speaking — hammasi bitta ro'yxatda. Speaking faqat 🎤 ikoni bilan farqlanadi.
+  const items = useMemo(
     () => Array.isArray(data) ? data : (data?.data ?? []),
     [data],
   );
-
-  // kind bo'yicha filter (default 'lesson' — kind yo'q yoki kind==='lesson')
-  const items = useMemo(() => {
-    return allItems.filter(i => {
-      const k = i.kind || 'lesson';
-      return k === kind;
-    });
-  }, [allItems, kind]);
 
   const counts = useMemo(() => ({
     pending: items.filter(i => i.col !== 'done').length,
     done:    items.filter(i => i.col === 'done').length,
   }), [items]);
-
-  // Boshqa kind dagi pending count (segment'da badge uchun)
-  const otherKindPending = useMemo(() => {
-    const otherKind = kind === 'lesson' ? 'speaking' : 'lesson';
-    return allItems.filter(i => {
-      const k = i.kind || 'lesson';
-      return k === otherKind && i.col !== 'done';
-    }).length;
-  }, [allItems, kind]);
 
   const tabItems = useMemo(() => {
     return items.filter(i => {
@@ -233,46 +210,13 @@ export default function MyHomework({ onOpenHomework }) {
     <div className="page">
       <div className="page-hd">
         <div>
-          <h1 className="page-title">Vazifalarim</h1>
+          <h1 className="page-title">Vazifalar</h1>
           <div className="page-sub">
             {counts.pending > 0
-              ? `${counts.pending} ta ${kind === 'speaking' ? 'speaking' : 'vazifa'} topshirilgan`
+              ? `${counts.pending} ta vazifa tekshirish kutmoqda`
               : "Yangi topshiriq yo'q 🎉"}
           </div>
         </div>
-      </div>
-
-      {/* Dars / Speaking segment */}
-      <div style={{
-        display:'flex', gap:6, marginBottom:12, padding:4,
-        background:'var(--bg-subtle)', borderRadius:11, border:'1px solid var(--border)',
-      }}>
-        {KINDS.map(k => {
-          const isActive = kind === k.id;
-          const otherBadge = !isActive ? otherKindPending : 0;
-          return (
-            <button key={k.id} onClick={() => { setKind(k.id); setTab('pending'); }}
-              style={{
-                flex:1, padding:'8px 10px', borderRadius:8,
-                background: isActive ? 'linear-gradient(135deg, var(--primary), var(--primary-d))' : 'transparent',
-                color: isActive ? '#fff' : 'var(--text-2)',
-                border:'none', cursor:'pointer',
-                fontSize:13, fontWeight:600,
-                display:'flex', alignItems:'center', justifyContent:'center', gap:6,
-                boxShadow: isActive ? '0 2px 8px rgba(99,102,241,0.25)' : 'none',
-                transition:'all 180ms',
-              }}>
-              {k.label}
-              {otherBadge > 0 && (
-                <span style={{
-                  padding:'1px 7px', borderRadius:8,
-                  background:'var(--amber-bg)', color:'var(--amber)',
-                  fontSize:10.5, fontWeight:700,
-                }}>{otherBadge}</span>
-              )}
-            </button>
-          );
-        })}
       </div>
 
       <div className="tabs" style={{ marginBottom:12 }}>
@@ -349,11 +293,11 @@ export default function MyHomework({ onOpenHomework }) {
       {tabItems.length === 0 ? (
         <div style={{ padding:'50px 20px', textAlign:'center', color:'var(--text-3)' }}>
           <div style={{ fontSize:36, marginBottom:8 }}>
-            {kind === 'speaking' ? (tab === 'pending' ? '🎤' : '🎉') : (tab === 'pending' ? '✅' : '📭')}
+            {tab === 'pending' ? '✅' : '📭'}
           </div>
           <div style={{ fontSize:13.5, color:'var(--text-2)' }}>
             {tab === 'pending'
-              ? (kind === 'speaking' ? "Hozircha topshirilgan speaking yo'q" : "Hozircha topshiriq yo'q")
+              ? "Hozircha topshiriq yo'q"
               : (pickedDate
                   ? "Bu kuni baholangan vazifa yo'q"
                   : "Baholangan vazifalar yo'q")}

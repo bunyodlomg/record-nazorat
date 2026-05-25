@@ -124,8 +124,11 @@ router.get('/events', asyncHandler(async (req, res) => {
   const groups = await Group.find({ teacher: req.user.teacherRef, isActive:true })
     .populate('teacher', 'name').lean();
 
+  const groupMap = Object.fromEntries(groups.map(g => [String(g._id), g]));
+
+  // Lesson event'lari — har dars kuni
   for (const g of groups) {
-    if (!g.scheduleDays?.length) continue; // scheduleTime endi majburiy emas
+    if (!g.scheduleDays?.length) continue;
     const days = g.scheduleDays.map(d => DAY_MAP[d]).filter(d => d !== undefined);
     if (!days.length) continue;
 
@@ -141,6 +144,28 @@ router.get('/events', asyncHandler(async (req, res) => {
         });
       }
       cur.setDate(cur.getDate() + 1);
+    }
+  }
+
+  // Speaking vazifalari — dueDate kuni event sifatida (lesson kabi)
+  const groupIds = groups.map(g => g._id);
+  if (groupIds.length) {
+    const speakingHw = await Homework.find({
+      group:   { $in: groupIds },
+      kind:    'speaking',
+      dueDate: { $gte: rangeStart, $lte: rangeEnd },
+    }).select('group title dueDate weekSeq').lean();
+
+    for (const hw of speakingHw) {
+      const g = groupMap[String(hw.group)];
+      if (!g) continue;
+      push(fmtKey(new Date(hw.dueDate)), {
+        type:     'speaking',
+        title:    g.name,
+        time:     '',
+        tone:     'amber',
+        subtitle: `🎤 Speaking #${hw.weekSeq || ''}`.trim(),
+      });
     }
   }
 

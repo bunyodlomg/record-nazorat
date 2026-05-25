@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Icon, Avatar } from '../components/ui.jsx';
 import { Spinner, ErrorBox } from '../components/Feedback.jsx';
 import { useFetch } from '../hooks/useFetch.js';
+import { useAuth } from '../context/AuthContext.jsx';
 import api from '../services/api.js';
 import { sfx } from '../hooks/useSound.js';
 
@@ -152,6 +153,8 @@ function PendingStudentCard({ s, onApprove, onReject, busy }) {
 }
 
 export default function GroupDetailPage({ groupId, onBack, onOpenStudent, onOpenHomework, onOpenTeacher }) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [tab, setTab] = useState('students');
   const [busyPending, setBusyPending] = useState(null);
   const [copied, setCopied] = useState(false);
@@ -260,38 +263,40 @@ export default function GroupDetailPage({ groupId, onBack, onOpenStudent, onOpen
         <StatTile icon="check"    tone="emerald" label="Tugatildi"   value={stats.completedHw}/>
       </div>
 
-      {/* Invite link card */}
-      <motion.div className="card"
-        initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.1 }}
-        style={{ padding:14, marginBottom:12 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
-          <div style={{ width:30, height:30, borderRadius:8, background:'var(--accent-bg)', color:'var(--accent-l)', display:'grid', placeItems:'center', flexShrink:0 }}>
-            <Icon name="send" size={14}/>
+      {/* Invite link card — faqat admin uchun */}
+      {isAdmin && (
+        <motion.div className="card"
+          initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.1 }}
+          style={{ padding:14, marginBottom:12 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
+            <div style={{ width:30, height:30, borderRadius:8, background:'var(--accent-bg)', color:'var(--accent-l)', display:'grid', placeItems:'center', flexShrink:0 }}>
+              <Icon name="send" size={14}/>
+            </div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:13, fontWeight:700 }}>Bot orqali ulanish</div>
+              <div style={{ fontSize:11.5, color:'var(--text-3)', marginTop:1 }}>O'quvchilar shu link orqali guruhga qo'shilishi mumkin</div>
+            </div>
           </div>
-          <div style={{ flex:1 }}>
-            <div style={{ fontSize:13, fontWeight:700 }}>Bot orqali ulanish</div>
-            <div style={{ fontSize:11.5, color:'var(--text-3)', marginTop:1 }}>O'quvchilar shu link orqali guruhga qo'shilishi mumkin</div>
-          </div>
-        </div>
-        {g.inviteLink ? (
-          <div style={{ display:'flex', gap:6, alignItems:'center' }}>
-            <code style={{
-              flex:1, padding:'9px 11px', background:'var(--bg-subtle)', border:'1px dashed var(--border)',
-              borderRadius:8, fontSize:11.5, fontFamily:'var(--mono)', wordBreak:'break-all',
-              color:'var(--text-1)',
-            }}>{g.inviteLink}</code>
-            <button className="btn btn-primary btn-sm" onClick={() => copyLink(g.inviteLink)}
-              style={{ flexShrink:0 }}>
-              {copied ? '✓' : 'Nusxalash'}
+          {g.inviteLink ? (
+            <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+              <code style={{
+                flex:1, padding:'9px 11px', background:'var(--bg-subtle)', border:'1px dashed var(--border)',
+                borderRadius:8, fontSize:11.5, fontFamily:'var(--mono)', wordBreak:'break-all',
+                color:'var(--text-1)',
+              }}>{g.inviteLink}</code>
+              <button className="btn btn-primary btn-sm" onClick={() => copyLink(g.inviteLink)}
+                style={{ flexShrink:0 }}>
+                {copied ? '✓' : 'Nusxalash'}
+              </button>
+            </div>
+          ) : (
+            <button className="btn btn-primary" onClick={ensureLink}
+              style={{ width:'100%', justifyContent:'center' }}>
+              <Icon name="plus" size={13}/> Link yaratish
             </button>
-          </div>
-        ) : (
-          <button className="btn btn-primary" onClick={ensureLink}
-            style={{ width:'100%', justifyContent:'center' }}>
-            <Icon name="plus" size={13}/> Link yaratish
-          </button>
-        )}
-      </motion.div>
+          )}
+        </motion.div>
+      )}
 
       {/* Pending students alert */}
       {pending.length > 0 && (

@@ -170,7 +170,7 @@ function FullList({ items, title, sub, subtitleKey, metricKey = 'score', metricL
 }
 
 export default function LeaderboardPage({ onOpenTeacher, onOpenStudent }) {
-  const [tab, setTab] = useState('teachers');
+  const [tab, setTab] = useState('students');
   const [groupId, setGroupId] = useState(null);
 
   const { data: teachersData, loading: tLoad, error: tErr, refetch: tRefetch } =

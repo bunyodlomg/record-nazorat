@@ -35,13 +35,13 @@ const ADMIN_DOCK = [
   { divider:true },
   { id:'leaderboard', label:'Reyting',       icon:'trophy' },
   { id:'calendar',    label:'Kalendar',      icon:'calendar' },
-  { id:'settings',    label:'Sozlamalar',    icon:'settings' },
+  { id:'gems',        label:'Olmoslar',      icon:'gem' },
 ];
 
 const TEACHER_DOCK = [
   { id:'dashboard',  label:'Bosh sahifa',         icon:'dashboard' },
   { id:'my-classes', label:'Mening guruhlarim',   icon:'groups' },
-  { id:'my-homework',label:'Vazifalarim',         icon:'homework' },
+  { id:'my-homework',label:'Vazifalar',            icon:'homework' },
   { id:'invites',    label:'Takliflar',           icon:'send' },
   { divider:true },
   { id:'calendar',   label:'Kalendar',            icon:'calendar' },
@@ -84,7 +84,7 @@ function AdminApp() {
   else if (page === 'leaderboard')   content = <LeaderboardPage onOpenTeacher={setDetailId} onOpenStudent={setStudentId}/>;
   else if (page === 'homework')      content = <HomeworkPage onOpenHomework={setHomeworkId} onOpenTeacher={setDetailId}/>;
   else if (page === 'calendar')      content = <CalendarPage onOpenTeacher={setDetailId}/>;
-  else if (page === 'settings')      content = <SettingsPage/>;
+  else if (page === 'gems')          content = <SettingsPage/>;
 
   return (
     <>

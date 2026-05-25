@@ -68,25 +68,29 @@ export function StudentRow({ sub, onUpdate, canEdit, busy }) {
   const [score, setScore] = useState(sub.score ?? '');
   const [feedback, setFeedback] = useState(sub.feedback || '');
   const [saving, setSaving] = useState(false);
-  const [localChecked, setLocalChecked] = useState(sub.status === 'reviewed');
+  const [localStatus, setLocalStatus] = useState(sub.status);
 
   useEffect(() => {
     setScore(sub.score ?? '');
     setFeedback(sub.feedback || '');
-    setLocalChecked(sub.status === 'reviewed');
+    setLocalStatus(sub.status);
   }, [sub._id, sub.score, sub.feedback, sub.status]);
 
-  const toggleReviewed = async (next) => {
+  const setStatus = async (next) => {
     if (!canEdit || busy) return;
-    setLocalChecked(next); // optimistic
-    if (next) sfx.success();
-    else      sfx.click();
+    const prev = localStatus;
+    setLocalStatus(next);
+    if (next === 'reviewed') sfx.success();
+    else if (next === 'returned') sfx.error?.();
+    else sfx.click();
     try {
-      await onUpdate(sub._id, { status: next ? 'reviewed' : 'pending' });
+      await onUpdate(sub._id, { status: next });
     } catch {
-      setLocalChecked(!next); // rollback
+      setLocalStatus(prev);
     }
   };
+
+  const toggleReviewed = (next) => setStatus(next ? 'reviewed' : 'pending');
 
   const saveDetails = async () => {
     setSaving(true);
@@ -100,32 +104,39 @@ export function StudentRow({ sub, onUpdate, canEdit, busy }) {
   };
 
   const s = sub.student || {};
-  const isReviewed = localChecked;
+  const isReviewed  = localStatus === 'reviewed';
+  const isSubmitted = localStatus === 'submitted';
+  const isReturned  = localStatus === 'returned';
+
+  const rowBg     = isReviewed ? 'var(--primary-bg)' : isReturned ? 'var(--rose-bg)' : isSubmitted ? 'var(--amber-bg)' : 'var(--bg-subtle)';
+  const rowBorder = isReviewed ? 'var(--primary)'   : isReturned ? 'var(--rose)'    : isSubmitted ? 'var(--amber)'    : 'var(--border)';
+  const statusText  =
+    isReviewed  ? 'Tekshirildi · ✓'  :
+    isReturned  ? 'Qaytarildi · ✕'   :
+    isSubmitted ? '📩 Topshirildi'   :
+                  'Hali topshirmagan';
+  const statusColor =
+    isReviewed  ? 'var(--primary-l)' :
+    isReturned  ? 'var(--rose)'      :
+    isSubmitted ? 'var(--amber)'     :
+                  'var(--text-3)';
 
   return (
     <motion.div layout
       style={{
-        background: isReviewed ? 'var(--primary-bg)' : 'var(--bg-subtle)',
+        background: rowBg,
         border:'1px solid var(--border)',
-        borderColor: isReviewed ? 'var(--primary)' : 'var(--border)',
+        borderColor: rowBorder,
         borderRadius:11,
         overflow:'hidden',
         transition:'background 200ms, border-color 200ms',
       }}>
       <div
-        onClick={() => canEdit && toggleReviewed(!isReviewed)}
         style={{
           display:'flex', alignItems:'center', gap:11,
           padding:'11px 12px',
-          cursor: canEdit ? 'pointer' : 'default',
           userSelect:'none',
         }}>
-        {canEdit && (
-          <ReviewCheckbox
-            checked={isReviewed}
-            onChange={toggleReviewed}
-            disabled={busy}/>
-        )}
         {s.photoUrl
           ? <img src={s.photoUrl} alt="" style={{ width:34, height:34, borderRadius:'50%', objectFit:'cover', flexShrink:0 }}/>
           : <Avatar name={s.name || '?'} hue={s.hue ?? 200} size="sm"/>}
@@ -147,11 +158,8 @@ export function StudentRow({ sub, onUpdate, canEdit, busy }) {
             )}
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:2 }}>
-            <span style={{
-              fontSize:11, color: isReviewed ? 'var(--primary-l)' : 'var(--text-3)',
-              fontWeight:500,
-            }}>
-              {isReviewed ? 'Tekshirildi' : 'Tekshirilmagan'}
+            <span style={{ fontSize:11, color: statusColor, fontWeight:600 }}>
+              {statusText}
             </span>
             {sub.score != null && (
               <span style={{ fontSize:11, color:'var(--text-3)', fontVariantNumeric:'tabular-nums' }}>
@@ -161,12 +169,40 @@ export function StudentRow({ sub, onUpdate, canEdit, busy }) {
           </div>
         </div>
         {canEdit && (
-          <button className="btn btn-ghost btn-icon"
-            onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
-            style={{ width:30, height:30, flexShrink:0 }}
-            title="Baho va izoh">
-            <Icon name={open ? 'chevronUp' : 'chevronDown'} size={13}/>
-          </button>
+          <div style={{ display:'flex', gap:5, flexShrink:0 }}>
+            <button
+              type="button"
+              onClick={() => setStatus(isReviewed ? 'pending' : 'reviewed')}
+              disabled={busy}
+              title="Qabul qildim (+olmos)"
+              style={{
+                width:34, height:34, borderRadius:9,
+                background: isReviewed ? 'linear-gradient(135deg, var(--primary), var(--primary-d))' : 'var(--bg-card)',
+                color: isReviewed ? '#fff' : 'var(--primary-l)',
+                border: isReviewed ? 'none' : '1.5px solid var(--border-md)',
+                fontSize:16, fontWeight:800, cursor:'pointer',
+                boxShadow: isReviewed ? '0 2px 10px rgba(99,102,241,0.35)' : 'none',
+              }}>+</button>
+            <button
+              type="button"
+              onClick={() => setStatus(isReturned ? 'pending' : 'returned')}
+              disabled={busy}
+              title="Qaytarish"
+              style={{
+                width:34, height:34, borderRadius:9,
+                background: isReturned ? 'var(--rose)' : 'var(--bg-card)',
+                color: isReturned ? '#fff' : 'var(--rose)',
+                border: isReturned ? 'none' : '1.5px solid var(--border-md)',
+                fontSize:18, fontWeight:800, cursor:'pointer',
+                boxShadow: isReturned ? '0 2px 10px rgba(244,63,94,0.30)' : 'none',
+              }}>−</button>
+            <button className="btn btn-ghost btn-icon"
+              onClick={() => setOpen(o => !o)}
+              style={{ width:30, height:30 }}
+              title="Baho va izoh">
+              <Icon name={open ? 'chevronUp' : 'chevronDown'} size={13}/>
+            </button>
+          </div>
         )}
       </div>
 
