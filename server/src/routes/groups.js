@@ -119,6 +119,36 @@ const canEditGroup = (req, group) => {
   return req.user.role === 'teacher' && req.user.teacherRef && String(group.teacher) === String(req.user.teacherRef);
 };
 
+const buildStudentInviteLink = (token) => {
+  const username = process.env.BOT_USERNAME;
+  if (!username || !token) return null;
+  return `https://t.me/${username}?start=g_${token}`;
+};
+
+// GET /api/groups/:id/invite-link — joriy token (yo'q bo'lsa yaratiladi)
+router.get('/:id/invite-link', param('id').isMongoId(), ok, asyncHandler(async (req,res) => {
+  const g = await Group.findById(req.params.id);
+  if (!g) return res.status(404).json({ success:false, message:'Guruh topilmadi' });
+  if (!canEditGroup(req, g)) return res.status(403).json({ success:false, message:'Ruxsat yo\'q' });
+
+  if (!g.inviteToken) {
+    g.inviteToken = Group.generateInviteToken();
+    await g.save();
+  }
+  res.json({ success:true, data: { token: g.inviteToken, link: buildStudentInviteLink(g.inviteToken) } });
+}));
+
+// POST /api/groups/:id/invite-link/rotate — yangi token (eski link bekor)
+router.post('/:id/invite-link/rotate', param('id').isMongoId(), ok, asyncHandler(async (req,res) => {
+  const g = await Group.findById(req.params.id);
+  if (!g) return res.status(404).json({ success:false, message:'Guruh topilmadi' });
+  if (!canEditGroup(req, g)) return res.status(403).json({ success:false, message:'Ruxsat yo\'q' });
+
+  g.inviteToken = Group.generateInviteToken();
+  await g.save();
+  res.json({ success:true, data: { token: g.inviteToken, link: buildStudentInviteLink(g.inviteToken) } });
+}));
+
 // UPDATE
 router.patch('/:id', param('id').isMongoId(), ok, asyncHandler(async (req,res) => {
   const existing = await Group.findById(req.params.id);

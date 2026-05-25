@@ -16,7 +16,7 @@ const BAR_BG = {
   3:'linear-gradient(180deg,#fed7aa,#ea580c)',
 };
 
-function PodiumCard({ entry, place, height, subtitleKey = 'subject' }) {
+function PodiumCard({ entry, place, height, subtitleKey = 'subject', onClick }) {
   const [anim, setAnim] = useState(false);
   useEffect(() => { const id = setTimeout(() => setAnim(true), 200 + place*100); return () => clearTimeout(id); }, []);
   const score = useCountUp(anim ? entry.score : 0, 1000);
@@ -31,7 +31,8 @@ function PodiumCard({ entry, place, height, subtitleKey = 'subject' }) {
     <motion.div
       initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }}
       transition={{ delay:0.1 + place*0.08, duration:0.5 }}
-      style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:11 }}>
+      onClick={() => onClick?.(entry)}
+      style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:11, cursor: onClick ? 'pointer' : 'default' }}>
       <motion.div
         whileHover={{ scale:1.08, rotate:5 }}
         style={{ width:48, height:48, borderRadius:'50%', background:m.bg, display:'grid', placeItems:'center',
@@ -98,7 +99,7 @@ function LeaderRow({ entry, idx, subtitleKey, onClick }) {
   );
 }
 
-function PodiumSection({ items, subtitleKey }) {
+function PodiumSection({ items, subtitleKey, onClick }) {
   const top3 = items.slice(0, 3);
   return (
     <motion.div className="card-glass"
@@ -106,9 +107,9 @@ function PodiumSection({ items, subtitleKey }) {
       style={{ padding:'24px 16px', marginBottom:14, position:'relative', overflow:'hidden' }}>
       <div style={{ position:'absolute', inset:0, background:'radial-gradient(ellipse at top, rgba(20,184,166,0.10), transparent 60%)', pointerEvents:'none' }}/>
       <div className="podium" style={{ position:'relative', maxWidth:680, margin:'0 auto' }}>
-        {top3[1] && <PodiumCard entry={top3[1]} place={2} height={150} subtitleKey={subtitleKey}/>}
-        {top3[0] && <PodiumCard entry={top3[0]} place={1} height={200} subtitleKey={subtitleKey}/>}
-        {top3[2] && <PodiumCard entry={top3[2]} place={3} height={120} subtitleKey={subtitleKey}/>}
+        {top3[1] && <PodiumCard entry={top3[1]} place={2} height={150} subtitleKey={subtitleKey} onClick={onClick}/>}
+        {top3[0] && <PodiumCard entry={top3[0]} place={1} height={200} subtitleKey={subtitleKey} onClick={onClick}/>}
+        {top3[2] && <PodiumCard entry={top3[2]} place={3} height={120} subtitleKey={subtitleKey} onClick={onClick}/>}
       </div>
     </motion.div>
   );
@@ -128,7 +129,7 @@ function FullList({ items, title, sub, subtitleKey, onClick }) {
   const useStagger = rest.length <= 20;
   return (
     <>
-      <PodiumSection items={items} subtitleKey={subtitleKey}/>
+      <PodiumSection items={items} subtitleKey={subtitleKey} onClick={onClick}/>
       {rest.length > 0 && (
         <div className="card">
           <div style={{ padding:'14px 16px', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 }}>

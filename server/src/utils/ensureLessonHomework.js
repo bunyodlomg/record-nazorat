@@ -53,7 +53,7 @@ async function ensureForGroup(group) {
   const toCreate = lessonDates.filter(d => !existingDays.has(d.getTime()));
   if (!toCreate.length) return 0;
 
-  const students = await Student.find({ group: group._id, status: 'active' }).select('_id').lean();
+  const students = await Student.find({ group: group._id, status: 'active' }).select('_id telegramId status').lean();
   const total = Math.max(students.length, 1);
 
   const docs = toCreate.map(date => ({
@@ -84,6 +84,18 @@ async function ensureForGroup(group) {
     }
   }
   if (subDocs.length) await Submission.insertMany(subDocs, { ordered: false }).catch(() => {});
+
+  // Bot orqali xabar (active + telegramId bor o'quvchilarga)
+  try {
+    const { notifyHomeworkAssigned } = require('../bot/notifications');
+    const tgStudents = students.filter(s => s.telegramId);
+    if (tgStudents.length) {
+      for (const hw of created) {
+        notifyHomeworkAssigned(hw, group, tgStudents).catch(() => {});
+      }
+    }
+  } catch {}
+
   return created.length;
 }
 

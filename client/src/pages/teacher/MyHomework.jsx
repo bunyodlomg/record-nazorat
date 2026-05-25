@@ -6,8 +6,8 @@ import api from '../../services/api.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 
 const TABS = [
-  { id:'pending', label:'Tekshirilmagan', icon:'clock', tone:'warning' },
-  { id:'done',    label:'Tekshirilgan',   icon:'check', tone:'success' },
+  { id:'pending', label:'Topshirilgan',  icon:'clock', tone:'warning' },
+  { id:'done',    label:'Baholangan',    icon:'check', tone:'success' },
 ];
 const TONE = {
   warning:['var(--amber-bg)','var(--amber)'],
@@ -115,7 +115,7 @@ function HomeworkCard({ it, tab, onOpen }) {
           }}>
             <span style={{ color:'var(--text-2)', fontWeight:500 }}>
               {isDone
-                ? <>Hammasi tekshirildi · <strong style={{ color:accentL }}>{total}/{total}</strong></>
+                ? <>Hammasi baholandi · <strong style={{ color:accentL }}>{total}/{total}</strong></>
                 : <><strong style={{ color:accentL, fontSize:15 }}>{pending}/{total}</strong> qoldi</>}
             </span>
             <span style={{
@@ -151,7 +151,7 @@ function HomeworkCard({ it, tab, onOpen }) {
         onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
         onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
         <Icon name={isDone ? 'eye' : 'chevronRight'} size={14}/>
-        {isDone ? "Ko'rib chiqish" : 'Tekshirishni boshlash'}
+        {isDone ? "Ko'rib chiqish" : 'Baholash'}
       </button>
     </div>
   );
@@ -161,7 +161,7 @@ export default function MyHomework({ onOpenHomework }) {
   const { user } = useAuth();
   const teacherId = user?.teacherRef?._id || user?.teacherRef;
   const [tab, setTab] = useState('pending');
-  // "Tekshirilgan" tab uchun sana filter — kechagi va bugungi aralashmasligi uchun
+  // "Baholangan" tab uchun sana filter
   const [pickedDate, setPickedDate] = useState(todayKey());
 
   const { data, loading, error, refetch } = useFetch(
@@ -211,8 +211,8 @@ export default function MyHomework({ onOpenHomework }) {
           <h1 className="page-title">Vazifalarim</h1>
           <div className="page-sub">
             {counts.pending > 0
-              ? `${counts.pending} ta vazifa tekshirilishi kerak`
-              : "Hammasi tekshirildi 🎉"}
+              ? `${counts.pending} ta vazifa topshirilgan`
+              : "Yangi topshiriq yo'q 🎉"}
           </div>
         </div>
       </div>
@@ -293,10 +293,10 @@ export default function MyHomework({ onOpenHomework }) {
           <div style={{ fontSize:36, marginBottom:8 }}>{tab === 'pending' ? '✅' : '📭'}</div>
           <div style={{ fontSize:13.5, color:'var(--text-2)' }}>
             {tab === 'pending'
-              ? "Tekshirilmagan vazifa yo'q"
+              ? "Hozircha topshiriq yo'q"
               : (pickedDate
-                  ? "Bu kuni tekshirilgan vazifa yo'q"
-                  : "Tugatilgan vazifalar yo'q")}
+                  ? "Bu kuni baholangan vazifa yo'q"
+                  : "Baholangan vazifalar yo'q")}
           </div>
           {tab === 'done' && pickedDate && doneDates.length > 0 && (
             <div style={{ fontSize:11.5, color:'var(--text-3)', marginTop:8 }}>

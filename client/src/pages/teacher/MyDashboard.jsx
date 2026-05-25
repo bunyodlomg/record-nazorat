@@ -110,7 +110,7 @@ export default function MyDashboard({ onNav }) {
         </div>
         <h1 className="page-title">
           {pendingCount > 0
-            ? <>Sizda <span style={{ color:'var(--primary-l)' }}>{pendingCount} ta vazifa</span> tekshirilishi kerak</>
+            ? <><span style={{ color:'var(--primary-l)' }}>{pendingCount} ta vazifa</span> topshirilgan</>
             : <>Bugun hammasi joyida</>}
         </h1>
         <div className="page-sub" style={{ fontSize:13, marginTop:4 }}>
@@ -122,8 +122,8 @@ export default function MyDashboard({ onNav }) {
       <motion.div variants={listContainer} initial="hidden" animate="show"
         className="my-stat-grid"
         style={{ gridTemplateColumns:'repeat(2, 1fr)', gap:10, marginBottom:12 }}>
-        <StatTile label="Tekshirilishi kerak" value={pendingCount} icon="clock" tone="amber"/>
-        <StatTile label="Tugatildi"           value={doneCount}    icon="check" tone="primary"/>
+        <StatTile label="Topshirilgan" value={pendingCount} icon="clock" tone="amber"/>
+        <StatTile label="Baholangan"           value={doneCount}    icon="check" tone="primary"/>
       </motion.div>
 
       {/* Chart — alohida qator */}
@@ -166,7 +166,7 @@ export default function MyDashboard({ onNav }) {
           Tezkor amallar
         </div>
         {[
-          pendingCount > 0 && { icon:'homework', label:`${pendingCount} ta tekshirishni boshlash`, page:'my-homework', color:'var(--amber)',    bg:'var(--amber-bg)' },
+          pendingCount > 0 && { icon:'homework', label:`${pendingCount} ta topshirilgan vazifa`, page:'my-homework', color:'var(--amber)',    bg:'var(--amber-bg)' },
           { icon:'groups',   label:'Mening guruhlarim', page:'my-classes', color:'var(--primary-l)', bg:'var(--primary-bg)' },
           { icon:'calendar', label:'Kalendar',          page:'calendar',   color:'var(--violet)',    bg:'var(--violet-bg)' },
         ].filter(Boolean).map((a, i) => (

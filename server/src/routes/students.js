@@ -33,18 +33,31 @@ const filterForUser = async (req) => {
 };
 
 // LIST /api/students?groupId=&status=&search=
+// Default: faqat active student'lar (pending bot orqali ulangan, lekin tasdiqlanmaganlar — chiqmaydi)
 router.get('/', asyncHandler(async (req, res) => {
   const baseFilter = await filterForUser(req);
   const filter = { ...baseFilter };
   if (req.query.groupId) filter.group = req.query.groupId;
   if (req.query.status)  filter.status = req.query.status;
-  else                    filter.status = { $ne: 'inactive' };
+  else                    filter.status = 'active';
   if (req.query.search) filter.name = new RegExp(req.query.search, 'i');
 
-  const students = await Student.find(filter).sort('-score')
+  const sortField = req.query.status === 'pending' ? '-createdAt' : '-score';
+  const students = await Student.find(filter).sort(sortField)
     .populate('group', 'name code')
     .populate('teacher', 'name hue')
     .limit(Number(req.query.limit) || 200);
+  res.json({ success:true, data: students });
+}));
+
+// GET /api/students/pending — teacher yoki admin uchun tasdiqlash kutayotgan ro'yxat
+router.get('/pending/list', asyncHandler(async (req, res) => {
+  const baseFilter = await filterForUser(req);
+  const students = await Student.find({ ...baseFilter, status: 'pending' })
+    .sort('-createdAt')
+    .populate('group', 'name code')
+    .populate('teacher', 'name hue')
+    .lean();
   res.json({ success:true, data: students });
 }));
 
@@ -136,6 +149,77 @@ router.patch('/:id', param('id').isMongoId(), ok, asyncHandler(async (req, res) 
     .populate('group', 'name code')
     .populate('teacher', 'name hue');
   res.json({ success:true, data: updated });
+}));
+
+// PATCH /api/students/:id/approve — pending student'ni active qilish
+router.patch('/:id/approve', param('id').isMongoId(), ok, asyncHandler(async (req, res) => {
+  const s = await Student.findById(req.params.id).populate('group', 'teacher name code');
+  if (!s) return res.status(404).json({ success:false, message:"O'quvchi topilmadi" });
+
+  const isOwnerTeacher = req.user.role === 'teacher' && req.user.teacherRef
+    && String(s.group?.teacher) === String(req.user.teacherRef);
+  if (req.user.role !== 'admin' && !isOwnerTeacher) {
+    return res.status(403).json({ success:false, message:"Ruxsat yo'q" });
+  }
+  if (s.status === 'active') {
+    return res.json({ success:true, data: s, message:'Allaqachon tasdiqlangan' });
+  }
+
+  s.status = 'active';
+  await s.save();
+
+  // Mavjud (tugatilmagan) homework'larga submission qo'shamiz
+  const existingHw = await Homework.find({
+    group: s.group._id,
+    col: { $ne: 'done' },
+  }).select('_id teacher').lean();
+  if (existingHw.length) {
+    const subDocs = existingHw.map(hw => ({
+      homework: hw._id,
+      student:  s._id,
+      group:    s.group._id,
+      teacher:  hw.teacher,
+      status:   'pending',
+    }));
+    await Submission.insertMany(subDocs, { ordered:false }).catch(() => {});
+    const activeCount = await Student.countDocuments({ group: s.group._id, status: 'active' });
+    await Homework.updateMany(
+      { _id: { $in: existingHw.map(h => h._id) } },
+      { $set: { total: Math.max(activeCount, 1) } },
+    );
+  }
+
+  // Botga "tasdiqlandingiz" xabari
+  try {
+    const { notifyStudentApproved } = require('../bot/notifications');
+    notifyStudentApproved(s).catch(() => {});
+  } catch {}
+
+  const populated = await Student.findById(s._id)
+    .populate('group', 'name code')
+    .populate('teacher', 'name hue');
+  res.json({ success:true, data: populated });
+}));
+
+// PATCH /api/students/:id/reject — pending student'ni o'chirish (rad etish)
+router.patch('/:id/reject', param('id').isMongoId(), ok, asyncHandler(async (req, res) => {
+  const s = await Student.findById(req.params.id).populate('group', 'teacher name');
+  if (!s) return res.status(404).json({ success:false, message:"O'quvchi topilmadi" });
+
+  const isOwnerTeacher = req.user.role === 'teacher' && req.user.teacherRef
+    && String(s.group?.teacher) === String(req.user.teacherRef);
+  if (req.user.role !== 'admin' && !isOwnerTeacher) {
+    return res.status(403).json({ success:false, message:"Ruxsat yo'q" });
+  }
+
+  // Bot orqali kelgan student'lar uchun: bildirib qo'yamiz, keyin o'chiramiz
+  try {
+    const { notifyStudentRejected } = require('../bot/notifications');
+    notifyStudentRejected(s).catch(() => {});
+  } catch {}
+
+  await Student.findByIdAndDelete(s._id);
+  res.json({ success:true, message:'Rad etildi' });
 }));
 
 // DELETE /api/students/:id (admin yoki guruh teacheri)

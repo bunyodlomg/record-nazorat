@@ -67,6 +67,28 @@ router.patch('/:id',
 
     if (status === 'reviewed' || status === 'returned') {
       Teacher.updateOne({ _id: sub.teacher }, { $set: { lastReviewedAt: new Date() } }).catch(() => {});
+
+      // Student'ga bot orqali xabar
+      try {
+        const Student  = require('../models/Student');
+        const Homework = require('../models/Homework');
+        const { notifyHomeworkReviewed } = require('../bot/notifications');
+        const [st, hw] = await Promise.all([
+          Student.findById(sub.student).select('telegramId name status').lean(),
+          Homework.findById(sub.homework).populate('group','name').select('title group').lean(),
+        ]);
+        if (st?.telegramId && st.status === 'active') {
+          notifyHomeworkReviewed({
+            studentTgId: st.telegramId,
+            studentName: st.name,
+            homeworkTitle: hw?.title,
+            groupName: hw?.group?.name,
+            status: sub.status,
+            score: sub.score,
+            feedback: sub.feedback,
+          }).catch(() => {});
+        }
+      } catch {}
     }
 
     const updated = await Submission.findById(sub._id)
@@ -103,6 +125,34 @@ router.patch('/bulk',
     if (status === 'reviewed' || status === 'returned') {
       const teacherIds = [...new Set(subs.map(s => String(s.teacher)))];
       Teacher.updateMany({ _id:{ $in:teacherIds } }, { $set:{ lastReviewedAt:new Date() } }).catch(() => {});
+
+      // Har student uchun bot xabari (parallel)
+      try {
+        const Student  = require('../models/Student');
+        const Homework = require('../models/Homework');
+        const { notifyHomeworkReviewed } = require('../bot/notifications');
+        const fullSubs = await Submission.find(filter)
+          .populate('student',  'telegramId name status')
+          .populate('homework', 'title group')
+          .lean();
+        const groupIds = [...new Set(fullSubs.map(s => String(s.group)))];
+        const Group = require('../models/Group');
+        const groups = await Group.find({ _id:{ $in:groupIds } }).select('name').lean();
+        const groupMap = Object.fromEntries(groups.map(g => [String(g._id), g.name]));
+        for (const s of fullSubs) {
+          if (s.student?.telegramId && s.student.status === 'active') {
+            notifyHomeworkReviewed({
+              studentTgId: s.student.telegramId,
+              studentName: s.student.name,
+              homeworkTitle: s.homework?.title,
+              groupName: groupMap[String(s.group)],
+              status,
+              score: s.score,
+              feedback: s.feedback,
+            }).catch(() => {});
+          }
+        }
+      } catch {}
     }
 
     res.json({ success:true, updated: subs.length });

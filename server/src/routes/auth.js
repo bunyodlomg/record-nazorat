@@ -61,6 +61,16 @@ router.post('/telegram', asyncHandler(async (req, res) => {
 
   console.log(`[telegram-auth] tgId=${tgId} startParam=${JSON.stringify(startParam)} verifiedParam=${JSON.stringify(v.startParam)} cached=${JSON.stringify(cachedToken)} resolved=${JSON.stringify(param)}`);
 
+  // Student bot orqali ulangan bo'lsa — Mini App'ga kirita olmaymiz
+  const Student = require('../models/Student');
+  const studentLink = await Student.findOne({ telegramId: tgId }).select('_id status').lean();
+  if (studentLink) {
+    return res.status(403).json({
+      success:false,
+      message:"O'quvchilar tizimga botning o'zi orqali ishlaydi. Mini App faqat o'qituvchi va administrator uchun.",
+    });
+  }
+
   let user = await User.findOne({ telegramId: tgId }).populate('teacherRef', 'name subject hue score attendance');
 
   // Mavjud user bo'lsa — Telegram profilini sinxronlashtirish

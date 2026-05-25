@@ -49,9 +49,12 @@ const api = {
   },
   students: {
     list:    (params = {})  => http.get('/students', { params }),
+    pending: ()             => http.get('/students/pending/list'),
     get:     id             => http.get(`/students/${id}`),
     create:  data           => http.post('/students', data),
     update:  (id, data)     => http.patch(`/students/${id}`, data),
+    approve: id             => http.patch(`/students/${id}/approve`),
+    reject:  id             => http.patch(`/students/${id}/reject`),
     delete:  id             => http.delete(`/students/${id}`),
   },
   leaderboard: {
@@ -78,6 +81,8 @@ const api = {
     create: data      => http.post('/groups', data),
     update: (id,data) => http.patch(`/groups/${id}`, data),
     delete: id        => http.delete(`/groups/${id}`),
+    inviteLink:       id => http.get(`/groups/${id}/invite-link`),
+    rotateInviteLink: id => http.post(`/groups/${id}/invite-link/rotate`),
   },
   notifications: {
     list: (params = {}) => http.get('/notifications', { params }),

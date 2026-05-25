@@ -177,7 +177,102 @@ function AddStudentsModal({ open, onClose, group, onSaved }) {
   );
 }
 
-function GroupCard({ g, onAddStudents, onRemove }) {
+function InviteLinkModal({ open, onClose, group }) {
+  const [link, setLink] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!open || !group?._id) return;
+    setError(''); setCopied(false); setLoading(true);
+    api.groups.inviteLink(group._id)
+      .then(r => setLink(r?.data?.link || ''))
+      .catch(e => setError(e.message || 'Xatolik'))
+      .finally(() => setLoading(false));
+  }, [open, group?._id]);
+
+  const rotate = async () => {
+    if (!group?._id) return;
+    if (!confirm('Yangi link yaratilsa eski havola bekor bo\'ladi. Davom etamizmi?')) return;
+    setLoading(true); setError(''); setCopied(false);
+    try {
+      const r = await api.groups.rotateInviteLink(group._id);
+      setLink(r?.data?.link || '');
+      sfx.success();
+    } catch (e) { setError(e.message || 'Xatolik'); }
+    finally { setLoading(false); }
+  };
+
+  const copy = async () => {
+    if (!link) return;
+    try { await navigator.clipboard.writeText(link); setCopied(true); sfx.success(); setTimeout(() => setCopied(false), 1500); }
+    catch { setError('Nusxalab bo\'lmadi'); }
+  };
+
+  const share = () => {
+    if (!link) return;
+    const text = `${group?.name || 'Guruh'}ga qo'shilish uchun:`;
+    if (navigator.share) {
+      navigator.share({ title: group?.name, text, url: link }).catch(() => {});
+    } else {
+      window.open(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`, '_blank');
+    }
+  };
+
+  if (!group) return null;
+  return (
+    <Modal open={open} onClose={onClose}
+      title={`${group.name} — taklif linki`}
+      subtitle="O'quvchilar bot orqali ulanadi. Tasdiqlash sizga keladi."
+      width={460}
+      footer={<>
+        <button className="btn btn-ghost" onClick={rotate} disabled={loading} title="Eski linkni bekor qilib yangisini yaratish">
+          🔄 Yangi link
+        </button>
+        <button className="btn btn-primary" onClick={onClose}>Yopish</button>
+      </>}>
+      {error && <div style={{ marginBottom:12, padding:'10px 12px', background:'var(--rose-bg)', borderRadius:8, color:'var(--rose)', fontSize:12.5 }}>{error}</div>}
+
+      {loading ? (
+        <div style={{ padding:'30px 0', textAlign:'center', color:'var(--text-3)', fontSize:13 }}>Yuklanmoqda…</div>
+      ) : (
+        <>
+          <div style={{
+            padding:'12px 14px', background:'var(--bg-subtle)', border:'1px dashed var(--border)',
+            borderRadius:10, fontSize:12.5, fontFamily:'var(--mono)', wordBreak:'break-all',
+            color:'var(--text-1)', marginBottom:12,
+          }}>
+            {link || '—'}
+          </div>
+
+          <div style={{ display:'flex', gap:8, marginBottom:14 }}>
+            <button className="btn btn-primary" style={{ flex:1, justifyContent:'center' }} onClick={copy} disabled={!link}>
+              <Icon name="check" size={12}/> {copied ? 'Nusxalandi' : 'Nusxalash'}
+            </button>
+            <button className="btn btn-ghost" style={{ flex:1, justifyContent:'center' }} onClick={share} disabled={!link}>
+              Ulashish
+            </button>
+          </div>
+
+          <div style={{
+            padding:'10px 12px', background:'var(--primary-bg)', borderRadius:10,
+            border:'1px solid var(--border)', fontSize:12, color:'var(--text-2)', lineHeight:1.55,
+          }}>
+            <div style={{ fontWeight:700, color:'var(--primary-l)', marginBottom:4, fontSize:11, textTransform:'uppercase', letterSpacing:'0.05em' }}>
+              Qanday ishlaydi
+            </div>
+            1. O'quvchi linkni bosadi — bot ochiladi<br/>
+            2. Ismini yozadi — siz bu yerda "Yangi o'quvchilar"da ko'rasiz<br/>
+            3. Siz tasdiqlaganingizdan keyin u bot orqali vazifa va baholaringizni oladi
+          </div>
+        </>
+      )}
+    </Modal>
+  );
+}
+
+function GroupCard({ g, onAddStudents, onShareLink, onRemove }) {
   return (
     <motion.div className="card card-hov" variants={listItem}
       whileHover={{ y:-2 }}
@@ -212,7 +307,11 @@ function GroupCard({ g, onAddStudents, onRemove }) {
       <div style={{ display:'flex', gap:6, marginTop:'auto' }}>
         <button className="btn btn-primary btn-sm" style={{ flex:1, justifyContent:'center', fontSize:12 }}
           onClick={() => onAddStudents(g)}>
-          <Icon name="plus" size={11}/> O'quvchi qo'shish
+          <Icon name="plus" size={11}/> Qo'lda
+        </button>
+        <button className="btn btn-ghost btn-sm" style={{ flex:1, justifyContent:'center', fontSize:12 }}
+          onClick={() => onShareLink(g)} title="Telegram orqali ulashish">
+          🔗 Link
         </button>
         <button className="btn btn-ghost btn-icon" style={{ width:30, height:30, color:'var(--rose)' }}
           onClick={() => onRemove(g)} title="O'chirish">
@@ -223,12 +322,88 @@ function GroupCard({ g, onAddStudents, onRemove }) {
   );
 }
 
+function PendingStudentsPanel({ onChange }) {
+  const { data, loading, refetch } = useFetch(() => api.students.pending());
+  const list = Array.isArray(data) ? data : (data?.data ?? []);
+  const [busyId, setBusyId] = useState(null);
+
+  useEffect(() => {
+    const id = setInterval(() => refetch({ silent:true }), 12_000);
+    return () => clearInterval(id);
+  }, [refetch]);
+
+  const act = async (id, action) => {
+    setBusyId(id);
+    try {
+      if (action === 'approve') await api.students.approve(id);
+      else                       await api.students.reject(id);
+      sfx.success();
+      refetch();
+      onChange?.();
+    } catch (e) { alert(e.message); sfx.error?.(); }
+    finally { setBusyId(null); }
+  };
+
+  if (loading && !list.length) return <div style={{ padding:'14px', color:'var(--text-3)', fontSize:13 }}>Yuklanmoqda…</div>;
+  if (!list.length) return (
+    <div style={{ padding:'18px 14px', textAlign:'center', color:'var(--text-3)', fontSize:13 }}>
+      Hozircha tasdiq kutayotgan o'quvchilar yo'q.
+    </div>
+  );
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+      {list.map(s => (
+        <div key={s._id} className="card" style={{
+          padding:'12px 13px', display:'flex', alignItems:'center', gap:10,
+          border:'1px solid var(--border)', background:'var(--bg-subtle)',
+        }}>
+          <div style={{
+            width:36, height:36, borderRadius:'50%',
+            background:`hsl(${s.hue || 200} 70% 60%)`,
+            color:'#fff', display:'grid', placeItems:'center',
+            fontWeight:700, fontSize:14, flexShrink:0,
+          }}>{(s.name || '?').trim()[0]?.toUpperCase()}</div>
+
+          <div style={{ minWidth:0, flex:1 }}>
+            <div style={{ fontWeight:700, fontSize:13.5, lineHeight:1.2, marginBottom:2,
+              overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{s.name}</div>
+            <div style={{ fontSize:11.5, color:'var(--text-2)' }}>
+              {s.group?.name || '—'}
+              {s.telegramUsername && <> · @{s.telegramUsername}</>}
+            </div>
+          </div>
+
+          <button className="btn btn-primary btn-sm" style={{ fontSize:11.5, padding:'6px 11px' }}
+            disabled={busyId === s._id} onClick={() => act(s._id, 'approve')}>
+            ✓ Tasdiqlash
+          </button>
+          <button className="btn btn-ghost btn-icon" style={{ width:30, height:30, color:'var(--rose)' }}
+            disabled={busyId === s._id} onClick={() => act(s._id, 'reject')} title="Rad etish">
+            ✕
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function MyClasses({ onOpenStudent }) {
   const [tab, setTab] = useState('groups');
   const [createOpen, setCreateOpen] = useState(false);
   const [addForGroup, setAddForGroup] = useState(null);
+  const [linkForGroup, setLinkForGroup] = useState(null);
   const { data, loading, error, refetch } = useFetch(() => api.groups.list({ limit:100 }));
+  const { data: pendingData, refetch: refetchPending } = useFetch(() => api.students.pending());
   const groups = Array.isArray(data) ? data : (data?.data ?? []);
+  const pendingList = Array.isArray(pendingData) ? pendingData : (pendingData?.data ?? []);
+  const pendingCount = pendingList.length;
+
+  // Pending ro'yxatini har 12s'da silent refresh
+  useEffect(() => {
+    const id = setInterval(() => refetchPending({ silent:true }), 12_000);
+    return () => clearInterval(id);
+  }, [refetchPending]);
 
   const remove = async (g) => {
     if (!confirm(`"${g.name}" guruhni o'chirishni tasdiqlang?`)) return;
@@ -246,10 +421,14 @@ export default function MyClasses({ onOpenStudent }) {
       initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.32 }}>
       <div className="page-hd">
         <div>
-          <h1 className="page-title">{tab === 'groups' ? 'Mening guruhlarim' : "O'quvchilarim"}</h1>
+          <h1 className="page-title">
+            {tab === 'groups' ? 'Mening guruhlarim' : tab === 'pending' ? "Yangi o'quvchilar" : "O'quvchilarim"}
+          </h1>
           <div className="page-sub">
             {tab === 'groups'
               ? `${groups.length} ta guruh · jami ${totalStudents} ta o'quvchi`
+              : tab === 'pending'
+              ? `${pendingCount} ta tasdiq kutmoqda`
               : `${totalStudents} ta o'quvchi`}
           </div>
         </div>
@@ -269,10 +448,21 @@ export default function MyClasses({ onOpenStudent }) {
         <button className={`tab ${tab==='students'?'active':''}`} onClick={() => setTab('students')}>
           <Icon name="user" size={12} style={{ marginRight:4, verticalAlign:-1 }}/> O'quvchilar
         </button>
+        <button className={`tab ${tab==='pending'?'active':''}`} onClick={() => setTab('pending')}
+          style={pendingCount > 0 ? { color:'var(--amber)', fontWeight:700 } : undefined}>
+          ⏳ Tasdiqlash {pendingCount > 0 && (
+            <span style={{
+              marginLeft:5, padding:'1px 7px', borderRadius:10,
+              background:'var(--amber)', color:'#1a1a1a', fontSize:10.5, fontWeight:800,
+            }}>{pendingCount}</span>
+          )}
+        </button>
       </div>
 
       {tab === 'students' ? (
         <StudentsPage embedded onOpenStudent={onOpenStudent}/>
+      ) : tab === 'pending' ? (
+        <PendingStudentsPanel onChange={() => { refetch(); refetchPending(); }}/>
       ) : groups.length === 0 ? (
         <div style={{ padding:'50px 20px', textAlign:'center', color:'var(--text-3)' }}>
           <div style={{ fontSize:36, marginBottom:8 }}>📚</div>
@@ -284,6 +474,7 @@ export default function MyClasses({ onOpenStudent }) {
           {groups.map(g => (
             <GroupCard key={g._id} g={g}
               onAddStudents={setAddForGroup}
+              onShareLink={setLinkForGroup}
               onRemove={remove}/>
           ))}
         </motion.div>
@@ -299,6 +490,11 @@ export default function MyClasses({ onOpenStudent }) {
         group={addForGroup}
         onClose={() => setAddForGroup(null)}
         onSaved={refetch}/>
+
+      <InviteLinkModal
+        open={!!linkForGroup}
+        group={linkForGroup}
+        onClose={() => setLinkForGroup(null)}/>
     </motion.div>
   );
 }

@@ -1,6 +1,9 @@
 const { Markup } = require('telegraf');
 const User = require('../models/User');
+const Student = require('../models/Student');
 const inviteCache = require('./inviteCache');
+const { startStudentJoin, completeStudentJoin, getSession, clearSession } = require('./studentJoin');
+const { notifyStudentPending } = require('./notifications');
 
 /**
  * WebApp tugma — agar inviteToken berilgan bo'lsa, URL'ga ?invite=xxx
@@ -27,10 +30,32 @@ const HELP_TEXT = (
 );
 
 module.exports = function attach(bot) {
-  // /start (default) yoki /start invite_xxx
+  // /start (default) yoki /start invite_xxx yoki /start g_<token>
   bot.start(async (ctx) => {
     const tgId = String(ctx.from.id);
-    const startPayload = ctx.startPayload; // 'invite_xxx' ko'rinishida
+    const startPayload = ctx.startPayload; // 'invite_xxx' yoki 'g_xxx'
+
+    // ── 1) STUDENT INVITE (g_<token>) — Mini App emas, faqat bot orqali ulanish
+    if (startPayload && startPayload.startsWith('g_')) {
+      const token = startPayload.slice(2);
+      const result = await startStudentJoin(tgId, token, ctx.from);
+      if (result.error) {
+        await ctx.reply(`❌ ${result.error}`);
+        return;
+      }
+      if (result.alreadyJoined) {
+        await ctx.replyWithMarkdown(`${result.message}\n\nGuruh: *${result.group.name}* (${result.group.code})`);
+        return;
+      }
+      const teacherName = result.group.teacher?.name || "O'qituvchi";
+      await ctx.replyWithMarkdown(
+        `🎓 *${result.group.name}* (${result.group.code}) guruhiga xush kelibsiz!\n\n` +
+        `O'qituvchi: *${teacherName}*\n\n` +
+        `Iltimos, *to'liq ism familyangizni* yozing.\n` +
+        `Masalan: \`Ali Valiyev\``
+      );
+      return;
+    }
 
     // Agar invite token bor bo'lsa — cache'ga yozamiz (WebApp ochganda
     // start_param kelmasa, shu cache'dan o'qiymiz)
@@ -118,9 +143,50 @@ module.exports = function attach(bot) {
     await ctx.replyWithMarkdown(text);
   });
 
-  // Boshqa har qanday matn — yordamga yo'naltir
+  // Boshqa har qanday matn — turli holatlar:
   bot.on('message', async (ctx) => {
     if (!ctx.message?.text || ctx.message.text.startsWith('/')) return;
+    const tgId = String(ctx.from.id);
+    const text = ctx.message.text.trim();
+
+    // ── 1) Student join sessiyasi (ism kutilmoqda)
+    const session = getSession(tgId);
+    if (session) {
+      const result = await completeStudentJoin(tgId, text, ctx.from);
+      if (result.error) {
+        await ctx.reply(`❌ ${result.error}`);
+        return;
+      }
+      await ctx.replyWithMarkdown(
+        `✅ *${result.student.name}*, ro'yxatdan o'tdingiz!\n\n` +
+        `Guruh: *${result.group.name}* (${result.group.code})\n` +
+        `Holat: ⏳ *O'qituvchi tasdiqlashini kuting*\n\n` +
+        `Tasdiqlangach, vazifa va baholaringiz haqida shu botga xabar keladi.`
+      );
+      // Teacher'ga xabar
+      if (result.teacherTgId) {
+        notifyStudentPending(result.teacherTgId, {
+          studentName: result.student.name,
+          groupName:   result.group.name,
+          groupCode:   result.group.code,
+          telegramUsername: ctx.from.username || null,
+        }).catch(() => {});
+      }
+      return;
+    }
+
+    // ── 2) Student rolli bot foydalanuvchisi — Mini App'ga yo'naltirmaymiz
+    const student = await Student.findOne({ telegramId: tgId }).select('status group').lean();
+    if (student) {
+      await ctx.reply(
+        student.status === 'pending'
+          ? "⏳ O'qituvchi tasdiqlashini kuting. Tasdiqlangach xabarlar shu botga keladi."
+          : "📬 Vazifa va baholaringiz haqida xabarlar shu botga avtomatik keladi."
+      );
+      return;
+    }
+
+    // ── 3) Boshqa hollar (admin/teacher yoki noma'lum) — Mini App tugmasi
     const kb = webAppButton('🚀 Mini App ochish');
     await ctx.reply(
       'Mini App orqali tizimni boshqarishingiz mumkin. /help — yordam',

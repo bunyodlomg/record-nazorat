@@ -675,13 +675,40 @@ function WeekView({ cursor, today, eventsByDate, onPick, nowF, isAdmin }) {
               </div>
             ))}
           </div>
-          {days.map((d, dayIdx) => (
+          {days.map((d, dayIdx) => {
+            const timedEvents = d.events.filter(e => e.time);
+            const untimedEvents = d.events.filter(e => !e.time);
+            return (
             <div key={dayIdx} className={`week-day-col ${d.isToday?'today':''}`} style={{ position:'relative' }}>
+              {/* Vaqtsiz darslar — ustunning yuqorisida card sifatida */}
+              {untimedEvents.length > 0 && (
+                <div style={{ position:'absolute', top:0, left:2, right:2, zIndex:4, display:'flex', flexDirection:'column', gap:3, paddingTop:2 }}>
+                  {untimedEvents.map((e, j) => {
+                    const tone = TONE[e.tone] || TONE.green;
+                    return (
+                      <motion.div key={`u${j}`}
+                        initial={{ opacity:0, scale:0.9 }} animate={{ opacity:1, scale:1 }}
+                        transition={{ delay: 0.1 + dayIdx*0.04 + j*0.03 }}
+                        onClick={() => onPick({ y:d.date.getFullYear(), m:d.date.getMonth(), d:d.date.getDate(), dow:dayIdx, events:d.events })}
+                        style={{
+                          background: tone.bg, color: tone.color,
+                          border:`1px solid ${tone.border}`, borderLeft:`3px solid ${tone.solid}`,
+                          borderRadius:7, padding:'4px 6px', fontSize:11, lineHeight:1.25,
+                          cursor:'pointer',
+                          boxShadow:'var(--shadow-xs)',
+                        }}>
+                        <div style={{ fontWeight:600, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{e.title}</div>
+                        {e.subtitle && <div style={{ fontSize:9.5, opacity:0.8, marginTop:1 }}>{e.subtitle}</div>}
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
               {hours.map((h, i) => (
                 <div key={h} className="week-cell"/>
               ))}
-              {/* Hodisalarni absolute joylash */}
-              {d.events.map((e, j) => {
+              {/* Vaqtli hodisalarni absolute joylash */}
+              {timedEvents.map((e, j) => {
                 const t = parseTime(e.time);
                 if (t < START_HR || t > END_HR) return null;
                 const top = ((t - START_HR) / HOURS) * 100;
@@ -690,7 +717,7 @@ function WeekView({ cursor, today, eventsByDate, onPick, nowF, isAdmin }) {
                   <motion.div key={j}
                     initial={{ opacity:0, scale:0.9 }} animate={{ opacity:1, scale:1 }}
                     transition={{ delay: 0.1 + dayIdx*0.04 + j*0.03 }}
-                    onClick={() => onPick({ y:d.date.getFullYear(), m:d.date.getMonth(), d:d.date.getDate(), dow:dayIdx, events:[e, ...d.events.filter(x => x !== e)] })}
+                    onClick={() => onPick({ y:d.date.getFullYear(), m:d.date.getMonth(), d:d.date.getDate(), dow:dayIdx, events:d.events })}
                     className="week-event"
                     style={{
                       position:'absolute', top:`${top}%`, left:4, right:4,
@@ -722,7 +749,8 @@ function WeekView({ cursor, today, eventsByDate, onPick, nowF, isAdmin }) {
                 </motion.div>
               )}
             </div>
-          ))}
+          );
+          })}
         </div>
       </div>
     </motion.div>
