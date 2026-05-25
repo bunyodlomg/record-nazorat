@@ -17,6 +17,12 @@ const ok = (req,res,next) => {
 
 router.use(protect, requireActive);
 
+const buildStudentInviteLink = (token) => {
+  const username = process.env.BOT_USERNAME;
+  if (!username || !token) return null;
+  return `https://t.me/${username}?start=g_${token}`;
+};
+
 // LIST
 router.get('/', asyncHandler(async (req,res) => {
   const { teacherId, level, isActive='true', page=1, limit=50 } = req.query;
@@ -67,12 +73,62 @@ router.get('/', asyncHandler(async (req,res) => {
   res.json({ success:true, data: enriched, pagination:{ total, page:Number(page), limit:Number(limit) } });
 }));
 
-// GET ONE (with students)
+// GET ONE — to'liq guruh ma'lumoti: students + pending + homework + stats + invite link
 router.get('/:id', param('id').isMongoId(), ok, asyncHandler(async (req,res) => {
-  const g = await Group.findById(req.params.id).populate('teacher','name email hue subject phone');
+  const g = await Group.findById(req.params.id).populate('teacher','name email hue subject phone telegramUsername');
   if (!g) return res.status(404).json({ success:false, message:'Guruh topilmadi' });
-  const students = await Student.find({ group: g._id, status:'active' }).sort('-score');
-  res.json({ success:true, data: { ...g.toObject(), studentList: students, studentCount: students.length } });
+
+  // Ko'rish ruxsati: admin har doim, teacher — faqat o'zining guruhi
+  const teacherIdStr = String(g.teacher?._id || g.teacher);
+  if (req.user.role === 'teacher' && (!req.user.teacherRef || teacherIdStr !== String(req.user.teacherRef))) {
+    return res.status(403).json({ success:false, message:"Ruxsat yo'q" });
+  }
+
+  const [activeStudents, pendingStudents, recentHw, pendingSubAgg, gemAgg] = await Promise.all([
+    Student.find({ group: g._id, status:'active' }).sort('-gems -score').lean(),
+    Student.find({ group: g._id, status:'pending' }).sort('-createdAt').lean(),
+    Homework.find({ group: g._id }).sort('-dueDate').limit(20).lean(),
+    Submission.aggregate([
+      { $match: { group: g._id } },
+      { $group: { _id: '$student', pending: { $sum: { $cond: [{ $ne: ['$status', 'reviewed'] }, 1, 0] } } } },
+    ]),
+    Student.aggregate([
+      { $match: { group: g._id, status:'active' } },
+      { $group: { _id: null, totalGems: { $sum: '$gems' }, avgScore: { $avg: '$score' } } },
+    ]),
+  ]);
+
+  const pendMap = Object.fromEntries(pendingSubAgg.map(p => [String(p._id), p.pending]));
+  const enrichedStudents = activeStudents.map(s => ({
+    ...s,
+    pendingSubmissions: pendMap[String(s._id)] || 0,
+  }));
+
+  const completedHw = recentHw.filter(h => h.col === 'done').length;
+  const pendingHw   = recentHw.filter(h => h.col !== 'done').length;
+
+  // Invite link — guruhga avval generatsiya qilingan token bo'lsa
+  const inviteLink = g.inviteToken ? buildStudentInviteLink(g.inviteToken) : null;
+
+  res.json({
+    success: true,
+    data: {
+      ...g.toObject(),
+      studentList:         enrichedStudents,
+      studentCount:        enrichedStudents.length,
+      pendingStudents,
+      pendingStudentCount: pendingStudents.length,
+      homework:            recentHw,
+      inviteLink,
+      stats: {
+        totalGems:   gemAgg?.[0]?.totalGems || 0,
+        avgScore:    Math.round(gemAgg?.[0]?.avgScore || 0),
+        totalHw:     recentHw.length,
+        completedHw,
+        pendingHw,
+      },
+    },
+  });
 }));
 
 // Auto-generate ketma-ket group code: May-G1, May-G2, Iyun-G1, ...
@@ -133,12 +189,6 @@ router.post('/',
 const canEditGroup = (req, group) => {
   if (req.user.role === 'admin') return true;
   return req.user.role === 'teacher' && req.user.teacherRef && String(group.teacher) === String(req.user.teacherRef);
-};
-
-const buildStudentInviteLink = (token) => {
-  const username = process.env.BOT_USERNAME;
-  if (!username || !token) return null;
-  return `https://t.me/${username}?start=g_${token}`;
 };
 
 // GET /api/groups/:id/invite-link — joriy token (yo'q bo'lsa yaratiladi)

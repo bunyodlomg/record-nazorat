@@ -2,7 +2,7 @@ const { Markup } = require('telegraf');
 const User = require('../models/User');
 const Student = require('../models/Student');
 const inviteCache = require('./inviteCache');
-const { startStudentJoin, completeStudentJoin, getSession, clearSession } = require('./studentJoin');
+const { startStudentJoin, startStudentJoinByInvite, completeStudentJoin, getSession, clearSession } = require('./studentJoin');
 const { notifyStudentPending } = require('./notifications');
 
 /**
@@ -57,9 +57,30 @@ module.exports = function attach(bot) {
       return;
     }
 
-    // Agar invite token bor bo'lsa — cache'ga yozamiz (WebApp ochganda
-    // start_param kelmasa, shu cache'dan o'qiymiz)
+    // ── 2) INVITE TOKEN (invite_<token>) — student bo'lsa studentJoin, aks holda Mini App cache
     if (startPayload && startPayload.startsWith('invite_')) {
+      const token = startPayload.slice('invite_'.length);
+      const result = await startStudentJoinByInvite(tgId, token);
+      if (result.error) {
+        await ctx.reply(`❌ ${result.error}`);
+        return;
+      }
+      if (result.alreadyJoined) {
+        await ctx.replyWithMarkdown(`${result.message}\n\nGuruh: *${result.group.name}* (${result.group.code})`);
+        return;
+      }
+      if (result.group) {
+        // Student invite muvaffaqiyatli — ism so'raymiz
+        const teacherName = result.group.teacher?.name || "O'qituvchi";
+        await ctx.replyWithMarkdown(
+          `🎓 *${result.group.name}* (${result.group.code}) guruhiga xush kelibsiz!\n\n` +
+          `O'qituvchi: *${teacherName}*\n\n` +
+          `Iltimos, *to'liq ism familyangizni* yozing.\n` +
+          `Masalan: \`Ali Valiyev\``
+        );
+        return;
+      }
+      // notStudent: admin/teacher invite — Mini App cache + flow davom etadi
       inviteCache.set(tgId, startPayload);
     }
 

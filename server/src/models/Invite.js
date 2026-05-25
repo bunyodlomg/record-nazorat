@@ -13,13 +13,16 @@ const inviteSchema = new mongoose.Schema({
   // single-use yoki ko'p marta — default single-use
   maxUses:   { type:Number, default:1, min:1 },
   uses:      [{ type:mongoose.Schema.Types.ObjectId, ref:'User' }],
+  // Student rolli invite uchun — bot orqali kelgan o'quvchilar
+  studentUses: [{ type:mongoose.Schema.Types.ObjectId, ref:'Student' }],
 
   expiresAt: { type:Date, default:null },
   revokedAt: { type:Date, default:null },
 }, { timestamps:true });
 
 inviteSchema.virtual('isUsed').get(function() {
-  return this.uses.length >= this.maxUses;
+  const used = (this.uses?.length || 0) + (this.studentUses?.length || 0);
+  return used >= this.maxUses;
 });
 inviteSchema.virtual('isExpired').get(function() {
   return this.expiresAt && this.expiresAt < new Date();

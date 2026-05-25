@@ -132,11 +132,12 @@ function GroupForm({ open, onClose, initial, onSaved, teachers, isAdmin }) {
 
 const dayLabels = (days = []) => DAYS.filter(d => days.includes(d.id)).map(d => d.label).join(' · ');
 
-function GroupCard({ g, onOpenTeacher, onEdit, onRemove, isAdmin }) {
+function GroupCard({ g, onOpenTeacher, onOpenGroup, onEdit, onRemove, isAdmin }) {
   return (
     <motion.div className="card card-hov" variants={listItem}
       whileHover={{ y:-3 }}
-      style={{ padding:17, position:'relative' }}>
+      onClick={() => onOpenGroup?.(g._id)}
+      style={{ padding:17, position:'relative', cursor: onOpenGroup ? 'pointer' : 'default' }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:14 }}>
         <div style={{ minWidth:0, flex:1 }}>
           <div style={{ fontFamily:'var(--display)', fontSize:16, fontWeight:700, letterSpacing:'-0.02em' }}>{g.name}</div>
@@ -145,7 +146,7 @@ function GroupCard({ g, onOpenTeacher, onEdit, onRemove, isAdmin }) {
           </div>
         </div>
         {isAdmin && (
-          <div style={{ display:'flex', gap:4 }}>
+          <div style={{ display:'flex', gap:4 }} onClick={e => e.stopPropagation()}>
             <button className="btn btn-ghost btn-icon" style={{ width:28, height:28 }} onClick={() => onEdit(g)}><Icon name="settings" size={13}/></button>
             <button className="btn btn-ghost btn-icon" style={{ width:28, height:28, color:'var(--rose)' }} onClick={() => onRemove(g)}><Icon name="alert" size={13}/></button>
           </div>
@@ -179,7 +180,7 @@ function GroupCard({ g, onOpenTeacher, onEdit, onRemove, isAdmin }) {
   );
 }
 
-function TeacherGroupSection({ teacher, groups, onOpenTeacher, onEdit, onRemove, isAdmin }) {
+function TeacherGroupSection({ teacher, groups, onOpenTeacher, onOpenGroup, onEdit, onRemove, isAdmin }) {
   const totalStudents = groups.reduce((s, g) => s + (g.studentCount || 0), 0);
   const noTeacher = !teacher;
   return (
@@ -212,14 +213,14 @@ function TeacherGroupSection({ teacher, groups, onOpenTeacher, onEdit, onRemove,
       </div>
       <div className="groups-grid">
         {groups.map(g => (
-          <GroupCard key={g._id} g={g} onOpenTeacher={onOpenTeacher} onEdit={onEdit} onRemove={onRemove} isAdmin={isAdmin}/>
+          <GroupCard key={g._id} g={g} onOpenTeacher={onOpenTeacher} onOpenGroup={onOpenGroup} onEdit={onEdit} onRemove={onRemove} isAdmin={isAdmin}/>
         ))}
       </div>
     </motion.div>
   );
 }
 
-export default function GroupsPage({ onOpenTeacher }) {
+export default function GroupsPage({ onOpenTeacher, onOpenGroup }) {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   const [search, setSearch] = useState('');
@@ -305,7 +306,7 @@ export default function GroupsPage({ onOpenTeacher }) {
           <motion.div key="by-group" className="groups-grid"
             variants={listContainer} initial="hidden" animate="show" exit={{ opacity:0 }}>
             {groups.map(g => (
-              <GroupCard key={g._id} g={g} onOpenTeacher={onOpenTeacher} onEdit={openEdit} onRemove={remove} isAdmin={isAdmin}/>
+              <GroupCard key={g._id} g={g} onOpenTeacher={onOpenTeacher} onOpenGroup={onOpenGroup} onEdit={openEdit} onRemove={remove} isAdmin={isAdmin}/>
             ))}
           </motion.div>
         )}
@@ -316,7 +317,7 @@ export default function GroupsPage({ onOpenTeacher }) {
             {groupedByTeacher.map(({ teacher, groups: tGroups }) => (
               <TeacherGroupSection key={teacher?._id || 'none'}
                 teacher={teacher} groups={tGroups}
-                onOpenTeacher={onOpenTeacher} onEdit={openEdit} onRemove={remove} isAdmin={isAdmin}/>
+                onOpenTeacher={onOpenTeacher} onOpenGroup={onOpenGroup} onEdit={openEdit} onRemove={remove} isAdmin={isAdmin}/>
             ))}
           </motion.div>
         )}

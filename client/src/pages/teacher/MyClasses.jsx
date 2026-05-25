@@ -286,11 +286,12 @@ function InviteLinkModal({ open, onClose, group }) {
   );
 }
 
-function GroupCard({ g, onAddStudents, onShareLink, onRemove }) {
+function GroupCard({ g, onAddStudents, onShareLink, onRemove, onOpenGroup }) {
   return (
     <motion.div className="card card-hov" variants={listItem}
       whileHover={{ y:-2 }}
-      style={{ padding:14, display:'flex', flexDirection:'column' }}>
+      onClick={() => onOpenGroup?.(g._id)}
+      style={{ padding:14, display:'flex', flexDirection:'column', cursor: onOpenGroup ? 'pointer' : 'default' }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10, gap:8 }}>
         <div style={{ minWidth:0, flex:1 }}>
           <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:5, flexWrap:'wrap' }}>
@@ -335,7 +336,7 @@ function GroupCard({ g, onAddStudents, onShareLink, onRemove }) {
         </div>
       )}
 
-      <div style={{ display:'flex', gap:6, marginTop:'auto' }}>
+      <div style={{ display:'flex', gap:6, marginTop:'auto' }} onClick={e => e.stopPropagation()}>
         <button className="btn btn-primary btn-sm" style={{ flex:1, justifyContent:'center', fontSize:12 }}
           onClick={() => onAddStudents(g)}>
           <Icon name="plus" size={11}/> Qo'lda
@@ -419,7 +420,7 @@ function PendingStudentsPanel({ onChange }) {
   );
 }
 
-export default function MyClasses({ onOpenStudent }) {
+export default function MyClasses({ onOpenStudent, onOpenGroup }) {
   const [tab, setTab] = useState('groups');
   const [createOpen, setCreateOpen] = useState(false);
   const [addForGroup, setAddForGroup] = useState(null);
@@ -506,7 +507,8 @@ export default function MyClasses({ onOpenStudent }) {
             <GroupCard key={g._id} g={g}
               onAddStudents={setAddForGroup}
               onShareLink={setLinkForGroup}
-              onRemove={remove}/>
+              onRemove={remove}
+              onOpenGroup={onOpenGroup}/>
           ))}
         </motion.div>
       )}

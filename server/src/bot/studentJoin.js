@@ -10,13 +10,15 @@
  */
 const Group   = require('../models/Group');
 const Student = require('../models/Student');
+const Invite  = require('../models/Invite');
 
 const SESSION_TTL_MS = 30 * 60 * 1000; // 30 daqiqa
-const sessions = new Map(); // tgId -> { groupId, expiresAt }
+const sessions = new Map(); // tgId -> { groupId, inviteId?, expiresAt }
 
-function setSession(tgId, groupId) {
+function setSession(tgId, groupId, inviteId = null) {
   sessions.set(String(tgId), {
     groupId: String(groupId),
+    inviteId: inviteId ? String(inviteId) : null,
     expiresAt: Date.now() + SESSION_TTL_MS,
   });
 }
@@ -73,6 +75,38 @@ async function startStudentJoin(tgId, token) {
 }
 
 /**
+ * Invite model orqali studentJoin boshlash.
+ * `/start invite_<token>` — role=student bo'lsa group bilan.
+ * Qaytarish: { group } yoki { error } yoki { alreadyJoined, message, group }
+ */
+async function startStudentJoinByInvite(tgId, token) {
+  const invite = await Invite.findOne({ token }).populate({ path:'group', populate:{ path:'teacher', select:'name' } });
+  if (!invite) return { error: "Bu havola topilmadi." };
+  if (invite.role !== 'student') return { error: null, notStudent: true }; // commands.js boshqacha handle qiladi
+  if (invite.revokedAt) return { error: "Bu havola bekor qilingan." };
+  if (invite.expiresAt && invite.expiresAt < new Date()) return { error: "Havola muddati tugagan." };
+  const used = (invite.uses?.length || 0) + (invite.studentUses?.length || 0);
+  if (used >= invite.maxUses) return { error: "Havolaning ishlatish lim­iti tugagan." };
+  if (!invite.group || !invite.group.isActive) return { error: "Guruh topilmadi yoki o'chirilgan." };
+
+  const group = invite.group;
+
+  // Avval shu Telegram bilan bu guruhga qo'shilganmi?
+  const existing = await Student.findOne({ telegramId: String(tgId), group: group._id }).lean();
+  if (existing) {
+    const label = existing.status === 'pending'
+      ? "⏳ Siz allaqachon ro'yxatdan o'tdingiz — o'qituvchi tasdiqlashini kuting."
+      : existing.status === 'active'
+      ? "✅ Siz allaqachon ushbu guruhdasiz."
+      : "❌ Sizning ro'yxatga olinishingiz to'xtatilgan.";
+    return { alreadyJoined: true, message: label, group };
+  }
+
+  setSession(tgId, group._id, invite._id);
+  return { group };
+}
+
+/**
  * Ism qabul qilish va pending Student yaratish.
  * Qaytarish: { student, group, teacherTgId } yoki { error }
  */
@@ -114,6 +148,11 @@ async function completeStudentJoin(tgId, name, telegramProfile = {}) {
     photoUrl:          telegramProfile.photo_url  || null,
     joinedViaBot: true,
   });
+
+  // Agar invite orqali kelgan bo'lsa — studentUses'ga qo'shamiz
+  if (session.inviteId) {
+    Invite.findByIdAndUpdate(session.inviteId, { $push: { studentUses: student._id } }).catch(() => {});
+  }
   clearSession(tgId);
 
   // Teacher'ning Telegram'iga xabar uchun chatId
@@ -133,6 +172,7 @@ async function completeStudentJoin(tgId, name, telegramProfile = {}) {
 
 module.exports = {
   startStudentJoin,
+  startStudentJoinByInvite,
   completeStudentJoin,
   getSession,
   clearSession,

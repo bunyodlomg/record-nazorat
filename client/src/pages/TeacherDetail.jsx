@@ -270,7 +270,7 @@ export function TeacherDrawer({ teacherId, onClose, onOpenFull }) {
   );
 }
 
-export function TeacherDetailPage({ teacherId, onBack }) {
+export function TeacherDetailPage({ teacherId, onBack, onOpenGroup }) {
   const { data: t, loading, error, refetch } = useFetch(() => api.teachers.get(teacherId), [teacherId]);
   const { data: acts = [] } = useFetch(() => api.teachers.activity(teacherId), [teacherId]);
   const [msg, setMsg] = useState(null);
@@ -397,45 +397,55 @@ export function TeacherDetailPage({ teacherId, onBack }) {
                     borderRadius:12, overflow:'hidden',
                     transition:'border-color 200ms',
                   }}>
-                  <button onClick={() => setExpandedGroup(isOpen ? null : g._id)}
-                    style={{
-                      width:'100%', display:'flex', alignItems:'center', gap:11, padding:'11px 13px',
-                      background:'transparent', textAlign:'left', cursor:'pointer',
-                    }}>
-                    <div style={{
-                      width:36, height:36, borderRadius:10,
-                      background: isComplete
-                        ? 'var(--primary-bg)'
-                        : 'var(--amber-bg)',
-                      color: isComplete ? 'var(--primary-l)' : 'var(--amber)',
-                      display:'grid', placeItems:'center', flexShrink:0,
-                      border:`1px solid ${isComplete ? 'var(--primary)' : 'rgba(251,191,36,0.4)'}`,
-                    }}>
-                      <Icon name={isComplete ? 'check' : 'clock'} size={15}/>
-                    </div>
-                    <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:2 }}>
-                        <span style={{ fontSize:13.5, fontWeight:600, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{g.name}</span>
-                        {g.code && (
-                          <span style={{ fontSize:10, fontFamily:'var(--mono)', color:'var(--text-3)', background:'var(--bg-card-s)', padding:'1px 6px', borderRadius:4 }}>
-                            {g.code}
+                  <div style={{
+                    width:'100%', display:'flex', alignItems:'center', gap:8, padding:'11px 13px',
+                  }}>
+                    <button onClick={() => onOpenGroup?.(g._id)}
+                      disabled={!onOpenGroup}
+                      style={{
+                        flex:1, display:'flex', alignItems:'center', gap:11,
+                        background:'transparent', textAlign:'left', cursor: onOpenGroup ? 'pointer' : 'default',
+                        minWidth:0,
+                      }}
+                      title="Guruh ma'lumotlarini ochish">
+                      <div style={{
+                        width:36, height:36, borderRadius:10,
+                        background: isComplete ? 'var(--primary-bg)' : 'var(--amber-bg)',
+                        color:      isComplete ? 'var(--primary-l)' : 'var(--amber)',
+                        display:'grid', placeItems:'center', flexShrink:0,
+                        border:`1px solid ${isComplete ? 'var(--primary)' : 'rgba(251,191,36,0.4)'}`,
+                      }}>
+                        <Icon name={isComplete ? 'check' : 'clock'} size={15}/>
+                      </div>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:2 }}>
+                          <span style={{ fontSize:13.5, fontWeight:600, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{g.name}</span>
+                          {g.code && (
+                            <span style={{ fontSize:10, fontFamily:'var(--mono)', color:'var(--text-3)', background:'var(--bg-card-s)', padding:'1px 6px', borderRadius:4 }}>
+                              {g.code}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize:11.5, color:'var(--text-2)', display:'flex', gap:7, alignItems:'center', flexWrap:'wrap' }}>
+                          <span style={{ display:'inline-flex', alignItems:'center', gap:3 }}>
+                            <Icon name="user" size={10}/> {g.studentCount} o'quvchi
                           </span>
-                        )}
+                          {isComplete
+                            ? <span style={{ color:'var(--primary-l)', fontWeight:600 }}>· To'liq tekshirilgan</span>
+                            : <span style={{ color:'var(--amber)', fontWeight:600 }}>· {pendingStudents.length} ta tekshirilmagan</span>}
+                        </div>
                       </div>
-                      <div style={{ fontSize:11.5, color:'var(--text-2)', display:'flex', gap:7, alignItems:'center', flexWrap:'wrap' }}>
-                        <span style={{ display:'inline-flex', alignItems:'center', gap:3 }}>
-                          <Icon name="user" size={10}/> {g.studentCount} o'quvchi
-                        </span>
-                        {isComplete
-                          ? <span style={{ color:'var(--primary-l)', fontWeight:600 }}>· To'liq tekshirilgan</span>
-                          : <span style={{ color:'var(--amber)', fontWeight:600 }}>· {pendingStudents.length} ta tekshirilmagan</span>}
-                      </div>
-                    </div>
-                    <motion.span animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration:0.2 }}
-                      style={{ display:'flex', color:'var(--text-3)' }}>
-                      <Icon name="chevronDown" size={14}/>
-                    </motion.span>
-                  </button>
+                    </button>
+                    <button onClick={() => setExpandedGroup(isOpen ? null : g._id)}
+                      className="btn btn-ghost btn-icon"
+                      style={{ width:32, height:32, flexShrink:0 }}
+                      title={isOpen ? 'Yopish' : "Tekshirilmaganlarni ko'rish"}>
+                      <motion.span animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration:0.2 }}
+                        style={{ display:'flex', color:'var(--text-3)' }}>
+                        <Icon name="chevronDown" size={14}/>
+                      </motion.span>
+                    </button>
+                  </div>
                   <AnimatePresence initial={false}>
                     {isOpen && (
                       <motion.div

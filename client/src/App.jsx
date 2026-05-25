@@ -13,6 +13,7 @@ import TeachersPage from './pages/Teachers.jsx';
 import { TeacherDrawer, TeacherDetailPage } from './pages/TeacherDetail.jsx';
 import StudentDetailPage from './pages/StudentDetail.jsx';
 import GroupsPage from './pages/Groups.jsx';
+import GroupDetailPage from './pages/GroupDetail.jsx';
 import LeaderboardPage from './pages/Leaderboard.jsx';
 import HomeworkPage from './pages/Homework.jsx';
 import HomeworkDetailPage from './pages/HomeworkDetail.jsx';
@@ -23,6 +24,7 @@ import SettingsPage from './pages/Settings.jsx';
 import MyDashboard from './pages/teacher/MyDashboard.jsx';
 import MyClasses   from './pages/teacher/MyClasses.jsx';
 import MyHomework  from './pages/teacher/MyHomework.jsx';
+import InvitesPage from './pages/Invites.jsx';
 import PendingUsersPage from './pages/PendingUsers.jsx';
 
 
@@ -40,6 +42,7 @@ const TEACHER_DOCK = [
   { id:'dashboard',  label:'Bosh sahifa',         icon:'dashboard' },
   { id:'my-classes', label:'Mening guruhlarim',   icon:'groups' },
   { id:'my-homework',label:'Vazifalarim',         icon:'homework' },
+  { id:'invites',    label:'Takliflar',           icon:'send' },
   { divider:true },
   { id:'calendar',   label:'Kalendar',            icon:'calendar' },
 ];
@@ -50,13 +53,15 @@ function AdminApp() {
   const [detailId,   setDetailId]   = useState(null);
   const [studentId,  setStudentId]  = useState(null);
   const [homeworkId, setHomeworkId] = useState(null);
+  const [groupId,    setGroupId]    = useState(null);
 
-  const nav = id => { setPage(id); setDetailId(null); setDrawerId(null); setStudentId(null); setHomeworkId(null); };
+  const nav = id => { setPage(id); setDetailId(null); setDrawerId(null); setStudentId(null); setHomeworkId(null); setGroupId(null); };
 
   // Telegram BackButton — drawer yoki detail ochiq bo'lsa orqaga qaytadi
   const backHandler =
     studentId  ? () => setStudentId(null) :
     homeworkId ? () => setHomeworkId(null) :
+    groupId    ? () => setGroupId(null) :
     detailId   ? () => setDetailId(null) :
     drawerId   ? () => setDrawerId(null) :
     page !== 'dashboard' ? () => setPage('dashboard') :
@@ -68,11 +73,14 @@ function AdminApp() {
     content = <StudentDetailPage studentId={studentId} onBack={() => setStudentId(null)}/>;
   } else if (homeworkId) {
     content = <HomeworkDetailPage homeworkId={homeworkId} onBack={() => setHomeworkId(null)}/>;
+  } else if (groupId) {
+    content = <GroupDetailPage groupId={groupId} onBack={() => setGroupId(null)}
+      onOpenStudent={setStudentId} onOpenHomework={setHomeworkId} onOpenTeacher={setDetailId}/>;
   } else if (detailId) {
-    content = <TeacherDetailPage teacherId={detailId} onBack={() => setDetailId(null)}/>;
+    content = <TeacherDetailPage teacherId={detailId} onBack={() => setDetailId(null)} onOpenGroup={setGroupId}/>;
   } else if (page === 'dashboard')   content = <DashboardPage   onOpenTeacher={setDetailId} onNav={nav}/>;
   else if (page === 'teachers')      content = <TeachersPage    onOpenTeacher={setDetailId} onOpenStudent={setStudentId}/>;
-  else if (page === 'groups')        content = <GroupsPage      onOpenTeacher={setDetailId}/>;
+  else if (page === 'groups')        content = <GroupsPage      onOpenTeacher={setDetailId} onOpenGroup={setGroupId}/>;
   else if (page === 'leaderboard')   content = <LeaderboardPage onOpenTeacher={setDetailId} onOpenStudent={setStudentId}/>;
   else if (page === 'homework')      content = <HomeworkPage onOpenHomework={setHomeworkId} onOpenTeacher={setDetailId}/>;
   else if (page === 'calendar')      content = <CalendarPage onOpenTeacher={setDetailId}/>;
@@ -103,24 +111,30 @@ function TeacherApp() {
   const [page, setPage] = useState('dashboard');
   const [studentId,  setStudentId]  = useState(null);
   const [homeworkId, setHomeworkId] = useState(null);
+  const [groupId,    setGroupId]    = useState(null);
 
   const backHandler =
     studentId  ? () => setStudentId(null) :
     homeworkId ? () => setHomeworkId(null) :
+    groupId    ? () => setGroupId(null) :
     page !== 'dashboard' ? () => setPage('dashboard') :
     null;
   useBackButton(backHandler);
 
-  const nav = id => { setPage(id); setStudentId(null); setHomeworkId(null); };
+  const nav = id => { setPage(id); setStudentId(null); setHomeworkId(null); setGroupId(null); };
 
   let content;
   if (studentId) {
     content = <StudentDetailPage studentId={studentId} onBack={() => setStudentId(null)}/>;
   } else if (homeworkId) {
     content = <HomeworkDetailPage homeworkId={homeworkId} onBack={() => setHomeworkId(null)}/>;
+  } else if (groupId) {
+    content = <GroupDetailPage groupId={groupId} onBack={() => setGroupId(null)}
+      onOpenStudent={setStudentId} onOpenHomework={setHomeworkId}/>;
   } else if (page === 'dashboard')        content = <MyDashboard onNav={nav}/>;
-  else if (page === 'my-classes')  content = <MyClasses onOpenStudent={setStudentId}/>;
+  else if (page === 'my-classes')  content = <MyClasses onOpenStudent={setStudentId} onOpenGroup={setGroupId}/>;
   else if (page === 'my-homework') content = <MyHomework onOpenHomework={setHomeworkId}/>;
+  else if (page === 'invites')     content = <InvitesPage/>;
   else if (page === 'calendar')    content = <CalendarPage/>;
 
   return (
