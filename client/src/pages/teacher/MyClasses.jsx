@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Icon } from '../../components/ui.jsx';
 import { Spinner, ErrorBox, listContainer, listItem } from '../../components/Feedback.jsx';
-import { Modal, Field } from '../../components/Modal.jsx';
+import { Modal, Field, Input } from '../../components/Modal.jsx';
 import { useFetch } from '../../hooks/useFetch.js';
 import api from '../../services/api.js';
 import { sfx } from '../../hooks/useSound.js';

@@ -34,16 +34,16 @@ function CreateInviteModal({ open, onClose, onCreated, isTeacher, groups }) {
   const [role, setRole] = useState(isTeacher ? 'student' : 'teacher');
   const [groupId, setGroupId] = useState('');
   const [label, setLabel] = useState('');
-  const [maxUses, setMaxUses] = useState(isTeacher ? 30 : 10);
-  const [expiresInHours, setExpires] = useState(168); // 7 kun default
+  const [maxUses, setMaxUses] = useState(20);
+  const [expiresInHours, setExpires] = useState(1); // 1 soat default
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState('');
 
   const resetForm = () => {
     setRole(isTeacher ? 'student' : 'teacher');
     setGroupId(''); setLabel('');
-    setMaxUses(isTeacher ? 30 : 10);
-    setExpires(168); setError('');
+    setMaxUses(20);
+    setExpires(1); setError('');
   };
 
   const submit = async () => {
@@ -115,7 +115,7 @@ function CreateInviteModal({ open, onClose, onCreated, isTeacher, groups }) {
           <Input type="number" min="1" max="1000" value={maxUses} onChange={e => setMaxUses(e.target.value)}/>
         </Field>
         <Field label="Amal qilish (soat)" hint="Bo'sh — cheksiz">
-          <Input type="number" min="0" value={expiresInHours} onChange={e => setExpires(e.target.value)} placeholder="168"/>
+          <Input type="number" min="0" value={expiresInHours} onChange={e => setExpires(e.target.value)} placeholder="1"/>
         </Field>
       </div>
     </Modal>
