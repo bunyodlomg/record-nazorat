@@ -56,6 +56,7 @@ const api = {
     approve: id             => http.patch(`/students/${id}/approve`),
     reject:  id             => http.patch(`/students/${id}/reject`),
     delete:  id             => http.delete(`/students/${id}`),
+    message: (id, payload)  => http.post(`/students/${id}/message`, payload),
   },
   leaderboard: {
     teachers: (params = {}) => http.get('/leaderboard/teachers', { params }),

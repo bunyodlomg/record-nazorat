@@ -34,6 +34,19 @@ async function sendTeacherMessage(chatId, { kind = 'message', text, from }) {
   return sendTo(chatId, `${heading}\n\n${escapeMd(text)}`);
 }
 
+/**
+ * Teacher tomonidan o'quvchiga shaxsiy xabar yoki maqtov.
+ *
+ * @param {string} chatId — student.telegramId
+ * @param {{ kind:'message'|'praise', text:string, from:string }} payload
+ */
+async function sendStudentMessage(chatId, { kind = 'message', text, from }) {
+  const heading = kind === 'praise'
+    ? `🌟 *Maqtov — ${escapeMd(from)} dan*`
+    : `💬 *Xabar — ${escapeMd(from)} dan*`;
+  return sendTo(chatId, `${heading}\n\n${escapeMd(text)}`);
+}
+
 const ROLE_LABEL = { admin:'Administrator', teacher:"O'qituvchi", student:"O'quvchi" };
 
 /**
@@ -226,4 +239,5 @@ module.exports = {
   notifyStudentApproved,
   notifyStudentRejected,
   sendTeacherMessage,
+  sendStudentMessage,
 };

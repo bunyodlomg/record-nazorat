@@ -14,6 +14,85 @@ const DAYS = [
 const dayLabels = (days = []) => DAYS.filter(d => days.includes(d.id)).map(d => d.label).join(' · ');
 const LVL_LABEL = { Beginner:"Boshlang'ich", Intermediate:"O'rta", Advanced:'Yuqori', Olympiad:'Olimpiada' };
 
+const PRAISE_TEMPLATES = [
+  "Vazifani juda yaxshi bajarding, rahmat! 👏",
+  "Yaqinda sezilarli o'sish ko'rsatyapsan — davom et!",
+  "Bugungi javobing ajoyib edi. 👍",
+];
+
+function MessageModal({ open, onClose, student, kind = 'message' }) {
+  const [text, setText]       = useState('');
+  const [sending, setSending] = useState(false);
+  const [error, setError]     = useState('');
+  const [done, setDone]       = useState(false);
+
+  const reset = () => { setText(''); setError(''); setDone(false); };
+  const close = () => { reset(); onClose(); };
+
+  const submit = async () => {
+    if (!text.trim()) return;
+    setError(''); setSending(true);
+    try {
+      await api.students.message(student._id, { text: text.trim(), kind });
+      setDone(true);
+      setTimeout(close, 1100);
+    } catch (e) {
+      setError(e.message || "Yuborib bo'lmadi");
+    } finally { setSending(false); }
+  };
+
+  if (!student) return null;
+  const title = kind === 'praise' ? 'Maqtash' : 'Yozish';
+  const handle = student.telegramUsername ? `@${student.telegramUsername}` : null;
+
+  return (
+    <Modal open={open} onClose={close}
+      title={title}
+      subtitle={`${student.name}${handle ? ' · '+handle : ''} — Telegram orqali yuboriladi`}
+      width={460}
+      footer={done ? null : <>
+        <button className="btn btn-ghost" onClick={close} disabled={sending}>Bekor qilish</button>
+        <button className="btn btn-primary" onClick={submit} disabled={sending || !text.trim()}>
+          {sending ? 'Yuborilmoqda...' : (kind === 'praise' ? 'Maqtovni yuborish' : 'Yuborish')}
+        </button>
+      </>}
+    >
+      {done ? (
+        <div style={{ padding:'20px 0', textAlign:'center' }}>
+          <div style={{ fontSize:34, marginBottom:8 }}>✓</div>
+          <div style={{ fontSize:14, fontWeight:600 }}>Yuborildi</div>
+          <div style={{ fontSize:12.5, color:'var(--text-3)', marginTop:4 }}>Telegram orqali yetkazildi</div>
+        </div>
+      ) : <>
+        {error && (
+          <div style={{ marginBottom:12, padding:'10px 12px', background:'var(--rose-bg)', border:'1px solid var(--rose)', borderRadius:8, color:'var(--rose)', fontSize:12.5 }}>
+            {error}
+          </div>
+        )}
+        {kind === 'praise' && (
+          <div style={{ marginBottom:14 }}>
+            <div style={{ fontSize:11.5, fontWeight:600, color:'var(--text-2)', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.05em' }}>Tayyor matnlar</div>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+              {PRAISE_TEMPLATES.map(tpl => (
+                <button key={tpl} type="button" className="chip chip-neutral"
+                  onClick={() => setText(tpl)}
+                  style={{ cursor:'pointer', fontSize:11.5, padding:'5px 10px' }}>
+                  {tpl.length > 40 ? tpl.slice(0,40)+'...' : tpl}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        <Field label="Xabar matni">
+          <Textarea value={text} onChange={e=>setText(e.target.value)} maxLength={1500}
+            placeholder={kind === 'praise' ? 'Maqtov so\'zlaringiz...' : 'Xabaringiz...'}
+            style={{ minHeight:120 }} autoFocus/>
+        </Field>
+      </>}
+    </Modal>
+  );
+}
+
 function EditModal({ open, onClose, student, onSaved }) {
   const [form, setForm] = useState(() => student ? {
     name: student.name || '',
@@ -85,8 +164,10 @@ function EditModal({ open, onClose, student, onSaved }) {
 
 export default function StudentDetailPage({ studentId, onBack }) {
   const { user } = useAuth();
-  const canEdit = user?.role === 'admin' || user?.role === 'teacher';
+  const isTeacher = user?.role === 'teacher';
+  const canEdit = user?.role === 'admin' || isTeacher;
   const [editOpen, setEditOpen] = useState(false);
+  const [msgKind, setMsgKind] = useState(null); // 'message' | 'praise' | null
   const { data: s, loading, error, refetch } = useFetch(() => api.students.get(studentId), [studentId]);
 
   if (loading) return <div className="page"><Spinner/></div>;
@@ -146,7 +227,23 @@ export default function StudentDetailPage({ studentId, onBack }) {
             </div>
           </div>
           {canEdit && (
-            <div style={{ display:'flex', gap:6 }}>
+            <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+              {isTeacher && (
+                <>
+                  <button className="btn btn-secondary"
+                    onClick={() => setMsgKind('message')}
+                    disabled={!s.telegramId}
+                    title={!s.telegramId ? "O'quvchining Telegram akkaunti yo'q" : ''}>
+                    <Icon name="send" size={13}/> Yozish
+                  </button>
+                  <button className="btn btn-primary"
+                    onClick={() => setMsgKind('praise')}
+                    disabled={!s.telegramId}
+                    title={!s.telegramId ? "O'quvchining Telegram akkaunti yo'q" : ''}>
+                    <Icon name="sparkles" size={13}/> Maqtash
+                  </button>
+                </>
+              )}
               <button className="btn btn-secondary" onClick={() => setEditOpen(true)}>
                 <Icon name="settings" size={13}/> Tahrirlash
               </button>
@@ -157,6 +254,12 @@ export default function StudentDetailPage({ studentId, onBack }) {
           )}
         </div>
       </motion.div>
+
+      <MessageModal
+        open={!!msgKind}
+        kind={msgKind}
+        student={s}
+        onClose={() => setMsgKind(null)}/>
 
       {/* Stats */}
       <motion.div

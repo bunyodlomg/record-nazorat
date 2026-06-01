@@ -190,7 +190,8 @@ export default function GroupDetailPage({ groupId, onBack, onOpenStudent, onOpen
 
   const students  = g?.studentList || [];
   const homework  = g?.homework    || [];
-  const pending   = g?.pendingStudents || [];
+  // Pending o'quvchilarni faqat guruh teacher'i ko'rib tasdiqlay oladi (admin emas).
+  const pending   = isAdmin ? [] : (g?.pendingStudents || []);
   const stats     = g?.stats || {};
 
   const pendingHwCount = useMemo(() => homework.filter(h => h.col !== 'done').length, [homework]);
