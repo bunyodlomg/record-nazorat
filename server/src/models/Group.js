@@ -18,8 +18,22 @@ const groupSchema = new mongoose.Schema({
 
   // Student'lar uchun umumiy invite token — Telegram bot orqali ulanish uchun
   // Link: https://t.me/<bot>?start=g_<token>
-  inviteToken: { type:String, default:null, index:true, sparse:true, unique:true },
+  // Eslatma: unique index quyida partialFilterExpression bilan beriladi
+  // (default:null + sparse:true kombinatsiyasi MongoDB'da duplicate-null xatosini keltirib chiqaradi).
+  inviteToken: { type:String },
 }, { timestamps:true, toJSON:{ virtuals:true }, toObject:{ virtuals:true } });
+
+// Bo'sh / null tokenlar — index'ga tushmasin. Faqat string qiymatlar uchun unique.
+groupSchema.index(
+  { inviteToken: 1 },
+  { unique: true, partialFilterExpression: { inviteToken: { $type: 'string' } } },
+);
+
+// Bo'sh string yoki null kelsa — field umuman saqlanmasin (undefined).
+groupSchema.pre('save', function(next) {
+  if (this.inviteToken === null || this.inviteToken === '') this.inviteToken = undefined;
+  next();
+});
 
 groupSchema.statics.generateInviteToken = function() {
   return crypto.randomBytes(10).toString('base64url'); // ~13 belgi

@@ -33,7 +33,6 @@ function statusOf(inv) {
 function CreateInviteModal({ open, onClose, onCreated, isTeacher, groups }) {
   const [role, setRole] = useState(isTeacher ? 'student' : 'teacher');
   const [groupId, setGroupId] = useState('');
-  const [label, setLabel] = useState('');
   const [maxUses, setMaxUses] = useState(20);
   const [expiresInHours, setExpires] = useState(1); // 1 soat default
   const [saving, setSaving] = useState(false);
@@ -41,7 +40,7 @@ function CreateInviteModal({ open, onClose, onCreated, isTeacher, groups }) {
 
   const resetForm = () => {
     setRole(isTeacher ? 'student' : 'teacher');
-    setGroupId(''); setLabel('');
+    setGroupId('');
     setMaxUses(20);
     setExpires(1); setError('');
   };
@@ -51,7 +50,6 @@ function CreateInviteModal({ open, onClose, onCreated, isTeacher, groups }) {
     try {
       const payload = {
         role,
-        label: label.trim() || null,
         maxUses: Number(maxUses) || 1,
         expiresInHours: expiresInHours ? Number(expiresInHours) : undefined,
       };
@@ -107,9 +105,6 @@ function CreateInviteModal({ open, onClose, onCreated, isTeacher, groups }) {
         </Field>
       )}
 
-      <Field label="Belgi (ixtiyoriy)" hint="Masalan: 'May guruhi' yoki tushuntirish">
-        <Input value={label} onChange={e => setLabel(e.target.value)} placeholder="Belgi"/>
-      </Field>
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
         <Field label="Necha marta ishlaydi" hint="1 — bir martalik">
           <Input type="number" min="1" max="1000" value={maxUses} onChange={e => setMaxUses(e.target.value)}/>
