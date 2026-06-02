@@ -6,8 +6,8 @@ import { useFetch } from '../hooks/useFetch.js';
 import api from '../services/api.js';
 
 const TABS = [
-  { id:'pending', label:'Tekshirilmagan', icon:'clock', tone:'warning' },
-  { id:'done',    label:'Tekshirilgan',   icon:'check', tone:'success' },
+  { id:'pending', label:'Kutilmoqda',  icon:'clock', tone:'warning' },
+  { id:'done',    label:'Belgilangan', icon:'check', tone:'success' },
 ];
 const TONE = {
   warning:['var(--amber-bg)','var(--amber)'],
@@ -37,7 +37,7 @@ export function TeacherRow({ t, tab, onOpenTeacher }) {
         marginBottom:9,
       }}>
       <div style={{ position:'relative', flexShrink:0 }}>
-        <Avatar name={t.name} hue={t.hue} size="sm"/>
+        <Avatar name={t.name} hue={t.hue} size="sm" photoUrl={t.photoUrl}/>
         {t.presence === 'online' && (
           <span style={{
             position:'absolute', bottom:-1, right:-1, width:10, height:10, borderRadius:'50%',
@@ -120,8 +120,8 @@ export default function HomeworkPage({ onOpenHomework, onOpenTeacher }) {
     return { pending, reviewed };
   }, [teachers]);
 
-  // Sort: tab=pending → ko'p tekshirilmaganlar yuqorida
-  //       tab=done → ko'p tekshirilganlar yuqorida
+  // Sort: tab=pending → ko'p kutmoqdalar yuqorida
+  //       tab=done → ko'p belgilanganlar yuqorida
   const sorted = useMemo(() => {
     const list = [...teachers];
     if (tab === 'pending') {
@@ -149,8 +149,8 @@ export default function HomeworkPage({ onOpenHomework, onOpenTeacher }) {
           <h1 className="page-title">Vazifalar</h1>
           <div className="page-sub">
             {totals.pending > 0
-              ? <><span style={{ color:'var(--amber)', fontWeight:600 }}>{totals.pending} ta tekshirilmagan</span> · {totals.reviewed} ta tekshirilgan</>
-              : `Hammasi tekshirilgan · jami ${totals.reviewed} ta`}
+              ? <><span style={{ color:'var(--amber)', fontWeight:600 }}>{totals.pending} ta kutmoqda</span> · {totals.reviewed} ta belgilangan</>
+              : `Hammasi belgilangan · jami ${totals.reviewed} ta`}
           </div>
         </div>
       </div>
@@ -188,8 +188,8 @@ export default function HomeworkPage({ onOpenHomework, onOpenTeacher }) {
               </div>
               <div style={{ fontSize:13.5, color:'var(--text-2)' }}>
                 {tab === 'pending'
-                  ? "Hamma o'qituvchi tekshirib bo'lgan 🎉"
-                  : "Hali tekshirilgan vazifa yo'q"}
+                  ? "Hamma o'qituvchi belgilab bo'lgan 🎉"
+                  : "Hali belgilangan vazifa yo'q"}
               </div>
             </div>
           ) : (

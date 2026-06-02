@@ -75,7 +75,7 @@ function StudentRow({ s, onOpen }) {
         </div>
         {s.pendingSubmissions > 0 && (
           <div style={{ fontSize:10.5, color:'var(--amber)', marginTop:2 }}>
-            {s.pendingSubmissions} tekshirilmagan
+            {s.pendingSubmissions} kutmoqda
           </div>
         )}
       </div>
@@ -111,7 +111,7 @@ function HomeworkItem({ hw, onOpen }) {
           {hw.title}
         </div>
         <div style={{ fontSize:10.5, color:'var(--text-3)', marginTop:2 }}>
-          {fmtDate(hw.dueDate)} · {submissions}/{total} tekshirildi
+          {fmtDate(hw.dueDate)} · {submissions}/{total} belgilandi
           {isOverdue && <span style={{ color:'var(--rose)', marginLeft:5, fontWeight:600 }}>· kechikkan</span>}
         </div>
       </div>
@@ -304,7 +304,7 @@ export default function GroupDetailPage({ groupId, onBack, onOpenStudent, onOpen
                   cursor: onOpenTeacher ? 'pointer' : 'default',
                   fontSize:12.5,
                 }}>
-                <Avatar name={g.teacher.name} hue={g.teacher.hue} size="sm"/>
+                <Avatar name={g.teacher.name} hue={g.teacher.hue} size="sm" photoUrl={g.teacher.photoUrl}/>
                 <div style={{ textAlign:'left' }}>
                   <div style={{ fontWeight:600 }}>{g.teacher.name}</div>
                   <div style={{ fontSize:10.5, color:'var(--text-3)' }}>Mas'ul o'qituvchi</div>
@@ -319,7 +319,7 @@ export default function GroupDetailPage({ groupId, onBack, onOpenStudent, onOpen
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:8, marginBottom:12 }} className="grp-stats-grid">
         <StatTile icon="users"    tone="primary" label="O'quvchilar" value={g.studentCount}/>
         <StatTile icon="💎"       tone="primary" label="Olmoslar"    value={stats.totalGems}/>
-        <StatTile icon="homework" tone="amber"   label="Tekshirilmagan" value={pendingHwCount}/>
+        <StatTile icon="homework" tone="amber"   label="Kutilmoqda"     value={pendingHwCount}/>
         <StatTile icon="check"    tone="emerald" label="Tugatildi"   value={stats.completedHw}/>
       </div>
 

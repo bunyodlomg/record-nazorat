@@ -89,7 +89,7 @@ function synthPop() {
   osc.start(t); osc.stop(t + 0.15);
 }
 
-/* Success — vazifa tekshirilganda (ikki nota arpeggio) */
+/* Success — vazifa belgilanganda (ikki nota arpeggio) */
 function synthSuccess() {
   const ac = getCtx(); if (!ac) return;
   const t = ac.currentTime;

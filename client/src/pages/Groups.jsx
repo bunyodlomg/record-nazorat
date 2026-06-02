@@ -158,7 +158,7 @@ function GroupCard({ g, onOpenTeacher, onOpenGroup, onEdit, onRemove, isAdmin })
           style={{ display:'flex', alignItems:'center', gap:9, padding:'8px 10px',
             background:'var(--bg-subtle)', borderRadius:9, border:'1px solid var(--border)',
             marginBottom:12, width:'100%', cursor: onOpenTeacher ? 'pointer' : 'default' }}>
-          <Avatar name={g.teacher.name} hue={g.teacher.hue} size="sm"/>
+          <Avatar name={g.teacher.name} hue={g.teacher.hue} size="sm" photoUrl={g.teacher.photoUrl}/>
           <div style={{ textAlign:'left' }}>
             <div style={{ fontSize:12.5, fontWeight:600 }}>{g.teacher.name}</div>
             <div style={{ fontSize:10.5, color:'var(--text-3)' }}>Mas'ul o'qituvchi</div>
@@ -201,7 +201,7 @@ function TeacherGroupSection({ teacher, groups, onOpenTeacher, onOpenGroup, onEd
           onMouseLeave={e => { if (!noTeacher) { e.currentTarget.style.background='var(--bg-subtle)'; e.currentTarget.style.borderColor='var(--border)'; } }}>
           {noTeacher
             ? <div style={{ width:32, height:32, borderRadius:'50%', background:'var(--bg-subtle)', display:'grid', placeItems:'center', color:'var(--text-3)' }}><Icon name="alert" size={14}/></div>
-            : <Avatar name={teacher.name} hue={teacher.hue} size="md"/>}
+            : <Avatar name={teacher.name} hue={teacher.hue} size="md" photoUrl={teacher.photoUrl}/>}
           <div style={{ textAlign:'left' }}>
             <div style={{ fontSize:13.5, fontWeight:600, letterSpacing:'-0.01em' }}>{noTeacher ? "Mas'ul biriktirilmagan" : teacher.name}</div>
             {!noTeacher && teacher.subject && <div style={{ fontSize:11, color:'var(--text-3)' }}>{teacher.subject}</div>}

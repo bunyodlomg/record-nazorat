@@ -90,7 +90,7 @@ export default function SettingsPage() {
 
       <div style={{ marginBottom:14, padding:'14px 16px', background:'var(--primary-bg)', borderRadius:12, border:'1px solid var(--border)' }}>
         <div style={{ fontSize:12.5, color:'var(--text-2)', lineHeight:1.55 }}>
-          O'quvchi har tekshirilgan vazifa uchun olmos oladi. Tekshirilmagan yoki qaytarilgan vazifa uchun olmos berilmaydi.
+          O'quvchi har belgilangan vazifa uchun olmos oladi. Belgilanmagan yoki qaytarilgan vazifa uchun olmos berilmaydi.
           Reyting va Leaderboard olmos bo'yicha tartiblanadi.
         </div>
       </div>
@@ -98,13 +98,13 @@ export default function SettingsPage() {
       <div style={{ display:'flex', flexDirection:'column', gap:12, marginBottom:18 }}>
         <GemInput
           label="Kunlik (dars) vazifa"
-          hint="Har dars kuni avto-yaratilgan vazifa tekshirilganda beriladi"
+          hint="Har dars kuni avto-yaratilgan vazifa belgilanganda beriladi"
           value={lessonGem}
           onChange={setLessonGem}
           color="var(--primary-bg)"/>
         <GemInput
           label="Speaking vazifa"
-          hint="Haftalik speaking kvota vazifasi tekshirilganda beriladi"
+          hint="Haftalik speaking kvota vazifasi belgilanganda beriladi"
           value={speakingGem}
           onChange={setSpeakingGem}
           color="var(--amber-bg)"/>

@@ -5,6 +5,7 @@ const inviteCache = require('./inviteCache');
 const { startStudentJoin, startStudentJoinByInvite, completeStudentJoin, getSession, clearSession } = require('./studentJoin');
 const { notifyStudentPending } = require('./notifications');
 const { handleStudentMessage } = require('./studentSubmit');
+const { fetchTelegramPhotoUrl } = require('../utils/telegramPhoto');
 
 /**
  * WebApp tugma — agar inviteToken berilgan bo'lsa, URL'ga ?invite=xxx
@@ -29,6 +30,21 @@ const HELP_TEXT = (
   `• /help — yordam\n\n` +
   `Tizimga kirish uchun administrator yoki o'qituvchidan taklif link oling.`
 );
+
+const STUDENT_HELP_TEXT = (
+  `🎓 *Record Nazorat*\n\n` +
+  `Siz o'quvchi sifatida shu botda ishlaysiz — Mini App kerak emas.\n\n` +
+  `*Qanday foydalanasiz:*\n` +
+  `• Vazifa tayyor bo'lsa — shu botga *matn, ovozli xabar, rasm yoki fayl* yuboring\n` +
+  `• O'qituvchi tekshirgach, natijalar va olmoslar shu botga keladi\n` +
+  `• Reyting o'zgarishi haqida ham xabar olasiz`
+);
+
+// Foydalanuvchi student bo'lsa true qaytaradi
+async function isStudent(tgId) {
+  const s = await Student.findOne({ telegramId: String(tgId) }).select('_id status').lean();
+  return !!s;
+}
 
 module.exports = function attach(bot) {
   // /start (default) yoki /start invite_xxx yoki /start g_<token>
@@ -85,6 +101,12 @@ module.exports = function attach(bot) {
       inviteCache.set(tgId, startPayload);
     }
 
+    // Student bo'lsa Mini App tugmasini ko'rsatmaymiz — bot orqali ishlaydi
+    if (await isStudent(tgId)) {
+      await ctx.replyWithMarkdown(STUDENT_HELP_TEXT);
+      return;
+    }
+
     // User bazada borligini tekshiramiz
     const user = await User.findOne({ telegramId: tgId }).lean();
 
@@ -124,8 +146,12 @@ module.exports = function attach(bot) {
     await ctx.replyWithMarkdown(text, kb || {});
   });
 
-  // /app — WebApp tugmasi
+  // /app — WebApp tugmasi (student'ga emas)
   bot.command('app', async (ctx) => {
+    if (await isStudent(String(ctx.from.id))) {
+      await ctx.replyWithMarkdown(STUDENT_HELP_TEXT);
+      return;
+    }
     const kb = webAppButton('🚀 Mini App ochish');
     if (!kb) {
       await ctx.reply("WebApp URL sozlanmagan. Administrator bilan bog'laning.");
@@ -136,6 +162,10 @@ module.exports = function attach(bot) {
 
   // /help
   bot.help(async (ctx) => {
+    if (await isStudent(String(ctx.from.id))) {
+      await ctx.replyWithMarkdown(STUDENT_HELP_TEXT);
+      return;
+    }
     const kb = webAppButton('🚀 Mini App ochish');
     await ctx.replyWithMarkdown(HELP_TEXT, kb || {});
   });
@@ -143,6 +173,26 @@ module.exports = function attach(bot) {
   // /me — foydalanuvchi profili
   bot.command('me', async (ctx) => {
     const tgId = String(ctx.from.id);
+
+    // Avval student'mi tekshiramiz
+    const student = await Student.findOne({ telegramId: tgId }).populate('group','name code').lean();
+    if (student) {
+      const statusLabel = student.status === 'active' ? '✅ Faol'
+                        : student.status === 'pending' ? '⏳ Tasdiq kutmoqda'
+                        : student.status === 'inactive' ? '⏸ To\'xtatilgan'
+                        : student.status;
+      const text =
+        `👤 *Profilingiz*\n\n` +
+        `Ism: *${student.name}*\n` +
+        `Roli: *O'quvchi*\n` +
+        `Holat: ${statusLabel}\n` +
+        (student.group ? `Guruh: *${student.group.name}* (${student.group.code})\n` : '') +
+        `💎 Olmoslar: *${student.gems || 0}*\n` +
+        `ID: \`${tgId}\``;
+      await ctx.replyWithMarkdown(text);
+      return;
+    }
+
     const user = await User.findOne({ telegramId: tgId }).lean();
     if (!user) {
       await ctx.reply("Siz hali tizimda ro'yxatdan o'tmagansiz. /start ni bosing.");
@@ -181,6 +231,10 @@ module.exports = function attach(bot) {
           await ctx.reply(`❌ ${result.error}`);
           return;
         }
+        // Telegram profil rasmini olib student.photoUrl ga saqlaymiz (best-effort)
+        fetchTelegramPhotoUrl(ctx.telegram, ctx.from.id).then(url => {
+          if (url) Student.updateOne({ _id: result.student._id }, { $set:{ photoUrl: url } }).catch(() => {});
+        }).catch(() => {});
         await ctx.replyWithMarkdown(
           `✅ *${result.student.name}*, ro'yxatdan o'tdingiz!\n\n` +
           `Guruh: *${result.group.name}* (${result.group.code})\n` +
@@ -202,6 +256,12 @@ module.exports = function attach(bot) {
     // ── 2) Student bo'lsa — pending/active holatga qarab
     const student = await Student.findOne({ telegramId: tgId }).lean();
     if (student) {
+      // Best-effort: photoUrl yo'q bo'lsa Telegram'dan olib qo'yamiz
+      if (!student.photoUrl) {
+        fetchTelegramPhotoUrl(ctx.telegram, ctx.from.id).then(url => {
+          if (url) Student.updateOne({ _id: student._id }, { $set:{ photoUrl: url } }).catch(() => {});
+        }).catch(() => {});
+      }
       if (student.status === 'pending') {
         await ctx.reply("⏳ O'qituvchi tasdiqlashini kuting. Tasdiqlangach xabarlar shu botga keladi.");
         return;

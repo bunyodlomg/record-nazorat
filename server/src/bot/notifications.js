@@ -143,7 +143,7 @@ async function notifyHomeworkAssigned(homework, group, students) {
  */
 async function notifyHomeworkReviewed({ studentTgId, studentName, homeworkTitle, groupName, status, score, feedback, gemDelta, totalGems }) {
   if (!studentTgId) return;
-  const statusLabel = status === 'reviewed' ? '✅ Tekshirildi'
+  const statusLabel = status === 'reviewed' ? '✅ Belgilandi'
                     : status === 'returned' ? '🔄 Qaytarildi'
                     : status;
 

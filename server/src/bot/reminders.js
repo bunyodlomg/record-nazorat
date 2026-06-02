@@ -29,11 +29,11 @@ async function sendReminderTo(chatId, payload) {
     ? `Eng eskisi: *${oldest} kun* avval topshirilgan.\n`
     : '';
   const text =
-    `⏰ *Eslatma — vazifalarni tekshirish*\n\n` +
+    `⏰ *Eslatma — vazifalarni belgilash*\n\n` +
     `Salom, ${escapeMd(teacherName)}!\n` +
-    `Sizda *${count} ta* o'quvchi vazifasi ${REMINDER_DAYS}+ kundan beri tekshirilmagan.\n` +
+    `Sizda *${count} ta* o'quvchi vazifasi ${REMINDER_DAYS}+ kundan beri belgilanmagan.\n` +
     oldestText +
-    `\nIltimos, Mini App'ni ochib "Vazifalarim" bo'limidan tekshiring.`;
+    `\nIltimos, Mini App'ni ochib "Vazifalarim" bo'limidan belgilang.`;
   try {
     await bot.telegram.sendMessage(chatId, text, { parse_mode:'Markdown' });
     return true;

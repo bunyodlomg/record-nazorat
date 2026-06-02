@@ -85,7 +85,7 @@ function TeacherEditForm({ open, onClose, initial, onSaved }) {
       )}
 
       <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:18, padding:'14px', background:'var(--bg-subtle)', borderRadius:10 }}>
-        <Avatar name={name || '?'} hue={initial.hue ?? 200} size="lg"/>
+        <Avatar name={name || '?'} hue={initial.hue ?? 200} size="lg" photoUrl={initial.photoUrl}/>
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ fontSize:13.5, fontWeight:600 }}>{name || '—'}</div>
           <div style={{ fontSize:12, color:'var(--text-3)', marginTop:2 }}>
@@ -181,9 +181,9 @@ function ReassignDeleteModal({ open, target, candidates, onClose, onDone }) {
 }
 
 const REVIEW_LABEL = {
-  reviewed:   'Hammasi tekshirilgan',
+  reviewed:   'Hammasi belgilangan',
   partial:    'Chala tekshirgan',
-  unreviewed: 'Tekshirilmagan',
+  unreviewed: 'Kutilmoqda',
   'no-tasks': 'Vazifa yo\'q',
 };
 const REVIEW_CHIP = {
@@ -279,7 +279,7 @@ function TeacherChatRow({ t, onClick, onEdit, onDelete }) {
     >
       {/* Avatar + online dot */}
       <div style={{ position:'relative', flexShrink:0 }}>
-        <Avatar name={t.name} hue={t.hue} size="lg"/>
+        <Avatar name={t.name} hue={t.hue} size="lg" photoUrl={t.photoUrl}/>
         <span style={{
           position:'absolute', bottom:1, right:1,
           width:13, height:13, borderRadius:'50%',
@@ -342,7 +342,7 @@ function TeacherCard({ t, onClick, onEdit, onDelete }) {
         style={{ background:'transparent', textAlign:'left', display:'flex', flexDirection:'column', gap:13, padding:0 }}>
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:10, paddingRight:32 }}>
           <div style={{ display:'flex', alignItems:'center', gap:11, minWidth:0, flex:1 }}>
-            <Avatar name={t.name} hue={t.hue} size="lg"/>
+            <Avatar name={t.name} hue={t.hue} size="lg" photoUrl={t.photoUrl}/>
             <div style={{ minWidth:0, flex:1 }}>
               <div style={{ fontSize:14, fontWeight:700, letterSpacing:'-0.01em', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{t.name}</div>
               <div style={{ fontSize:12, color:'var(--text-2)', marginTop:2 }}>{t.subject}</div>
@@ -498,7 +498,7 @@ function TeachersListView({ onOpenTeacher }) {
                     <tr key={t._id}>
                       <td onClick={() => onOpenTeacher(t._id)} style={{ cursor:'pointer' }}>
                         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                          <Avatar name={t.name} hue={t.hue} size="sm"/>
+                          <Avatar name={t.name} hue={t.hue} size="sm" photoUrl={t.photoUrl}/>
                           <div>
                             <div style={{ fontWeight:600 }}>{t.name}</div>
                             <div style={{ fontSize:11.5, color:'var(--text-3)' }}>

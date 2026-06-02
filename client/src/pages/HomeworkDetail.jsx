@@ -2,14 +2,14 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '../components/ui.jsx';
 import { Spinner, ErrorBox } from '../components/Feedback.jsx';
-import { StudentRow, ReviewCheckbox } from '../components/SubmissionsModal.jsx';
+import { StudentRow } from '../components/SubmissionsModal.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { sfx } from '../hooks/useSound.js';
 import api from '../services/api.js';
 
 const TABS = [
-  { id:'pending',  label:'Tekshirilmagan', icon:'clock', tone:'warning' },
-  { id:'reviewed', label:'Tekshirilgan',   icon:'check', tone:'success' },
+  { id:'pending',  label:'Kutilmoqda',  icon:'clock', tone:'warning' },
+  { id:'reviewed', label:'Belgilangan', icon:'check', tone:'success' },
 ];
 const TONE = {
   warning:['var(--amber-bg)','var(--amber)'],
@@ -91,22 +91,6 @@ export default function HomeworkDetailPage({ homeworkId, onBack }) {
     return list;
   }, [subs, tab, search]);
 
-  const allChecked  = subs.length > 0 && counts.reviewed === subs.length;
-  const someChecked = counts.reviewed > 0 && !allChecked;
-
-  const toggleAll = async () => {
-    if (!canEdit || !subs.length) return;
-    const targetStatus = allChecked ? 'pending' : 'reviewed';
-    const ids = subs.filter(s => s.status !== targetStatus).map(s => s._id);
-    if (!ids.length) return;
-    setBusy(true);
-    try {
-      await api.submissions.bulk(ids, targetStatus);
-      sfx[targetStatus === 'reviewed' ? 'success' : 'click']();
-      await load();
-    } finally { setBusy(false); }
-  };
-
   if (loading) return <div className="page"><Spinner/></div>;
   if (error)   return <div className="page"><ErrorBox message={error} onRetry={load}/></div>;
   if (!hw)     return null;
@@ -159,26 +143,15 @@ export default function HomeworkDetailPage({ homeworkId, onBack }) {
         })}
       </div>
 
-      {/* Master checkbox + jami */}
+      {/* Umumiy hisob */}
       {canEdit && subs.length > 0 && (
         <div style={{
-          display:'flex', alignItems:'center', gap:11,
-          padding:'11px 13px', marginBottom:9,
+          padding:'10px 13px', marginBottom:9,
           background:'var(--bg-subtle)', borderRadius:12,
           border:'1px solid var(--border)',
+          fontSize:12.5, color:'var(--text-2)',
         }}>
-          <ReviewCheckbox
-            checked={allChecked}
-            onChange={toggleAll}
-            disabled={busy}/>
-          <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontSize:13.5, fontWeight:600 }}>
-              {allChecked ? 'Hammasi tekshirilgan' : someChecked ? 'Qisman tekshirilgan' : "Hammasini belgilash"}
-            </div>
-            <div style={{ fontSize:11.5, color:'var(--text-2)', marginTop:1 }}>
-              {counts.reviewed} / {subs.length} tekshirildi
-            </div>
-          </div>
+          {counts.reviewed} / {subs.length} belgilandi
         </div>
       )}
 
@@ -208,8 +181,8 @@ export default function HomeworkDetailPage({ homeworkId, onBack }) {
             {search
               ? "Topilmadi"
               : tab === 'reviewed'
-                ? "Hali tekshirilgan o'quvchi yo'q"
-                : "Hamma o'quvchi tekshirilgan 🎉"}
+                ? "Hali belgilangan o'quvchi yo'q"
+                : "Hamma o'quvchi belgilangan 🎉"}
           </div>
         </div>
       ) : (

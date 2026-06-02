@@ -40,7 +40,7 @@ function PodiumCard({ entry, place, height, subtitleKey = 'subject', metricKey =
           fontSize:24, boxShadow:`0 4px 16px ${m.border}50`, border:`2px solid ${m.border}` }}>
         {m.icon}
       </motion.div>
-      <Avatar name={entry.name} hue={entry.hue || 200} size={place===1?'xl':'lg'}/>
+      <Avatar name={entry.name} hue={entry.hue || 200} size={place===1?'xl':'lg'} photoUrl={entry.photoUrl}/>
       <div style={{ textAlign:'center', maxWidth:140 }}>
         <div style={{ fontFamily:'var(--display)', fontSize:place===1?16:13.5, fontWeight:700, letterSpacing:'-0.02em', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{entry.name}</div>
         <div style={{ fontSize:11.5, color:'var(--text-2)', marginTop:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{subtitle}</div>
@@ -84,7 +84,7 @@ function LeaderRow({ entry, idx, subtitleKey, metricKey = 'score', metricIcon = 
     >
       <div style={{ fontFamily:'var(--display)', fontSize:14, fontWeight:700, color:'var(--text-3)' }}>#{idx+4}</div>
       <div style={{ display:'flex', alignItems:'center', gap:10, minWidth:0 }}>
-        <Avatar name={entry.name} hue={entry.hue || 200} size="sm"/>
+        <Avatar name={entry.name} hue={entry.hue || 200} size="sm" photoUrl={entry.photoUrl}/>
         <div style={{ minWidth:0 }}>
           <div style={{ fontSize:13.5, fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{entry.name}</div>
           <div style={{ fontSize:11.5, color:'var(--text-2)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{subtitle}</div>
@@ -261,7 +261,7 @@ export default function LeaderboardPage({ onOpenTeacher, onOpenStudent }) {
           {tab === 'students' && (
             sLoad ? <Spinner/> :
             sErr  ? <ErrorBox message={sErr} onRetry={sRefetch}/> :
-            <FullList items={students} title="O'quvchilar reytingi" sub="Tekshirilgan vazifalardan to'plangan olmoslar"
+            <FullList items={students} title="O'quvchilar reytingi" sub="Belgilangan vazifalardan to'plangan olmoslar"
               subtitleKey="group"
               metricKey="gems" metricLabel="Olmos" metricIcon="💎" showBar={false}
               onClick={onOpenStudent ? (e) => onOpenStudent(e._id) : null}/>

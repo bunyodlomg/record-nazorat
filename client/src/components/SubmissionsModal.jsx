@@ -8,9 +8,9 @@ import { sfx } from '../hooks/useSound.js';
 import api from '../services/api.js';
 
 export const STATUS_LABEL = {
-  pending:   "Tekshirilmagan",
+  pending:   "Kutilmoqda",
   submitted: "Topshirildi",
-  reviewed:  "Tekshirildi",
+  reviewed:  "Belgilandi",
   returned:  "Qaytarildi",
 };
 export const STATUS_CHIP = {
@@ -111,7 +111,7 @@ export function StudentRow({ sub, onUpdate, canEdit, busy }) {
   const rowBg     = isReviewed ? 'var(--primary-bg)' : isReturned ? 'var(--rose-bg)' : isSubmitted ? 'var(--amber-bg)' : 'var(--bg-subtle)';
   const rowBorder = isReviewed ? 'var(--primary)'   : isReturned ? 'var(--rose)'    : isSubmitted ? 'var(--amber)'    : 'var(--border)';
   const statusText  =
-    isReviewed  ? 'Tekshirildi · ✓'  :
+    isReviewed  ? 'Belgilandi · ✓'   :
     isReturned  ? 'Qaytarildi · ✕'   :
     isSubmitted ? '📩 Topshirildi'   :
                   'Hali topshirmagan';
@@ -286,23 +286,6 @@ export default function SubmissionsModal({ open, onClose, homework, onChanged })
   }, [subs]);
   const total = subs.length;
 
-  const allChecked = total > 0 && counts.reviewed === total;
-  const someChecked = counts.reviewed > 0 && !allChecked;
-
-  const toggleAll = async () => {
-    if (!canEdit || !subs.length) return;
-    const targetStatus = allChecked ? 'pending' : 'reviewed';
-    const ids = subs.filter(s => s.status !== targetStatus).map(s => s._id);
-    if (!ids.length) return;
-    setBusy(true);
-    try {
-      await api.submissions.bulk(ids, targetStatus);
-      sfx[targetStatus === 'reviewed' ? 'success' : 'click']();
-      await load();
-      onChanged?.();
-    } finally { setBusy(false); }
-  };
-
   if (!homework) return null;
 
   return (
@@ -322,26 +305,15 @@ export default function SubmissionsModal({ open, onClose, homework, onChanged })
         </div>
       ) : (
         <>
-          {/* Master checkbox + jami hisob */}
+          {/* Umumiy hisob */}
           {canEdit && (
             <div style={{
-              display:'flex', alignItems:'center', gap:11,
               padding:'10px 12px', marginBottom:10,
               background:'var(--bg-subtle)', borderRadius:10,
               border:'1px solid var(--border)',
+              fontSize:12.5, color:'var(--text-2)',
             }}>
-              <ReviewCheckbox
-                checked={allChecked}
-                onChange={toggleAll}
-                disabled={busy}/>
-              <div style={{ flex:1 }}>
-                <div style={{ fontSize:13, fontWeight:600 }}>
-                  {allChecked ? 'Hammasi tekshirilgan' : someChecked ? 'Qisman tekshirilgan' : "Hammasini belgilash"}
-                </div>
-                <div style={{ fontSize:11.5, color:'var(--text-2)', marginTop:1 }}>
-                  {counts.reviewed} / {total} tekshirildi
-                </div>
-              </div>
+              {counts.reviewed} / {total} belgilandi
             </div>
           )}
 

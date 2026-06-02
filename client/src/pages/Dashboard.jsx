@@ -43,7 +43,7 @@ function ProblemTeacherCard({ t, onOpenTeacher }) {
           width:'100%', display:'flex', alignItems:'center', gap:11, padding:'12px 14px',
           background:'transparent', border:'none', textAlign:'left', cursor:'pointer',
         }}>
-        <Avatar name={t.name} hue={t.hue} size="sm"/>
+        <Avatar name={t.name} hue={t.hue} size="sm" photoUrl={t.photoUrl}/>
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ fontSize:13.5, fontWeight:600 }}>{t.name}</div>
           <div style={{ fontSize:11, color:'var(--text-3)', marginTop:1 }}>{t.subject}</div>
@@ -62,7 +62,7 @@ function ProblemTeacherCard({ t, onOpenTeacher }) {
           <div style={{ padding:'8px 14px', display:'flex', flexDirection:'column', gap:5 }}>
             {preview.map((p, i) => (
               <div key={i} style={{ display:'flex', alignItems:'center', gap:8, fontSize:12 }}>
-                <Avatar name={p.studentName} hue={p.studentHue} size="xs"/>
+                <Avatar name={p.studentName} hue={p.studentHue} size="xs" photoUrl={p.studentPhotoUrl}/>
                 <span style={{ fontWeight:500, flex:1, minWidth:0, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
                   {p.studentName}
                 </span>
@@ -129,7 +129,7 @@ export default function DashboardPage({ onOpenTeacher, onNav }) {
         <KpiCard label="Jami o'qituvchilar"  value={kpis.totalTeachers}    icon="teachers" iconBg="var(--primary-bg)" iconColor="var(--primary-l)"/>
         <KpiCard label="Faol o'qituvchilar"  value={kpis.activeTeachers}   icon="activity" iconBg="var(--accent-bg)"  iconColor="var(--accent-l)"/>
         <KpiCard label="Faol bo'lmaganlar"   value={kpis.inactiveTeachers} icon="user"     iconBg="var(--rose-bg)"    iconColor="var(--rose)"/>
-        <KpiCard label="Tekshirilmagan"      value={kpis.totalUnchecked}   icon="homework" iconBg="var(--amber-bg)"   iconColor="var(--amber)"/>
+        <KpiCard label="Kutilmoqda"          value={kpis.totalUnchecked}   icon="homework" iconBg="var(--amber-bg)"   iconColor="var(--amber)"/>
       </motion.div>
 
       <motion.div className="chart-grid" variants={listContainer} initial="hidden" animate="show">
@@ -137,7 +137,7 @@ export default function DashboardPage({ onOpenTeacher, onNav }) {
           <div className="card-head">
             <div>
               <div className="card-title">O'qituvchi faolligi</div>
-              <div className="card-sub">Darslar va tekshirilgan vazifalar · shu hafta</div>
+              <div className="card-sub">Darslar va belgilangan vazifalar · shu hafta</div>
             </div>
             <div style={{ display:'flex', gap:14, fontSize:11.5, color:'var(--text-2)', alignItems:'center' }}>
               {[['#6366f1','Darslar'],['#a78bfa','Vazifalar']].map(([c,l]) => (
@@ -214,7 +214,7 @@ export default function DashboardPage({ onOpenTeacher, onNav }) {
                 <Icon name="alert" size={15}/>
               </div>
               <div>
-                <div className="card-title">Tekshirilmagan vazifalar</div>
+                <div className="card-title">Kutayotgan vazifalar</div>
                 <div className="card-sub">{problemTeachers.length} o'qituvchi · jami {problemTeachers.reduce((s,t)=>s+(t.pendingReview||0),0)} ta</div>
               </div>
             </div>

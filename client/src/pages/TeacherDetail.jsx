@@ -29,9 +29,9 @@ const TONE_BG = {
 };
 
 const REVIEW = {
-  reviewed:   { label:'Hammasi tekshirilgan', chip:'chip-success', icon:'check' },
+  reviewed:   { label:'Hammasi belgilangan',  chip:'chip-success', icon:'check' },
   partial:    { label:'Chala tekshirgan',     chip:'chip-warning', icon:'alert' },
-  unreviewed: { label:'Tekshirilmagan',       chip:'chip-danger',  icon:'alert' },
+  unreviewed: { label:'Kutilmoqda',           chip:'chip-danger',  icon:'alert' },
   'no-tasks': { label:"Vazifa yo'q",          chip:'chip-neutral', icon:'clock' },
 };
 function ReviewChip({ status }) {
@@ -155,7 +155,7 @@ export function TeacherDrawer({ teacherId, onClose, onOpenFull }) {
         : <>
           <div className="drawer-hd">
             <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-              <Avatar name={t.name} hue={t.hue} size="md"/>
+              <Avatar name={t.name} hue={t.hue} size="md" photoUrl={t.photoUrl}/>
               <div>
                 <div style={{ fontFamily:'var(--display)', fontSize:15, fontWeight:600, letterSpacing:'-0.02em' }}>{t.name}</div>
                 <div style={{ fontSize:12, color:'var(--text-2)', marginTop:1 }}>{t.subject}</div>
@@ -171,7 +171,7 @@ export function TeacherDrawer({ teacherId, onClose, onOpenFull }) {
               </span>
               {(t.homework?.pending ?? 0) > 0 && (
                 <span className={`chip ${t.homework.pending > 5 ? 'chip-danger' : 'chip-warning'}`}>
-                  {t.homework.pending} ta tekshirilmagan
+                  {t.homework.pending} ta kutmoqda
                 </span>
               )}
             </motion.div>
@@ -299,7 +299,7 @@ export function TeacherDetailPage({ teacherId, onBack, onOpenGroup }) {
         style={{ padding:20, marginBottom:14, position:'relative', overflow:'hidden' }}>
         <div style={{ position:'absolute', inset:0, background:`radial-gradient(ellipse at top right, oklch(0.74 0.16 ${t.hue} / 0.20), transparent 55%)`, pointerEvents:'none' }}/>
         <div className="t-hero">
-          <Avatar name={t.name} hue={t.hue} size="2xl"/>
+          <Avatar name={t.name} hue={t.hue} size="2xl" photoUrl={t.photoUrl}/>
           <div className="t-hero-info">
             <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6, flexWrap:'wrap' }}>
               <h2 className="t-hero-name">{t.name}</h2>
@@ -349,7 +349,7 @@ export function TeacherDetailPage({ teacherId, onBack, onOpenGroup }) {
         <KpiTile icon="users"    tone="primary" label="Jami o'quvchi"   value={stats.totalStudents}/>
         <KpiTile icon="groups"   tone="accent"  label="Faol guruh"      value={stats.activeGroups} sub={stats.totalGroups !== stats.activeGroups ? `${stats.totalGroups} jami` : null}/>
         <KpiTile icon="homework" tone="amber"   label="Tekshiruvda"     value={stats.homework.pending + stats.homework.checking} sub={stats.homework.total ? `${stats.homework.total} jami` : null}/>
-        <KpiTile icon="check"    tone="emerald" label="Tekshirilgan"    value={stats.homework.done}/>
+        <KpiTile icon="check"    tone="emerald" label="Belgilangan"     value={stats.homework.done}/>
       </motion.div>
 
       {showScore && (
@@ -431,15 +431,15 @@ export function TeacherDetailPage({ teacherId, onBack, onOpenGroup }) {
                             <Icon name="user" size={10}/> {g.studentCount} o'quvchi
                           </span>
                           {isComplete
-                            ? <span style={{ color:'var(--primary-l)', fontWeight:600 }}>· To'liq tekshirilgan</span>
-                            : <span style={{ color:'var(--amber)', fontWeight:600 }}>· {pendingStudents.length} ta tekshirilmagan</span>}
+                            ? <span style={{ color:'var(--primary-l)', fontWeight:600 }}>· To'liq belgilangan</span>
+                            : <span style={{ color:'var(--amber)', fontWeight:600 }}>· {pendingStudents.length} ta kutmoqda</span>}
                         </div>
                       </div>
                     </button>
                     <button onClick={() => setExpandedGroup(isOpen ? null : g._id)}
                       className="btn btn-ghost btn-icon"
                       style={{ width:32, height:32, flexShrink:0 }}
-                      title={isOpen ? 'Yopish' : "Tekshirilmaganlarni ko'rish"}>
+                      title={isOpen ? 'Yopish' : "Kutmoqdalarni ko'rish"}>
                       <motion.span animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration:0.2 }}
                         style={{ display:'flex', color:'var(--text-3)' }}>
                         <Icon name="chevronDown" size={14}/>
@@ -461,12 +461,12 @@ export function TeacherDetailPage({ teacherId, onBack, onOpenGroup }) {
                             </div>
                           ) : isComplete ? (
                             <div style={{ padding:'14px 8px', textAlign:'center', color:'var(--primary-l)', fontSize:12.5, fontWeight:600 }}>
-                              ✓ Bu guruhda hamma o'quvchining vazifasi tekshirilgan
+                              ✓ Bu guruhda hamma o'quvchining vazifasi belgilangan
                             </div>
                           ) : (
                             <>
                               <div style={{ fontSize:10.5, fontWeight:700, color:'var(--amber)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:7 }}>
-                                Tekshirilmagan o'quvchilar
+                                Kutilayotgan o'quvchilar
                               </div>
                               <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
                                 {pendingStudents.map(s => (

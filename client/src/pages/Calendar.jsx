@@ -76,7 +76,7 @@ function AdminTeacherFilterPanel({ teachers, selectedTeacherId, onSelect, onOpen
         {sel
           ? <span style={{ color:'var(--primary-l)', fontWeight:600 }}>Tanlangan o'qituvchi bo'yicha filter</span>
           : (totals.pending > 0
-              ? <><span style={{ color:'var(--amber)', fontWeight:600 }}>{totals.partial} chala</span> · {totals.pending} ta tekshirilmagan</>
+              ? <><span style={{ color:'var(--amber)', fontWeight:600 }}>{totals.partial} chala</span> · {totals.pending} ta kutmoqda</>
               : "Hammasi to'liq")}
       </div>
       <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom: sel ? 10 : 0 }}>
@@ -89,7 +89,7 @@ function AdminTeacherFilterPanel({ teachers, selectedTeacherId, onSelect, onOpen
               const p = t.submissions?.pending || 0;
               return (
                 <option key={t._id} value={t._id}>
-                  {t.name}{p > 0 ? ` · ${p} tekshirilmagan` : ''}
+                  {t.name}{p > 0 ? ` · ${p} kutmoqda` : ''}
                 </option>
               );
             })}
@@ -115,7 +115,7 @@ function AdminTeacherFilterPanel({ teachers, selectedTeacherId, onSelect, onOpen
             borderLeft: `3px solid ${selHasIssue ? 'var(--amber)' : 'var(--primary)'}`,
           }}>
           <div style={{ position:'relative', flexShrink:0 }}>
-            <Avatar name={sel.name} hue={sel.hue} size="sm"/>
+            <Avatar name={sel.name} hue={sel.hue} size="sm" photoUrl={sel.photoUrl}/>
             {sel.presence === 'online' && (
               <span style={{
                 position:'absolute', bottom:-1, right:-1, width:9, height:9, borderRadius:'50%',
@@ -286,7 +286,7 @@ export default function CalendarPage({ onOpenTeacher }) {
       {/* Legend */}
       <div style={{ display:'flex', gap:14, fontSize:12, color:'var(--text-2)', marginBottom:14, alignItems:'center', flexWrap:'wrap' }}>
         {(isAdmin
-          ? [['indigo','Berildi'],['green','Tekshirildi'],['amber','Qoldi']]
+          ? [['indigo','Berildi'],['green','Belgilandi'],['amber','Qoldi']]
           : [['green','Darslar']]
         ).map(([t, lbl]) => (
           <span key={lbl} style={{ display:'flex', alignItems:'center', gap:6 }}>
@@ -323,7 +323,7 @@ export default function CalendarPage({ onOpenTeacher }) {
           ? (isAdmin
               ? (() => {
                   const s = dayStats(picked.events);
-                  if (s.assigned > 0) return `${s.reviewed}/${s.assigned} tekshirildi · ${s.remaining} qoldi`;
+                  if (s.assigned > 0) return `${s.reviewed}/${s.assigned} belgilandi · ${s.remaining} qoldi`;
                   return `${s.reviewed + s.submitted} ta submission`;
                 })()
               : `${picked.events.length} ta dars`)
@@ -368,7 +368,7 @@ function teacherDayBreakdown(events) {
   for (const e of (events || [])) {
     if (e.type === 'teacher-day') list.push(e);
   }
-  // Tekshirilmaganlar (remaining > 0) tepada, keyin assigned bo'yicha desc
+  // Kutmoqdalar (remaining > 0) tepada, keyin assigned bo'yicha desc
   list.sort((a, b) => {
     if ((b.remaining || 0) !== (a.remaining || 0)) return (b.remaining || 0) - (a.remaining || 0);
     return (b.assigned || 0) - (a.assigned || 0);
@@ -456,7 +456,7 @@ function StatBar({ tone, label, n }) {
   );
 }
 
-/* Admin uchun kun cell'idagi mini stats — "tekshirildi/qoldi" format */
+/* Admin uchun kun cell'idagi mini stats — "belgilandi/qoldi" format */
 function AdminCellSummary({ events }) {
   const s = dayStats(events);
   // assigned bo'lsa "reviewed / assigned" format, yo'q bo'lsa eski tarz
@@ -773,7 +773,7 @@ function TeacherMiniRow({ t, onClick }) {
         textAlign:'left', cursor:'pointer', width:'100%',
       }}>
       <div style={{ position:'relative', flexShrink:0 }}>
-        <Avatar name={t.name} hue={t.hue} size="sm"/>
+        <Avatar name={t.name} hue={t.hue} size="sm" photoUrl={t.photoUrl}/>
         {t.presence === 'online' && (
           <span style={{
             position:'absolute', bottom:-1, right:-1, width:9, height:9, borderRadius:'50%',
@@ -821,7 +821,7 @@ function AdminDayDetails({ events, teachers = [], onOpenTeacher }) {
         <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:8 }}>
           {[
             ['indigo', 'Berildi',     s.assigned],
-            ['green',  'Tekshirildi', s.reviewed],
+            ['green',  'Belgilandi',  s.reviewed],
             ['amber',  'Qoldi',       s.remaining],
           ].map(([tone, label, n], i) => {
             const t = TONE[tone];
@@ -840,7 +840,7 @@ function AdminDayDetails({ events, teachers = [], onOpenTeacher }) {
         </div>
       ) : (s.reviewed + s.submitted) > 0 ? (
         <div style={{ display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:9 }}>
-          {[['green', 'Tekshirildi', s.reviewed], ['amber', 'Kutilmoqda', s.submitted]].map(([tone, label, n], i) => {
+          {[['green', 'Belgilandi', s.reviewed], ['amber', 'Kutilmoqda', s.submitted]].map(([tone, label, n], i) => {
             const t = TONE[tone];
             return (
               <motion.div key={i}
@@ -878,7 +878,7 @@ function AdminDayDetails({ events, teachers = [], onOpenTeacher }) {
                     borderLeft: `3px solid ${t.solid}`,
                     textAlign:'left', cursor:'pointer', width:'100%',
                   }}>
-                  <Avatar name={td.teacherName} hue={td.hue} size="sm"/>
+                  <Avatar name={td.teacherName} hue={td.hue} size="sm" photoUrl={td.photoUrl}/>
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{
                       fontSize:13, fontWeight:600, color:'var(--text)',
@@ -888,7 +888,7 @@ function AdminDayDetails({ events, teachers = [], onOpenTeacher }) {
                       fontSize:11, color:'var(--text-3)', marginTop:2,
                       display:'flex', alignItems:'center', gap:5, flexWrap:'wrap',
                     }}>
-                      <span><strong style={{ color:'var(--text-2)' }}>{td.reviewed}</strong>/{td.assigned} tekshirildi</span>
+                      <span><strong style={{ color:'var(--text-2)' }}>{td.reviewed}</strong>/{td.assigned} belgilandi</span>
                       {td.remaining > 0 && (
                         <span style={{ color:t.color, fontWeight:600 }}>· {td.remaining} qoldi</span>
                       )}

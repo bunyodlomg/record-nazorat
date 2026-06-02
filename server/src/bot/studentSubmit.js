@@ -94,7 +94,7 @@ async function handleStudentMessage(ctx, student) {
     handled: true,
     replyText:
       `✅ *${sub.homework.title}* vazifasi yuborildi!\n\n` +
-      `O'qituvchingiz tekshirib, baholaydi. Natija shu botga keladi.`,
+      `O'qituvchingiz ko'rib chiqib belgilaydi. Natija shu botga keladi.`,
   };
 }
 

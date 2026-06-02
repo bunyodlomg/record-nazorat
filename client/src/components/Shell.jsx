@@ -287,7 +287,7 @@ export function Header({ theme, onToggleTheme, page }) {
       <div ref={menuRef} style={{ position:'relative' }}>
         <button className="h-user" onClick={() => !isTelegram && setMenuOpen(o => !o)}
           style={{ cursor: isTelegram ? 'default' : 'pointer' }}>
-          <Avatar name={user?.name || '?'} hue={user?.role === 'admin' ? 270 : 165} size="sm"/>
+          <Avatar name={user?.name || '?'} hue={user?.role === 'admin' ? 270 : 165} size="sm" photoUrl={user?.photoUrl}/>
           <div className="h-user-meta">
             <div className="h-user-name">{user?.name?.split(' ')[0]}</div>
             <div className="h-user-role">
@@ -309,7 +309,7 @@ export function Header({ theme, onToggleTheme, page }) {
               >
                 <div className="um-head">
                   <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                    <Avatar name={user?.name || '?'} hue={user?.role === 'admin' ? 270 : 165} size="md"/>
+                    <Avatar name={user?.name || '?'} hue={user?.role === 'admin' ? 270 : 165} size="md" photoUrl={user?.photoUrl}/>
                     <div style={{ minWidth:0, flex:1 }}>
                       <div style={{ fontSize:13, fontWeight:600, color:'var(--text)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{user?.name}</div>
                       <div style={{ fontSize:11, color:'var(--text-3)', marginTop:1 }}>

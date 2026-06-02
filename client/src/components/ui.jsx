@@ -17,8 +17,16 @@ export function useCountUp(target, duration = 1000) {
   return v;
 }
 
-export function Avatar({ name = '?', hue = 180, size = 'md' }) {
+export function Avatar({ name = '?', hue = 180, size = 'md', photoUrl = null }) {
   const cls = { xs:'av-xs', sm:'av-sm', md:'av-md', lg:'av-lg', xl:'av-xl', '2xl':'av-2xl' }[size] || 'av-md';
+  if (photoUrl) {
+    return (
+      <img src={photoUrl} alt={name}
+        className={`avatar ${cls}`}
+        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+        style={{ objectFit:'cover', background:'var(--bg-subtle)' }}/>
+    );
+  }
   const initials = name.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
   return (
     <div className={`avatar ${cls}`}

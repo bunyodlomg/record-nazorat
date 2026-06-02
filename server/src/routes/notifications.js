@@ -22,8 +22,8 @@ const fmtTime = (d) => {
 
 const HW_LABEL = {
   pending:  'Yangi vazifa berildi',
-  checking: 'Vazifa tekshiruvga olindi',
-  done:     'Vazifa tekshirildi',
+  checking: 'Vazifa belgilashga olindi',
+  done:     'Vazifa belgilandi',
 };
 const HW_ICON = { pending:'plus', checking:'sparkles', done:'check' };
 const HW_TONE = { pending:'info', checking:'warning', done:'success' };

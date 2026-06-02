@@ -328,7 +328,7 @@ export default function StudentDetailPage({ studentId, onBack }) {
           style={{ padding:18, marginBottom:14 }}>
           <div className="card-title" style={{ marginBottom:12 }}>O'qituvchi</div>
           <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-            <Avatar name={s.teacher.name} hue={s.teacher.hue} size="md"/>
+            <Avatar name={s.teacher.name} hue={s.teacher.hue} size="md" photoUrl={s.teacher.photoUrl}/>
             <div>
               <div style={{ fontSize:14, fontWeight:600 }}>{s.teacher.name}</div>
               {s.teacher.subject && <div style={{ fontSize:12, color:'var(--text-2)', marginTop:2 }}>{s.teacher.subject}</div>}
