@@ -227,8 +227,14 @@ function PendingStudentsPanel({ onChange }) {
 
 export default function MyClasses({ onOpenStudent, onOpenGroup }) {
   const [tab, setTab] = useState('groups');
+  const [showClosed, setShowClosed] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
-  const { data, loading, error, refetch } = useFetch(() => api.groups.list({ limit:100 }));
+  const { data, loading, error, refetch } = useFetch(
+    () => api.groups.list({ limit:100, isActive: showClosed ? 'false' : 'true' }),
+    [showClosed],
+  );
+  const { data: closedData } = useFetch(() => api.groups.list({ limit:100, isActive:'false' }), [showClosed]);
+  const closedCount = Array.isArray(closedData) ? closedData.length : (closedData?.data?.length ?? 0);
   const { data: pendingData, refetch: refetchPending } = useFetch(() => api.students.pending());
   const groups = Array.isArray(data) ? data : (data?.data ?? []);
   const pendingList = Array.isArray(pendingData) ? pendingData : (pendingData?.data ?? []);
@@ -257,21 +263,33 @@ export default function MyClasses({ onOpenStudent, onOpenGroup }) {
       <div className="page-hd">
         <div>
           <h1 className="page-title">
-            {tab === 'groups' ? 'Mening guruhlarim' : tab === 'pending' ? "Yangi o'quvchilar" : "O'quvchilarim"}
+            {tab === 'groups'
+              ? (showClosed ? 'Yopilgan guruhlar' : 'Mening guruhlarim')
+              : tab === 'pending' ? "Yangi o'quvchilar" : "O'quvchilarim"}
           </h1>
           <div className="page-sub">
             {tab === 'groups'
-              ? `${groups.length} ta guruh · jami ${totalStudents} ta o'quvchi`
+              ? (showClosed
+                  ? `${groups.length} ta yopilgan guruh`
+                  : `${groups.length} ta guruh · jami ${totalStudents} ta o'quvchi`)
               : tab === 'pending'
               ? `${pendingCount} ta tasdiq kutmoqda`
               : `${totalStudents} ta o'quvchi`}
           </div>
         </div>
         {tab === 'groups' && (
-          <div className="page-acts">
-            <button className="btn btn-primary" onClick={() => setCreateOpen(true)}>
-              <Icon name="plus" size={13}/> Yangi guruh
-            </button>
+          <div className="page-acts" style={{ display:'flex', gap:6 }}>
+            {(closedCount > 0 || showClosed) && (
+              <button className="btn btn-ghost" onClick={() => setShowClosed(s => !s)}
+                style={showClosed ? { background:'var(--rose-bg)', color:'var(--rose)' } : undefined}>
+                <Icon name="check" size={12}/> {showClosed ? 'Faollar' : `Yopilganlar (${closedCount})`}
+              </button>
+            )}
+            {!showClosed && (
+              <button className="btn btn-primary" onClick={() => setCreateOpen(true)}>
+                <Icon name="plus" size={13}/> Yangi guruh
+              </button>
+            )}
           </div>
         )}
       </div>

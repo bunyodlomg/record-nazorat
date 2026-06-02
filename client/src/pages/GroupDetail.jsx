@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Icon, Avatar } from '../components/ui.jsx';
 import { Spinner, ErrorBox } from '../components/Feedback.jsx';
+import { Modal } from '../components/Modal.jsx';
 import { useFetch } from '../hooks/useFetch.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import api from '../services/api.js';
@@ -152,12 +153,65 @@ function PendingStudentCard({ s, onApprove, onReject, busy }) {
   );
 }
 
+function CloseGroupModal({ open, group, onClose, onDone }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  if (!group) return null;
+  const willClose = group.isActive;
+  const submit = async () => {
+    setBusy(true); setError('');
+    try {
+      await api.groups.update(group._id, { isActive: !willClose });
+      sfx.success();
+      onDone?.();
+      onClose();
+    } catch (e) {
+      setError(e.message || 'Xatolik');
+    } finally { setBusy(false); }
+  };
+  return (
+    <Modal open={open} onClose={onClose}
+      title={willClose ? 'Guruhni yopish' : 'Guruhni qayta ochish'}
+      subtitle={willClose ? `"${group.name}" — darslar muvaffaqiyatli yakunlandimi?` : `"${group.name}" yana faollashtiriladi`}
+      width={420}
+      footer={<>
+        <button className="btn btn-ghost" onClick={onClose} disabled={busy}>Bekor</button>
+        <button className="btn btn-primary" onClick={submit} disabled={busy}
+          style={willClose ? { background:'var(--rose)', border:'none' } : undefined}>
+          {busy ? '...' : (willClose ? 'Ha, yopish' : 'Qayta ochish')}
+        </button>
+      </>}
+    >
+      {error && (
+        <div style={{ marginBottom:12, padding:'10px 12px', background:'var(--rose-bg)', border:'1px solid var(--rose)', borderRadius:8, color:'var(--rose)', fontSize:12.5 }}>
+          {error}
+        </div>
+      )}
+      <div style={{ padding:'12px 14px', background:'var(--bg-subtle)', borderRadius:10, fontSize:13, color:'var(--text-2)', lineHeight:1.55 }}>
+        {willClose ? (
+          <>
+            <div style={{ marginBottom:6 }}>Yopilgandan keyin:</div>
+            <ul style={{ margin:0, paddingLeft:18 }}>
+              <li>Guruhga yangi vazifa avto-yaratilmaydi</li>
+              <li>O'quvchilar va statistika saqlanadi (o'chmaydi)</li>
+              <li>Istalgan vaqtda qayta ochishingiz mumkin</li>
+            </ul>
+          </>
+        ) : (
+          <>Guruh yana faol bo'ladi va dars kunlari avto-vazifa yaratish davom etadi.</>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 export default function GroupDetailPage({ groupId, onBack, onOpenStudent, onOpenHomework, onOpenTeacher }) {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   const [tab, setTab] = useState('students');
   const [busyPending, setBusyPending] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [closeOpen, setCloseOpen] = useState(false);
   const { data: g, loading, error, refetch } = useFetch(() => api.groups.get(groupId), [groupId]);
 
   const handleApprove = async (id) => {
@@ -228,6 +282,11 @@ export default function GroupDetailPage({ groupId, onBack, onOpenStudent, onOpen
               <span style={{ fontSize:11, fontFamily:'var(--mono)', color:'var(--text-2)', background:'var(--bg-subtle)', padding:'3px 8px', borderRadius:6, fontWeight:500 }}>
                 {g.code}
               </span>
+              {!g.isActive && (
+                <span className="chip" style={{ background:'var(--rose-bg)', color:'var(--rose)', fontSize:10.5, fontWeight:700 }}>
+                  <Icon name="check" size={10}/> Yopilgan
+                </span>
+              )}
             </div>
             <div style={{ fontSize:12.5, color:'var(--text-2)', marginBottom:10 }}>
               {dayLabels(g.scheduleDays) || "Kun belgilanmagan"}
@@ -262,6 +321,33 @@ export default function GroupDetailPage({ groupId, onBack, onOpenStudent, onOpen
         <StatTile icon="💎"       tone="primary" label="Olmoslar"    value={stats.totalGems}/>
         <StatTile icon="homework" tone="amber"   label="Tekshirilmagan" value={pendingHwCount}/>
         <StatTile icon="check"    tone="emerald" label="Tugatildi"   value={stats.completedHw}/>
+      </div>
+
+      {/* Guruhni yopish / qayta ochish — teacher va admin uchun */}
+      <div style={{ marginBottom:12 }}>
+        {g.isActive ? (
+          <button onClick={() => setCloseOpen(true)}
+            style={{
+              width:'100%', padding:'12px 14px', borderRadius:12,
+              background:'var(--rose-bg)', color:'var(--rose)',
+              border:'1px solid rgba(244,63,94,0.30)',
+              fontSize:13.5, fontWeight:600, cursor:'pointer',
+              display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+            }}>
+            <Icon name="check" size={14}/> Darslar tugadi — guruhni yopish
+          </button>
+        ) : (
+          <button onClick={() => setCloseOpen(true)}
+            style={{
+              width:'100%', padding:'12px 14px', borderRadius:12,
+              background:'var(--primary-bg)', color:'var(--primary-l)',
+              border:'1px solid rgba(99,102,241,0.30)',
+              fontSize:13.5, fontWeight:600, cursor:'pointer',
+              display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+            }}>
+            <Icon name="plus" size={14}/> Guruhni qayta ochish
+          </button>
+        )}
       </div>
 
       {/* Invite link card — faqat admin uchun */}
@@ -378,6 +464,13 @@ export default function GroupDetailPage({ groupId, onBack, onOpenStudent, onOpen
           </div>
         )
       )}
+
+      <CloseGroupModal
+        open={closeOpen}
+        group={g}
+        onClose={() => setCloseOpen(false)}
+        onDone={refetch}
+      />
     </motion.div>
   );
 }

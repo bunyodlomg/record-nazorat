@@ -171,7 +171,7 @@ export default function DashboardPage({ onOpenTeacher, onNav }) {
           <div className="card-head">
             <div>
               <div className="card-title">Vazifa bajarilish dinamikasi</div>
-              <div className="card-sub">12 haftalik bajarilgan/berilgan nisbati</div>
+              <div className="card-sub">Oxirgi 12 hafta · har hafta bajarilgan vazifalar foizi (sana — hafta boshlanish kuni)</div>
             </div>
             {hasTrend && trendDelta !== 0 && (
               <span className={`chip ${trendDelta >= 0 ? 'chip-success' : 'chip-danger'}`}>

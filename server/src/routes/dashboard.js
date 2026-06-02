@@ -95,6 +95,8 @@ router.get('/', asyncHandler(async (req, res) => {
   }
 
   // Haftalik vazifa bajarilish trendi — oxirgi 12 hafta (real Homework ma'lumoti)
+  // X-axis label: hafta boshlanish sanasi (masalan "5-Yan") — H1...H12 dan ko'ra tushunarli
+  const MONTHS_UZ = ['Yan','Fev','Mar','Apr','May','Iyn','Iyl','Avg','Sen','Okt','Noy','Dek'];
   const attendanceTrend = [];
   for (let i = 11; i >= 0; i--) {
     const wkStart = new Date(today);
@@ -108,7 +110,8 @@ router.get('/', asyncHandler(async (req, res) => {
       Homework.countDocuments({ updatedAt: { $gte: wkStart, $lt: wkEnd }, col: 'done' }),
     ]);
     const pct = created > 0 ? Math.round((doneInWeek / created) * 100) : 0;
-    attendanceTrend.push({ week: `H${12-i}`, val: pct });
+    const label = `${wkStart.getDate()}-${MONTHS_UZ[wkStart.getMonth()]}`;
+    attendanceTrend.push({ week: label, val: pct });
   }
   const hasTrendData = attendanceTrend.some(p => p.val > 0);
 

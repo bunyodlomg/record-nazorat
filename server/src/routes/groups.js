@@ -26,7 +26,10 @@ const buildStudentInviteLink = (token) => {
 // LIST
 router.get('/', asyncHandler(async (req,res) => {
   const { teacherId, level, isActive='true', page=1, limit=50 } = req.query;
-  const filter = { isActive: isActive==='true' };
+  // isActive: 'true' → faol guruhlar (default), 'false' → yopilganlar, 'all' → hammasi
+  const filter = {};
+  if (isActive === 'true')  filter.isActive = true;
+  if (isActive === 'false') filter.isActive = false;
   if (teacherId) filter.teacher = teacherId;
   if (level)     filter.level   = level;
 
