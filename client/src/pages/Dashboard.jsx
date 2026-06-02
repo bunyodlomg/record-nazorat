@@ -28,11 +28,11 @@ function KpiCard({ label, value = 0, delta, deltaDir, icon, iconBg, iconColor, i
   );
 }
 
-function ProblemTeacherCard({ t, onOpenTeacher }) {
+function ProblemTeacherCard({ t, onOpenTeacher, onOpenStudent }) {
   const [expanded, setExpanded] = useState(false);
-  const items = t.pendingItems || [];
-  const preview = items.slice(0, expanded ? items.length : 3);
-  const remaining = items.length - preview.length;
+  const students = t.pendingStudents || [];
+  const preview = students.slice(0, expanded ? students.length : 3);
+  const remaining = students.length - preview.length;
 
   return (
     <motion.div className="card" variants={listItem}
@@ -46,7 +46,11 @@ function ProblemTeacherCard({ t, onOpenTeacher }) {
         <Avatar name={t.name} hue={t.hue} size="sm" photoUrl={t.photoUrl}/>
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ fontSize:13.5, fontWeight:600 }}>{t.name}</div>
-          <div style={{ fontSize:11, color:'var(--text-3)', marginTop:1 }}>{t.subject}</div>
+          <div style={{ fontSize:11, color:'var(--text-3)', marginTop:1 }}>
+            {students.length > 0
+              ? `${students.length} o'quvchi · ${t.pendingReview} vazifa`
+              : t.subject}
+          </div>
         </div>
         <span style={{
           background:'var(--rose-bg)', color:'var(--rose)',
@@ -57,22 +61,34 @@ function ProblemTeacherCard({ t, onOpenTeacher }) {
         </span>
       </button>
 
-      {items.length > 0 && (
+      {students.length > 0 && (
         <div style={{ borderTop:'1px solid var(--border)', background:'var(--bg-subtle)' }}>
-          <div style={{ padding:'8px 14px', display:'flex', flexDirection:'column', gap:5 }}>
-            {preview.map((p, i) => (
-              <div key={i} style={{ display:'flex', alignItems:'center', gap:8, fontSize:12 }}>
+          <div style={{ padding:'8px 14px', display:'flex', flexDirection:'column', gap:3 }}>
+            {preview.map(p => (
+              <button key={p.studentId}
+                onClick={() => onOpenStudent?.(p.studentId)}
+                disabled={!onOpenStudent}
+                style={{
+                  display:'flex', alignItems:'center', gap:8, padding:'5px 4px',
+                  background:'transparent', border:'none', textAlign:'left',
+                  cursor: onOpenStudent ? 'pointer' : 'default', borderRadius:6,
+                }}>
                 <Avatar name={p.studentName} hue={p.studentHue} size="xs" photoUrl={p.studentPhotoUrl}/>
-                <span style={{ fontWeight:500, flex:1, minWidth:0, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                <span style={{ fontSize:12.5, fontWeight:500, flex:1, minWidth:0, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
                   {p.studentName}
                 </span>
-                <span style={{ fontSize:10.5, color:'var(--text-3)', whiteSpace:'nowrap' }}>
-                  {p.homeworkTitle}
+                <span style={{
+                  fontSize:10.5, fontWeight:700,
+                  padding:'2px 7px', borderRadius:6,
+                  background:'var(--amber-bg)', color:'var(--amber)',
+                  whiteSpace:'nowrap', flexShrink:0,
+                }}>
+                  {p.count} ta
                 </span>
-              </div>
+              </button>
             ))}
           </div>
-          {items.length > 3 && (
+          {students.length > 3 && (
             <button
               onClick={() => setExpanded(e => !e)}
               style={{
@@ -91,7 +107,7 @@ function ProblemTeacherCard({ t, onOpenTeacher }) {
   );
 }
 
-export default function DashboardPage({ onOpenTeacher, onNav }) {
+export default function DashboardPage({ onOpenTeacher, onOpenStudent, onNav }) {
   const { data, loading, error, refetch } = useFetch(() => api.dashboard.get());
 
   // Real-time uchun har 12s da refetch
@@ -103,7 +119,7 @@ export default function DashboardPage({ onOpenTeacher, onNav }) {
   if (loading) return <div className="page"><Spinner/></div>;
   if (error)   return <div className="page"><ErrorBox message={error} onRetry={refetch}/></div>;
 
-  const { kpis, problemTeachers, activityData, attendanceTrend } = data;
+  const { kpis, problemTeachers, totalPendingStudents, activityData, attendanceTrend } = data;
   const hasActivity = (activityData ?? []).some(d => (d.lessons ?? 0) + (d.hw ?? 0) > 0);
   const hasTrend    = (attendanceTrend ?? []).length > 0;
   const trendDelta  = hasTrend
@@ -215,7 +231,11 @@ export default function DashboardPage({ onOpenTeacher, onNav }) {
               </div>
               <div>
                 <div className="card-title">Kutayotgan vazifalar</div>
-                <div className="card-sub">{problemTeachers.length} o'qituvchi · jami {problemTeachers.reduce((s,t)=>s+(t.pendingReview||0),0)} ta</div>
+                <div className="card-sub">
+                  {problemTeachers.length} o'qituvchi
+                  {totalPendingStudents > 0 && ` · ${totalPendingStudents} o'quvchi`}
+                  {' · '}{problemTeachers.reduce((s,t)=>s+(t.pendingReview||0),0)} vazifa
+                </div>
               </div>
             </div>
           </div>
@@ -225,7 +245,9 @@ export default function DashboardPage({ onOpenTeacher, onNav }) {
             style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:10, padding:14 }}
           >
             {problemTeachers.map(t => (
-              <ProblemTeacherCard key={t._id} t={t} onOpenTeacher={onOpenTeacher}/>
+              <ProblemTeacherCard key={t._id} t={t}
+                onOpenTeacher={onOpenTeacher}
+                onOpenStudent={onOpenStudent}/>
             ))}
           </motion.div>
         </motion.div>

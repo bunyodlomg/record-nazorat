@@ -42,33 +42,51 @@ router.get('/', asyncHandler(async (req, res) => {
     : [];
   const countMap = Object.fromEntries(submittedByTeacher.map(x => [String(x._id), x.count]));
 
-  // Har problem teacher uchun tekshirilmagan o'quvchi nomlari
-  let pendingStudentsByTeacher = {};
+  // Har problem teacher uchun o'quvchi bo'yicha aggregate
+  // teacherId → Map(studentId → { studentId, studentName, studentHue, studentPhotoUrl, count, oldestDue })
+  const pendingStudentsByTeacher = {};
   if (problemTeacherIds.length) {
     const pendingSubs = await Submission.find({
       teacher: { $in: problemTeacherIds },
       status: { $ne: 'reviewed' },
-    }).populate('student', 'name hue').populate('homework', 'title dueDate').lean();
+    }).populate('student', 'name hue photoUrl').populate('homework', 'title dueDate').lean();
+
     for (const s of pendingSubs) {
-      const k = String(s.teacher);
-      (pendingStudentsByTeacher[k] ||= []).push({
-        studentId:   s.student?._id,
-        studentName: s.student?.name || '—',
-        studentHue:  s.student?.hue ?? 200,
-        homeworkId:  s.homework?._id,
-        homeworkTitle: s.homework?.title || '',
-        dueDate:     s.homework?.dueDate || null,
-      });
+      if (!s.student) continue;
+      const tk = String(s.teacher);
+      const sk = String(s.student._id);
+      (pendingStudentsByTeacher[tk] ||= new Map());
+      const ex = pendingStudentsByTeacher[tk].get(sk);
+      const due = s.homework?.dueDate ? new Date(s.homework.dueDate) : null;
+      if (ex) {
+        ex.count++;
+        if (due && (!ex.oldestDue || due < ex.oldestDue)) ex.oldestDue = due;
+      } else {
+        pendingStudentsByTeacher[tk].set(sk, {
+          studentId:       s.student._id,
+          studentName:     s.student.name || '—',
+          studentHue:      s.student.hue ?? 200,
+          studentPhotoUrl: s.student.photoUrl || null,
+          count:           1,
+          oldestDue:       due,
+        });
+      }
     }
   }
 
   const problemTeachers = problemTeachersRaw
-    .map(t => ({
-      ...t,
-      pendingReview: countMap[String(t._id)] || 0,
-      pendingItems:  pendingStudentsByTeacher[String(t._id)] || [],
-    }))
+    .map(t => {
+      const map = pendingStudentsByTeacher[String(t._id)] || new Map();
+      const pendingStudents = Array.from(map.values()).sort((a, b) => b.count - a.count);
+      return {
+        ...t,
+        pendingReview:   countMap[String(t._id)] || 0,
+        pendingStudents,
+      };
+    })
     .sort((a, b) => b.pendingReview - a.pendingReview);
+
+  const totalPendingStudents = problemTeachers.reduce((s, t) => s + t.pendingStudents.length, 0);
 
   const ts  = tStats[0]  || {};
   const hwM = Object.fromEntries((hwAgg||[]).map(h=>[h._id, h.count]));
@@ -131,6 +149,7 @@ router.get('/', asyncHandler(async (req, res) => {
     },
     topTeachers,
     problemTeachers,
+    totalPendingStudents,
     activityData,
     attendanceTrend: hasTrendData ? attendanceTrend : [],
   }});

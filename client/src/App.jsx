@@ -78,7 +78,7 @@ function AdminApp() {
       onOpenStudent={setStudentId} onOpenHomework={setHomeworkId} onOpenTeacher={setDetailId}/>;
   } else if (detailId) {
     content = <TeacherDetailPage teacherId={detailId} onBack={() => setDetailId(null)} onOpenGroup={setGroupId}/>;
-  } else if (page === 'dashboard')   content = <DashboardPage   onOpenTeacher={setDetailId} onNav={nav}/>;
+  } else if (page === 'dashboard')   content = <DashboardPage   onOpenTeacher={setDetailId} onOpenStudent={setStudentId} onNav={nav}/>;
   else if (page === 'teachers')      content = <TeachersPage    onOpenTeacher={setDetailId} onOpenStudent={setStudentId}/>;
   else if (page === 'groups')        content = <GroupsPage      onOpenTeacher={setDetailId} onOpenGroup={setGroupId}/>;
   else if (page === 'leaderboard')   content = <LeaderboardPage onOpenTeacher={setDetailId} onOpenStudent={setStudentId}/>;
