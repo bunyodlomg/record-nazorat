@@ -64,7 +64,7 @@ const api = {
     groups:   (params = {}) => http.get('/leaderboard/groups',   { params }),
   },
   dashboard: {
-    get: () => http.get('/dashboard'),
+    get: (params = {}) => http.get('/dashboard', { params }),
   },
   teachers: {
     list:     (p = {}) => http.get('/teachers', { params: p }),

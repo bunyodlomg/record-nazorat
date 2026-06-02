@@ -108,7 +108,8 @@ function ProblemTeacherCard({ t, onOpenTeacher, onOpenStudent }) {
 }
 
 export default function DashboardPage({ onOpenTeacher, onOpenStudent, onNav }) {
-  const { data, loading, error, refetch } = useFetch(() => api.dashboard.get());
+  const [trendRange, setTrendRange] = useState('month'); // 'month' | 'year'
+  const { data, loading, error, refetch } = useFetch(() => api.dashboard.get({ range: trendRange }), [trendRange]);
 
   // Real-time uchun har 12s da refetch
   useEffect(() => {
@@ -187,18 +188,34 @@ export default function DashboardPage({ onOpenTeacher, onOpenStudent, onNav }) {
           <div className="card-head">
             <div>
               <div className="card-title">Vazifa bajarilish dinamikasi</div>
-              <div className="card-sub">Oxirgi 12 hafta · har hafta bajarilgan vazifalar foizi (sana — hafta boshlanish kuni)</div>
+              <div className="card-sub">
+                {trendRange === 'month'
+                  ? "Oxirgi 30 kun · kunlik bajarilgan vazifalar foizi"
+                  : "Oxirgi 12 oy · oylik bajarilgan vazifalar foizi"}
+              </div>
             </div>
-            {hasTrend && trendDelta !== 0 && (
-              <span className={`chip ${trendDelta >= 0 ? 'chip-success' : 'chip-danger'}`}>
-                {trendDelta >= 0 ? '↑' : '↓'} {Math.abs(trendDelta)}%
-              </span>
-            )}
+            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+              {hasTrend && trendDelta !== 0 && (
+                <span className={`chip ${trendDelta >= 0 ? 'chip-success' : 'chip-danger'}`}>
+                  {trendDelta >= 0 ? '↑' : '↓'} {Math.abs(trendDelta)}%
+                </span>
+              )}
+              <div className="seg" style={{ flexShrink:0 }}>
+                <button className={`seg-btn ${trendRange==='month'?'active':''}`}
+                  onClick={() => setTrendRange('month')} title="1 oy">
+                  1 oy
+                </button>
+                <button className={`seg-btn ${trendRange==='year'?'active':''}`}
+                  onClick={() => setTrendRange('year')} title="1 yil">
+                  1 yil
+                </button>
+              </div>
+            </div>
           </div>
           <div style={{ padding:'14px 16px 16px', height:230 }}>
           {hasTrend ? (
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={attendanceTrend}>
+              <AreaChart data={attendanceTrend} margin={{ top:5, right:5, left:0, bottom:0 }}>
                 <defs>
                   <linearGradient id="attGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%"  stopColor="#6366f1" stopOpacity={0.35}/>
@@ -206,11 +223,14 @@ export default function DashboardPage({ onOpenTeacher, onOpenStudent, onNav }) {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 6" stroke="var(--border)" vertical={false}/>
-                <XAxis dataKey="week" tick={{ fontSize:10.5, fill:'var(--text-2)' }} axisLine={false} tickLine={false}/>
-                <YAxis domain={[80,100]} tick={{ fontSize:11, fill:'var(--text-3)' }} axisLine={false} tickLine={false} width={34} tickFormatter={v=>`${v}%`}/>
+                <XAxis dataKey="week" tick={{ fontSize:10.5, fill:'var(--text-2)' }}
+                  axisLine={false} tickLine={false} interval="preserveStartEnd"
+                  minTickGap={trendRange === 'month' ? 22 : 8}/>
+                <YAxis domain={[0,100]} tick={{ fontSize:11, fill:'var(--text-3)' }} axisLine={false} tickLine={false} width={34} tickFormatter={v=>`${v}%`}/>
                 <Tooltip content={<ChartTooltip/>}/>
                 <Area type="monotone" dataKey="val" name="Bajarilgan" stroke="#6366f1" strokeWidth={2.5} fill="url(#attGrad)"
-                  dot={{ r:3.5, fill:'var(--bg-card-s)', stroke:'#6366f1', strokeWidth:2 }}/>
+                  dot={trendRange === 'month' ? false : { r:3.5, fill:'var(--bg-card-s)', stroke:'#6366f1', strokeWidth:2 }}
+                  activeDot={{ r:4.5, fill:'#6366f1', stroke:'var(--bg-card-s)', strokeWidth:2 }}/>
               </AreaChart>
             </ResponsiveContainer>
           ) : (

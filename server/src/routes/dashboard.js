@@ -112,24 +112,42 @@ router.get('/', asyncHandler(async (req, res) => {
     });
   }
 
-  // Haftalik vazifa bajarilish trendi — oxirgi 12 hafta (real Homework ma'lumoti)
-  // X-axis label: hafta boshlanish sanasi (masalan "5-Yan") — H1...H12 dan ko'ra tushunarli
+  // Vazifa bajarilish dinamikasi — ?range=month (default) yoki ?range=year
+  // month: oxirgi 30 kun, kunlik nuqta (X-axis: "5-Iyn")
+  // year:  oxirgi 12 oy,  oylik nuqta (X-axis: "Iyn")
   const MONTHS_UZ = ['Yan','Fev','Mar','Apr','May','Iyn','Iyl','Avg','Sen','Okt','Noy','Dek'];
+  const range = req.query.range === 'year' ? 'year' : 'month';
   const attendanceTrend = [];
-  for (let i = 11; i >= 0; i--) {
-    const wkStart = new Date(today);
-    wkStart.setHours(0,0,0,0);
-    wkStart.setDate(wkStart.getDate() - i*7 - 6);
-    const wkEnd = new Date(wkStart);
-    wkEnd.setDate(wkEnd.getDate() + 7);
 
-    const [created, doneInWeek] = await Promise.all([
-      Homework.countDocuments({ createdAt: { $gte: wkStart, $lt: wkEnd } }),
-      Homework.countDocuments({ updatedAt: { $gte: wkStart, $lt: wkEnd }, col: 'done' }),
-    ]);
-    const pct = created > 0 ? Math.round((doneInWeek / created) * 100) : 0;
-    const label = `${wkStart.getDate()}-${MONTHS_UZ[wkStart.getMonth()]}`;
-    attendanceTrend.push({ week: label, val: pct });
+  if (range === 'month') {
+    for (let i = 29; i >= 0; i--) {
+      const dayStart = new Date(today);
+      dayStart.setHours(0,0,0,0);
+      dayStart.setDate(dayStart.getDate() - i);
+      const dayEnd = new Date(dayStart);
+      dayEnd.setDate(dayEnd.getDate() + 1);
+
+      const [created, doneInDay] = await Promise.all([
+        Homework.countDocuments({ createdAt: { $gte: dayStart, $lt: dayEnd } }),
+        Homework.countDocuments({ updatedAt: { $gte: dayStart, $lt: dayEnd }, col: 'done' }),
+      ]);
+      const pct = created > 0 ? Math.round((doneInDay / created) * 100) : 0;
+      const label = `${dayStart.getDate()}-${MONTHS_UZ[dayStart.getMonth()]}`;
+      attendanceTrend.push({ week: label, val: pct });
+    }
+  } else {
+    for (let i = 11; i >= 0; i--) {
+      const monthStart = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      const monthEnd   = new Date(today.getFullYear(), today.getMonth() - i + 1, 1);
+
+      const [created, doneInMonth] = await Promise.all([
+        Homework.countDocuments({ createdAt: { $gte: monthStart, $lt: monthEnd } }),
+        Homework.countDocuments({ updatedAt: { $gte: monthStart, $lt: monthEnd }, col: 'done' }),
+      ]);
+      const pct = created > 0 ? Math.round((doneInMonth / created) * 100) : 0;
+      const label = MONTHS_UZ[monthStart.getMonth()];
+      attendanceTrend.push({ week: label, val: pct });
+    }
   }
   const hasTrendData = attendanceTrend.some(p => p.val > 0);
 
