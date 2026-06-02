@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 
 const TABS = [
   { id:'pending', label:'Topshirilgan',  icon:'clock', tone:'warning' },
-  { id:'done',    label:'Baholangan',    icon:'check', tone:'success' },
+  { id:'done',    label:'Belgilangan',   icon:'check', tone:'success' },
 ];
 const KINDS = [
   { id:'lesson',   label:'Kunlik vazifalar', icon:'book' },
@@ -121,7 +121,7 @@ function HomeworkCard({ it, tab, onOpen }) {
           }}>
             <span style={{ color:'var(--text-2)', fontWeight:500 }}>
               {isDone
-                ? <>Hammasi baholandi · <strong style={{ color:accentL }}>{total}/{total}</strong></>
+                ? <>Hammasi belgilandi · <strong style={{ color:accentL }}>{total}/{total}</strong></>
                 : <><strong style={{ color:accentL, fontSize:15 }}>{pending}/{total}</strong> qoldi</>}
             </span>
             <span style={{
@@ -157,7 +157,7 @@ function HomeworkCard({ it, tab, onOpen }) {
         onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
         onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
         <Icon name={isDone ? 'eye' : 'chevronRight'} size={14}/>
-        {isDone ? "Ko'rib chiqish" : 'Baholash'}
+        {isDone ? "Ko'rib chiqish" : 'Belgilash'}
       </button>
     </div>
   );
@@ -168,7 +168,7 @@ export default function MyHomework({ onOpenHomework }) {
   const teacherId = user?.teacherRef?._id || user?.teacherRef;
   const [kind, setKind] = useState('lesson');
   const [tab, setTab] = useState('pending');
-  // "Baholangan" tab uchun sana filter
+  // "Belgilangan" tab uchun sana filter
   const [pickedDate, setPickedDate] = useState(todayKey());
 
   const { data, loading, error, refetch } = useFetch(
@@ -337,8 +337,8 @@ export default function MyHomework({ onOpenHomework }) {
             {tab === 'pending'
               ? (kind === 'speaking' ? "Hozircha topshirilgan speaking yo'q" : "Hozircha topshiriq yo'q")
               : (pickedDate
-                  ? "Bu kuni baholangan vazifa yo'q"
-                  : "Baholangan vazifalar yo'q")}
+                  ? "Bu kuni belgilangan vazifa yo'q"
+                  : "Belgilangan vazifalar yo'q")}
           </div>
           {tab === 'done' && pickedDate && doneDates.length > 0 && (
             <div style={{ fontSize:11.5, color:'var(--text-3)', marginTop:8 }}>

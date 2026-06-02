@@ -2,8 +2,9 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon, Avatar, StatusDot } from '../components/ui.jsx';
 import { Spinner, ErrorBox, listContainer, listItem } from '../components/Feedback.jsx';
-import { Modal, Field, Input } from '../components/Modal.jsx';
+import { Modal, Field, Input, Select } from '../components/Modal.jsx';
 import { useFetch } from '../hooks/useFetch.js';
+import { useAuth } from '../context/AuthContext.jsx';
 import api from '../services/api.js';
 import InvitesPage     from './Invites.jsx';
 import PendingUsersPage from './PendingUsers.jsx';
@@ -96,6 +97,85 @@ function TeacherEditForm({ open, onClose, initial, onSaved }) {
       <Field label="Ism Familiya">
         <Input value={name} onChange={e=>setName(e.target.value)} placeholder="Aziza Karimova" autoFocus/>
       </Field>
+    </Modal>
+  );
+}
+
+function ReassignDeleteModal({ open, target, candidates, onClose, onDone }) {
+  const [reassignTo, setReassignTo] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => { setReassignTo(''); setError(''); }, [target?._id, open]);
+
+  if (!target) return null;
+  const groupCount = target.groups?.length ?? 0;
+  const options = candidates.filter(c => String(c._id) !== String(target._id));
+
+  const submit = async () => {
+    if (groupCount > 0 && !reassignTo) {
+      setError("Yangi o'qituvchini tanlang");
+      return;
+    }
+    setBusy(true); setError('');
+    try {
+      await api.teachers.delete(target._id, groupCount > 0 ? reassignTo : undefined);
+      onDone?.();
+      onClose();
+    } catch (e) {
+      setError(e.message || 'Xatolik');
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <Modal open={open} onClose={onClose}
+      title={`"${target.name}" ni o'chirish`}
+      subtitle={groupCount > 0
+        ? `${groupCount} ta guruh boshqa o'qituvchiga o'tkaziladi`
+        : "Bu o'qituvchining guruhi yo'q"}
+      width={440}
+      footer={<>
+        <button className="btn btn-ghost" onClick={onClose} disabled={busy}>Bekor qilish</button>
+        <button className="btn btn-primary" onClick={submit} disabled={busy}
+          style={{ background:'var(--rose)', border:'none' }}>
+          {busy ? "O'chirilmoqda..." : "O'chirish"}
+        </button>
+      </>}
+    >
+      {error && (
+        <div style={{ marginBottom:12, padding:'10px 12px', background:'var(--rose-bg)', border:'1px solid var(--rose)', borderRadius:8, color:'var(--rose)', fontSize:12.5 }}>
+          {error}
+        </div>
+      )}
+
+      {groupCount > 0 ? (
+        <>
+          <div style={{ marginBottom:14, padding:'10px 12px', background:'var(--amber-bg)', border:'1px solid rgba(251,191,36,0.30)', borderRadius:10, fontSize:12.5, color:'var(--text-2)', lineHeight:1.5 }}>
+            <Icon name="alert" size={12} style={{ verticalAlign:-1, marginRight:5, color:'var(--amber)' }}/>
+            Guruhlar, vazifalar, o'quvchilar va topshiriqlar — hammasi tanlangan o'qituvchiga o'tadi.
+          </div>
+          <Field label="Yangi mas'ul o'qituvchi">
+            {options.length === 0 ? (
+              <div style={{ padding:'10px 12px', background:'var(--bg-subtle)', borderRadius:8, color:'var(--text-3)', fontSize:12.5 }}>
+                Boshqa o'qituvchi yo'q — avval yangi o'qituvchi qo'shing.
+              </div>
+            ) : (
+              <Select value={reassignTo} onChange={e => setReassignTo(e.target.value)}>
+                <option value="">— Tanlang —</option>
+                {options.map(c => (
+                  <option key={c._id} value={c._id}>
+                    {c.name} {c.subject ? `· ${c.subject}` : ''} {c.groups?.length ? `(${c.groups.length} guruh)` : ''}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Field>
+        </>
+      ) : (
+        <div style={{ padding:'12px 14px', background:'var(--bg-subtle)', borderRadius:10, fontSize:12.5, color:'var(--text-2)' }}>
+          O'qituvchi va uning hisobi (login) butunlay o'chiriladi.
+        </div>
+      )}
     </Modal>
   );
 }
@@ -308,6 +388,7 @@ function TeachersListView({ onOpenTeacher }) {
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [deleting, setDeleting] = useState(null);
 
   const params = useMemo(() => {
     const p = { limit:50 };
@@ -344,10 +425,7 @@ function TeachersListView({ onOpenTeacher }) {
   };
 
   const openEdit = t => { setEditing(t); setModalOpen(true); };
-  const remove = async t => {
-    if (!confirm(`"${t.name}" ni o'chirishni tasdiqlang?`)) return;
-    try { await api.teachers.delete(t._id); refetch(); } catch (e) { alert(e.message); }
-  };
+  const remove = t => setDeleting(t);
 
   return (
     <>
@@ -464,18 +542,97 @@ function TeachersListView({ onOpenTeacher }) {
         onClose={() => setModalOpen(false)}
         onSaved={refetch}
       />
+
+      <ReassignDeleteModal
+        open={!!deleting}
+        target={deleting}
+        candidates={teachers}
+        onClose={() => setDeleting(null)}
+        onDone={refetch}
+      />
     </>
+  );
+}
+
+/* Adminlar ro'yxati — User collection orqali (role: admin, status: active) */
+function AdminsListView() {
+  const { user: me } = useAuth();
+  const { data, loading, error, refetch } = useFetch(
+    () => api.users.list({ role:'admin', status:'active' }),
+    [],
+  );
+  const admins = data ?? [];
+
+  const remove = async (u) => {
+    if (!confirm(`"${u.name}" ni o'chirishni tasdiqlang?`)) return;
+    try { await api.users.delete(u._id); refetch(); }
+    catch (e) { alert(e.message); }
+  };
+
+  if (loading) return <Spinner/>;
+  if (error)   return <ErrorBox message={error} onRetry={refetch}/>;
+  if (!admins.length) return (
+    <div style={{ padding:'60px 0', textAlign:'center', color:'var(--text-3)' }}>
+      <div style={{ fontSize:40, marginBottom:8 }}>🛡️</div>
+      <div style={{ fontSize:14, fontWeight:600, color:'var(--text-2)' }}>Hozircha boshqa admin yo'q</div>
+      <div style={{ fontSize:12.5, marginTop:5 }}>"Takliflar" tabidan admin uchun invite link yarating.</div>
+    </div>
+  );
+
+  return (
+    <motion.div variants={listContainer} initial="hidden" animate="show"
+      className="card" style={{ padding:'4px 0', overflow:'visible' }}>
+      {admins.map(u => {
+        const isMe = String(me?._id || me?.id) === String(u._id);
+        return (
+          <motion.div key={u._id} variants={listItem}
+            style={{
+              display:'flex', alignItems:'center', gap:13,
+              padding:'10px 12px',
+              borderBottom:'1px solid var(--border)',
+            }}>
+            {u.photoUrl
+              ? <img src={u.photoUrl} alt="" style={{ width:42, height:42, borderRadius:'50%', objectFit:'cover', flexShrink:0 }}/>
+              : <Avatar name={u.name} hue={270} size="lg"/>}
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:14, fontWeight:600, letterSpacing:'-0.01em' }}>
+                <span style={{ whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{u.name}</span>
+                {isMe && (
+                  <span className="chip" style={{ background:'var(--primary-bg)', color:'var(--primary-l)', fontSize:10 }}>Siz</span>
+                )}
+              </div>
+              <div style={{ fontSize:12, color:'var(--text-2)', marginTop:2 }}>
+                {u.telegramUsername ? `@${u.telegramUsername}` : (u.email && !/^tg-[\w-]+@local$/i.test(u.email) ? u.email : '—')}
+              </div>
+            </div>
+            <span className="chip" style={{ background:'var(--violet-bg)', color:'var(--violet)', fontSize:10.5, flexShrink:0 }}>
+              <Icon name="shield" size={10}/> Admin
+            </span>
+            {!isMe && (
+              <button className="btn btn-ghost btn-icon"
+                style={{ width:30, height:30, color:'var(--rose)', flexShrink:0 }}
+                onClick={() => remove(u)} title="O'chirish">
+                <Icon name="alert" size={13}/>
+              </button>
+            )}
+          </motion.div>
+        );
+      })}
+    </motion.div>
   );
 }
 
 export default function TeachersPage({ onOpenTeacher, onOpenStudent }) {
   const [tab, setTab] = useState('teachers');
   const { data: pendingData, refetch: refetchPending } = useFetch(() => api.users.list({ status:'pending' }), []);
+  const { data: adminsData } = useFetch(() => api.users.list({ role:'admin', status:'active' }), []);
   const pendingCount = (pendingData ?? []).length;
+  const adminsCount  = (adminsData  ?? []).length;
 
   const meta = {
     teachers: { title:"O'qituvchilar", sub:"Batafsil ko'rish uchun bosing" },
     students: { title:"O'quvchilar",   sub:"Barcha guruhlardagi o'quvchilar" },
+    admins:   { title:'Adminlar',      sub:`${adminsCount} ta faol admin` },
     pending:  { title:'Kutayotganlar', sub:`${pendingCount} ta tasdiqlanishi kerak` },
     invites:  { title:'Takliflar',     sub:'Bot orqali kirish uchun linklar' },
   };
@@ -498,6 +655,13 @@ export default function TeachersPage({ onOpenTeacher, onOpenStudent }) {
         <button className={`tab ${tab==='students'?'active':''}`} onClick={() => setTab('students')}>
           <Icon name="user" size={12} style={{ marginRight:4, verticalAlign:'-1px' }}/>
           O'quvchilar
+        </button>
+        <button className={`tab ${tab==='admins'?'active':''}`} onClick={() => setTab('admins')}>
+          <Icon name="shield" size={12} style={{ marginRight:4, verticalAlign:'-1px' }}/>
+          Adminlar
+          {adminsCount > 0 && (
+            <span style={{ fontSize:11, color:'var(--text-3)', marginLeft:4 }}>{adminsCount}</span>
+          )}
         </button>
         <button className={`tab ${tab==='pending'?'active':''}`} onClick={() => setTab('pending')}>
           <Icon name="clock" size={12} style={{ marginRight:4, verticalAlign:'-1px' }}/>
@@ -522,6 +686,7 @@ export default function TeachersPage({ onOpenTeacher, onOpenStudent }) {
           style={{ display:'flex', flexDirection:'column' }}>
           {tab === 'teachers' && <TeachersListView onOpenTeacher={onOpenTeacher}/>}
           {tab === 'students' && <StudentsPage embedded onOpenStudent={onOpenStudent}/>}
+          {tab === 'admins'   && <AdminsListView/>}
           {tab === 'pending'  && <PendingUsersPage embedded onChange={refetchPending}/>}
           {tab === 'invites'  && <InvitesPage embedded/>}
         </motion.div>

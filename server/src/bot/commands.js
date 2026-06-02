@@ -90,7 +90,7 @@ module.exports = function attach(bot) {
 
     let text;
     if (user) {
-      const roleLabel = user.role === 'admin' ? 'Administrator' :
+      const roleLabel = user.role === 'admin' ? 'Admin' :
                         user.role === 'teacher' ? "O'qituvchi" :
                         user.role === 'student' ? "O'quvchi" : 'Foydalanuvchi';
       const statusLabel = user.status === 'active' ? '✅ Faol' :
@@ -148,7 +148,7 @@ module.exports = function attach(bot) {
       await ctx.reply("Siz hali tizimda ro'yxatdan o'tmagansiz. /start ni bosing.");
       return;
     }
-    const roleLabel = user.role === 'admin' ? 'Administrator' :
+    const roleLabel = user.role === 'admin' ? 'Admin' :
                       user.role === 'teacher' ? "O'qituvchi" :
                       user.role === 'student' ? "O'quvchi" : 'Foydalanuvchi';
     const statusLabel = user.status === 'active' ? '✅ Faol' :

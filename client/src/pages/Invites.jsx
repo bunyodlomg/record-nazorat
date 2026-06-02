@@ -88,7 +88,7 @@ function CreateInviteModal({ open, onClose, onCreated, isTeacher, groups }) {
         <Field label="Kim uchun">
           <Select value={role} onChange={e => { setRole(e.target.value); setGroupId(''); }}>
             <option value="teacher">O'qituvchi</option>
-            <option value="admin">Administrator</option>
+            <option value="admin">Admin</option>
             <option value="student">O'quvchi (guruhga)</option>
           </Select>
         </Field>

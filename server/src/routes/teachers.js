@@ -285,13 +285,72 @@ router.patch('/:id', param('id').isMongoId(), ok, asyncHandler(async (req,res) =
   res.json({ success:true, data:t });
 }));
 
-// DELETE  DELETE /api/teachers/:id
-router.delete('/:id', param('id').isMongoId(), ok, asyncHandler(async (req,res) => {
-  const t = await Teacher.findByIdAndDelete(req.params.id);
-  if (!t) return res.status(404).json({ success:false, message:'Teacher not found' });
-  await Group.updateMany({ teacher:req.params.id }, { $unset:{ teacher:1 } });
-  res.json({ success:true, message:'Deleted' });
-}));
+// DELETE  DELETE /api/teachers/:id?reassignTo=<otherTeacherId>
+// Agar o'qituvchining guruhlari bo'lsa — reassignTo majburiy.
+// Guruh/Homework/Student/Submission'lar yangi o'qituvchiga o'tkaziladi.
+router.delete('/:id',
+  param('id').isMongoId(),
+  ok,
+  asyncHandler(async (req,res) => {
+    const Homework   = require('../models/Homework');
+    const Student    = require('../models/Student');
+    const Submission = require('../models/Submission');
+
+    const oldId = req.params.id;
+    const t = await Teacher.findById(oldId);
+    if (!t) return res.status(404).json({ success:false, message:'Teacher not found' });
+
+    const groups = await Group.find({ teacher: oldId }).select('_id').lean();
+    const groupIds = groups.map(g => g._id);
+
+    if (groupIds.length > 0) {
+      const reassignTo = req.query.reassignTo;
+      if (!reassignTo) {
+        return res.status(400).json({
+          success:false,
+          code:'NEED_REASSIGN',
+          message:`Bu o'qituvchining ${groupIds.length} ta guruhi bor. Avval ularni boshqa o'qituvchiga o'tkazing.`,
+          data:{ groupCount: groupIds.length },
+        });
+      }
+      if (String(reassignTo) === String(oldId)) {
+        return res.status(400).json({ success:false, message:"Guruhlarni o'zining ichiga o'tkazib bo'lmaydi" });
+      }
+      if (!reassignTo.match(/^[0-9a-fA-F]{24}$/)) {
+        return res.status(400).json({ success:false, message:"Noto'g'ri reassignTo ID" });
+      }
+      const newTeacher = await Teacher.findById(reassignTo);
+      if (!newTeacher) {
+        return res.status(404).json({ success:false, message:'Yangi o\'qituvchi topilmadi' });
+      }
+
+      // Bog'langan barcha ma'lumotlarni yangi o'qituvchiga ko'chiramiz
+      await Promise.all([
+        Group     .updateMany({ teacher: oldId }, { $set:{ teacher: newTeacher._id } }),
+        Homework  .updateMany({ teacher: oldId }, { $set:{ teacher: newTeacher._id } }),
+        Student   .updateMany({ teacher: oldId }, { $set:{ teacher: newTeacher._id } }),
+        Submission.updateMany({ teacher: oldId }, { $set:{ teacher: newTeacher._id } }),
+      ]);
+
+      // Yangi o'qituvchining groups massiviga qo'shamiz (duplicate'siz)
+      await Teacher.updateOne(
+        { _id: newTeacher._id },
+        { $addToSet:{ groups:{ $each: groupIds } } },
+      );
+    }
+
+    // Endi xavfsiz o'chiramiz
+    await Teacher.deleteOne({ _id: oldId });
+    await User.deleteMany({ teacherRef: oldId });
+
+    res.json({
+      success:true,
+      message: groupIds.length > 0
+        ? `O'chirildi, ${groupIds.length} ta guruh ko'chirildi`
+        : "O'chirildi",
+    });
+  }),
+);
 
 // ACTIVITY  GET /api/teachers/:id/activity
 // Real activity log — Homework collection'idan oxirgi hodisalar

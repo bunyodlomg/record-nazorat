@@ -72,7 +72,7 @@ const api = {
     get:      id        => http.get(`/teachers/${id}`),
     create:   data      => http.post('/teachers', data),
     update:   (id,data) => http.patch(`/teachers/${id}`, data),
-    delete:   id        => http.delete(`/teachers/${id}`),
+    delete:   (id, reassignTo) => http.delete(`/teachers/${id}`, { params: reassignTo ? { reassignTo } : {} }),
     activity: id        => http.get(`/teachers/${id}/activity`),
     message:  (id, payload) => http.post(`/teachers/${id}/message`, payload),
   },

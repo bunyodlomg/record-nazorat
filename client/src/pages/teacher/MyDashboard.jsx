@@ -123,7 +123,7 @@ export default function MyDashboard({ onNav }) {
         className="my-stat-grid"
         style={{ gridTemplateColumns:'repeat(2, 1fr)', gap:10, marginBottom:12 }}>
         <StatTile label="Topshirilgan" value={pendingCount} icon="clock" tone="amber"/>
-        <StatTile label="Baholangan"           value={doneCount}    icon="check" tone="primary"/>
+        <StatTile label="Belgilangan"          value={doneCount}    icon="check" tone="primary"/>
       </motion.div>
 
       {/* Chart — alohida qator */}

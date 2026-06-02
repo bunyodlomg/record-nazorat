@@ -199,7 +199,7 @@ export function StudentRow({ sub, onUpdate, canEdit, busy }) {
             <button className="btn btn-ghost btn-icon"
               onClick={() => setOpen(o => !o)}
               style={{ width:30, height:30 }}
-              title="Baho va izoh">
+              title="Izoh va ball">
               <Icon name={open ? 'chevronUp' : 'chevronDown'} size={13}/>
             </button>
           </div>
@@ -216,7 +216,7 @@ export function StudentRow({ sub, onUpdate, canEdit, busy }) {
             style={{ overflow:'hidden' }}>
             <div style={{ padding:'10px 12px 12px', borderTop:'1px solid var(--border)', display:'grid', gap:8 }} onClick={e => e.stopPropagation()}>
               <div>
-                <div style={{ fontSize:10.5, fontWeight:700, color:'var(--text-3)', marginBottom:4, textTransform:'uppercase', letterSpacing:'0.05em' }}>Baho (0–100, ixtiyoriy)</div>
+                <div style={{ fontSize:10.5, fontWeight:700, color:'var(--text-3)', marginBottom:4, textTransform:'uppercase', letterSpacing:'0.05em' }}>Ball (0–100, ixtiyoriy)</div>
                 <input type="number" min="0" max="100" value={score}
                   onChange={e => setScore(e.target.value)}
                   className="input" style={{ width:'100%' }}

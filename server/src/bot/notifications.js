@@ -47,7 +47,7 @@ async function sendStudentMessage(chatId, { kind = 'message', text, from }) {
   return sendTo(chatId, `${heading}\n\n${escapeMd(text)}`);
 }
 
-const ROLE_LABEL = { admin:'Administrator', teacher:"O'qituvchi", student:"O'quvchi" };
+const ROLE_LABEL = { admin:'Admin', teacher:"O'qituvchi", student:"O'quvchi" };
 
 /**
  * Yangi foydalanuvchi pending bo'lganda — tasdiqlovchi(lar)ga xabar.
