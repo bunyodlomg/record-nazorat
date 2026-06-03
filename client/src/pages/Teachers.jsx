@@ -292,8 +292,19 @@ function TeacherChatRow({ t, onClick, onEdit, onDelete }) {
       {/* Markaz: ism + status matni */}
       <div style={{ flex:1, minWidth:0, display:'flex', flexDirection:'column', gap:3 }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 }}>
-          <div style={{ fontSize:14.5, fontWeight:600, color:'var(--text)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', letterSpacing:'-0.01em' }}>
-            {t.name}
+          <div style={{ display:'flex', alignItems:'baseline', gap:7, minWidth:0 }}>
+            <span style={{ fontSize:14.5, fontWeight:600, color:'var(--text)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', letterSpacing:'-0.01em' }}>
+              {t.name}
+            </span>
+            {t.telegramUsername ? (
+              <span style={{ fontSize:11.5, color:'var(--primary-l)', fontWeight:500, whiteSpace:'nowrap', flexShrink:0 }}>
+                @{t.telegramUsername}
+              </span>
+            ) : t.telegramId ? (
+              <span style={{ fontSize:11, color:'var(--text-3)', fontWeight:500, whiteSpace:'nowrap', flexShrink:0 }}>
+                ID {t.telegramId}
+              </span>
+            ) : null}
           </div>
           <div style={{ fontSize:11, color: presence === 'online' ? dotColor : 'var(--text-3)', fontWeight: presence === 'online' ? 600 : 500, flexShrink:0 }}>
             {presence === 'online' ? PRESENCE_LABEL.online : (lastSeenText || PRESENCE_LABEL.offline)}
