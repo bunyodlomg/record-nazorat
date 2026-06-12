@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon, Avatar, StatusDot } from '../components/ui.jsx';
-import { Spinner, ErrorBox, listContainer, listItem } from '../components/Feedback.jsx';
+import { Spinner, ErrorBox, listContainer, listItem, usePaged, Pagination } from '../components/Feedback.jsx';
 import { useFetch } from '../hooks/useFetch.js';
 import api from '../services/api.js';
 
@@ -22,6 +22,9 @@ export default function StudentsPage({ embedded = false, onOpenStudent, groupId 
     const q = search.toLowerCase();
     return all.filter(s => (s.name || '').toLowerCase().includes(q));
   }, [data, search]);
+
+  const { page, setPage, totalPages, pageItems, total, pageSize } =
+    usePaged(students, 12, [search, filterGroup, students.length]);
 
   const wrapperProps = embedded
     ? { initial:{ opacity:0 }, animate:{ opacity:1 }, transition:{ duration:0.25 }, style:{ display:'flex', flexDirection:'column', gap:12 } }
@@ -84,7 +87,7 @@ export default function StudentsPage({ embedded = false, onOpenStudent, groupId 
         ) : (
           <motion.div key="g" variants={listContainer} initial="hidden" animate="show"
             style={{ display:'flex', flexDirection:'column', gap:8 }}>
-            {students.map(s => (
+            {pageItems.map(s => (
               <motion.button key={s._id} variants={listItem}
                 onClick={() => onOpenStudent?.(s._id)}
                 className="card card-hov"
@@ -120,6 +123,11 @@ export default function StudentsPage({ embedded = false, onOpenStudent, groupId 
           </motion.div>
         )}
       </AnimatePresence>
+
+      {!loading && !error && (
+        <Pagination page={page} totalPages={totalPages} total={total}
+          pageSize={pageSize} onPage={setPage} label="o'quvchi"/>
+      )}
     </motion.div>
   );
 }

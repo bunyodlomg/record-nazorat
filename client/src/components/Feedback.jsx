@@ -1,3 +1,4 @@
+import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Icon } from './ui.jsx';
 
@@ -69,3 +70,94 @@ export const listItem = {
   hidden: { opacity:0, y:14 },
   show:   { opacity:1, y:0, transition: { duration:0.4, ease:[0.22,1,0.36,1] } },
 };
+
+/* ──────────────────────────────────────────────
+   Client-side pagination
+   ────────────────────────────────────────────── */
+
+/**
+ * usePaged — ro'yxatni sahifalarga bo'ladi.
+ * @param {Array}  items     to'liq ro'yxat
+ * @param {number} pageSize  bir sahifadagi elementlar soni
+ * @param {Array}  deps      o'zgarganda 1-sahifaga qaytadigan qaramliklar (filter, search...)
+ */
+export function usePaged(items, pageSize = 10, deps = []) {
+  const list = Array.isArray(items) ? items : [];
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(list.length / pageSize));
+
+  // Filter/qidiruv o'zgarsa — 1-sahifaga qaytamiz
+  useEffect(() => { setPage(1); }, deps); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Ro'yxat qisqarsa va joriy sahifa tashqarida qolsa — tuzatamiz
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
+  const pageItems = useMemo(
+    () => list.slice((page - 1) * pageSize, page * pageSize),
+    [list, page, pageSize],
+  );
+
+  return {
+    page, setPage, totalPages,
+    pageItems,
+    total: list.length,
+    pageSize,
+  };
+}
+
+/** Sahifa raqamlarini ellipsis bilan hosil qiladi: [1, '…', 4,5,6, '…', 12] */
+function pageNumbers(current, total) {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const set = new Set([1, total, current, current - 1, current + 1]);
+  const sorted = [...set].filter(n => n >= 1 && n <= total).sort((a, b) => a - b);
+  const out = [];
+  let prev = 0;
+  for (const n of sorted) {
+    if (n - prev > 1) out.push('…');
+    out.push(n);
+    prev = n;
+  }
+  return out;
+}
+
+/**
+ * Pagination — qayta ishlatiladigan sahifalash boshqaruvi.
+ * 1 sahifadan kam bo'lsa hech narsa ko'rsatmaydi.
+ */
+export function Pagination({ page, totalPages, total, pageSize, onPage, label = 'ta' }) {
+  if (totalPages <= 1) return null;
+  const nums = pageNumbers(page, totalPages);
+  const from = (page - 1) * pageSize + 1;
+  const to   = Math.min(page * pageSize, total);
+
+  return (
+    <div className="pagination">
+      <span className="pg-info">
+        {from}–{to} <span className="pg-info-dim">/ {total} {label}</span>
+      </span>
+      <div className="pg-controls">
+        <button className="pg-btn" disabled={page <= 1}
+          onClick={() => onPage(page - 1)} aria-label="Oldingi">
+          <Icon name="chevronLeft" size={14}/>
+        </button>
+        {nums.map((n, i) =>
+          n === '…' ? (
+            <span key={`e${i}`} className="pg-ellipsis">…</span>
+          ) : (
+            <button key={n}
+              className={`pg-btn pg-num ${n === page ? 'active' : ''}`}
+              onClick={() => onPage(n)}>
+              {n}
+            </button>
+          )
+        )}
+        <button className="pg-btn" disabled={page >= totalPages}
+          onClick={() => onPage(page + 1)} aria-label="Keyingi">
+          <Icon name="chevronRight" size={14}/>
+        </button>
+      </div>
+    </div>
+  );
+}

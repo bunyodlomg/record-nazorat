@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon, Avatar } from '../components/ui.jsx';
-import { Spinner, ErrorBox, listContainer, listItem } from '../components/Feedback.jsx';
+import { Spinner, ErrorBox, listContainer, listItem, usePaged, Pagination } from '../components/Feedback.jsx';
 import { Modal, Field } from '../components/Modal.jsx';
 import { useFetch } from '../hooks/useFetch.js';
 import api from '../services/api.js';
@@ -149,6 +149,7 @@ export default function PendingUsersPage({ embedded = false, onChange }) {
   const [target, setTarget] = useState(null);
   const { data, loading, error, refetch } = useFetch(() => api.users.list({ status:'pending' }), []);
   const users = data ?? [];
+  const { page, setPage, totalPages, pageItems, total, pageSize } = usePaged(users, 10, [users.length]);
 
   const reload = () => { refetch(); onChange?.(); };
 
@@ -197,7 +198,9 @@ export default function PendingUsersPage({ embedded = false, onChange }) {
           </div>
         ) : (
           <motion.div key="g" variants={listContainer} initial="hidden" animate="show">
-            <PendingTable users={users} onApprove={setTarget} onReject={reject}/>
+            <PendingTable users={pageItems} onApprove={setTarget} onReject={reject}/>
+            <Pagination page={page} totalPages={totalPages} total={total}
+              pageSize={pageSize} onPage={setPage} label="foydalanuvchi"/>
           </motion.div>
         )}
       </AnimatePresence>

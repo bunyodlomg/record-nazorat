@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon, Avatar, StatusDot } from '../components/ui.jsx';
-import { Spinner, ErrorBox, listContainer, listItem } from '../components/Feedback.jsx';
+import { Spinner, ErrorBox, listContainer, listItem, usePaged, Pagination } from '../components/Feedback.jsx';
 import { Modal, Field, Input, Select } from '../components/Modal.jsx';
 import { useFetch } from '../hooks/useFetch.js';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -423,6 +423,10 @@ function TeachersListView({ onOpenTeacher }) {
       })
     : preFiltered;
 
+  // Sahifalash — filter/qidiruv/ko'rinish o'zgarsa 1-sahifaga qaytadi
+  const { page, setPage, totalPages, pageItems, total, pageSize } =
+    usePaged(filtered, view === 'grid' ? 12 : 10, [filter, search, view, filtered.length]);
+
   // Avto-refresh — online holatlari real-time yangilanishi uchun
   useEffect(() => {
     const t = setInterval(() => refetch({ silent: true }), 12_000);
@@ -478,7 +482,7 @@ function TeachersListView({ onOpenTeacher }) {
         ) : view === 'chat' ? (
           <motion.div key="c" variants={listContainer} initial="hidden" animate="show"
             className="card" style={{ padding:'4px 0', overflow:'visible', position:'relative' }}>
-            {filtered.map(t => (
+            {pageItems.map(t => (
               <TeacherChatRow key={t._id} t={t}
                 onClick={() => onOpenTeacher(t._id)}
                 onEdit={() => openEdit(t)}
@@ -489,7 +493,7 @@ function TeachersListView({ onOpenTeacher }) {
         ) : view === 'grid' ? (
           <motion.div key="g" variants={listContainer} initial="hidden" animate="show"
             style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:12 }}>
-            {filtered.map(t => (
+            {pageItems.map(t => (
               <TeacherCard key={t._id} t={t}
                 onClick={() => onOpenTeacher(t._id)}
                 onEdit={() => openEdit(t)}
@@ -505,7 +509,7 @@ function TeachersListView({ onOpenTeacher }) {
                   <th>O'qituvchi</th><th>Predmet</th><th>Guruhlar</th><th>Vazifa</th><th>Tekshiruv</th><th>Faollik</th><th></th>
                 </tr></thead>
                 <tbody>
-                  {filtered.map(t => (
+                  {pageItems.map(t => (
                     <tr key={t._id}>
                       <td onClick={() => onOpenTeacher(t._id)} style={{ cursor:'pointer' }}>
                         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
@@ -547,6 +551,11 @@ function TeachersListView({ onOpenTeacher }) {
         )}
       </AnimatePresence>
 
+      {!loading && !error && (
+        <Pagination page={page} totalPages={totalPages} total={total}
+          pageSize={pageSize} onPage={setPage} label="o'qituvchi"/>
+      )}
+
       <TeacherEditForm
         open={modalOpen}
         initial={editing}
@@ -573,6 +582,7 @@ function AdminsListView() {
     [],
   );
   const admins = data ?? [];
+  const { page, setPage, totalPages, pageItems, total, pageSize } = usePaged(admins, 10, [admins.length]);
 
   const remove = async (u) => {
     if (!confirm(`"${u.name}" ni o'chirishni tasdiqlang?`)) return;
@@ -591,9 +601,10 @@ function AdminsListView() {
   );
 
   return (
+    <>
     <motion.div variants={listContainer} initial="hidden" animate="show"
       className="card" style={{ padding:'4px 0', overflow:'visible' }}>
-      {admins.map(u => {
+      {pageItems.map(u => {
         const isMe = String(me?._id || me?.id) === String(u._id);
         return (
           <motion.div key={u._id} variants={listItem}
@@ -630,6 +641,9 @@ function AdminsListView() {
         );
       })}
     </motion.div>
+    <Pagination page={page} totalPages={totalPages} total={total}
+      pageSize={pageSize} onPage={setPage} label="admin"/>
+    </>
   );
 }
 

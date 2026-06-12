@@ -149,7 +149,7 @@ function TeacherApp() {
 
 export default function App() {
   const { user, status, error, logout, refresh } = useAuth();
-  const [theme, setTheme] = useState(() => localStorage.getItem('ep_theme') || 'dark');
+  const [theme, setTheme] = useState(() => localStorage.getItem('ep_theme') || 'light');
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
