@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Icon } from '../../components/ui.jsx';
 import { Spinner, ErrorBox } from '../../components/Feedback.jsx';
+import PageHero from '../../components/PageHero.jsx';
 import { useFetch } from '../../hooks/useFetch.js';
 import api from '../../services/api.js';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -224,16 +225,16 @@ export default function MyHomework({ onOpenHomework }) {
 
   return (
     <div className="page">
-      <div className="page-hd">
-        <div>
-          <h1 className="page-title">Vazifalar</h1>
-          <div className="page-sub">
-            {counts.pending > 0
-              ? `${counts.pending} ta ${kind === 'speaking' ? 'speaking' : 'kunlik'} vazifa kutmoqda`
-              : "Yangi topshiriq yo'q 🎉"}
-          </div>
-        </div>
-      </div>
+      <PageHero
+        title="Vazifalar"
+        subtitle={counts.pending > 0
+          ? `${counts.pending} ta ${kind === 'speaking' ? 'speaking' : 'kunlik'} vazifa kutmoqda`
+          : "Yangi topshiriq yo'q 🎉"}
+        stats={[
+          { value: allItems.filter(i => i.col !== 'done').length, label:'Kutilmoqda',  icon:'clock', bg:'var(--amber-bg)',   color:'var(--amber)' },
+          { value: allItems.filter(i => i.col === 'done').length, label:'Belgilangan', icon:'check', bg:'var(--primary-bg)', color:'var(--primary)' },
+        ]}
+      />
 
       {/* Kunlik / Speaking — asosiy tab */}
       <div className="tabs" style={{ marginBottom:10 }}>

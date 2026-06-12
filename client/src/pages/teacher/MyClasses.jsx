@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { Icon } from '../../components/ui.jsx';
 import { Spinner, ErrorBox, listContainer, listItem } from '../../components/Feedback.jsx';
 import { Modal, Field, Input } from '../../components/Modal.jsx';
+import PageHero from '../../components/PageHero.jsx';
+import GroupCard from '../../components/GroupCard.jsx';
 import { useFetch } from '../../hooks/useFetch.js';
 import api from '../../services/api.js';
 import { sfx } from '../../hooks/useSound.js';
@@ -96,66 +98,6 @@ function GroupCreateForm({ open, onClose, onSaved }) {
         </div>
       </Field>
     </Modal>
-  );
-}
-
-function GroupCard({ g, onRemove, onOpenGroup }) {
-  return (
-    <motion.div className="card card-hov" variants={listItem}
-      whileHover={{ y:-2 }}
-      onClick={() => onOpenGroup?.(g._id)}
-      style={{ padding:14, display:'flex', flexDirection:'column', cursor: onOpenGroup ? 'pointer' : 'default' }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10, gap:8 }}>
-        <div style={{ minWidth:0, flex:1 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:5, flexWrap:'wrap' }}>
-            <span style={{ fontSize:10.5, fontFamily:'var(--mono)', color:'var(--text-2)', background:'var(--bg-subtle)', padding:'2px 7px', borderRadius:5, fontWeight:500 }}>
-              {g.code}
-            </span>
-          </div>
-          <div style={{ fontFamily:'var(--display)', fontSize:15, fontWeight:700, letterSpacing:'-0.02em', lineHeight:1.3 }}>
-            {g.name}
-          </div>
-          <div style={{ fontSize:11.5, color:'var(--text-2)', marginTop:3 }}>
-            {dayLabels(g.scheduleDays) || "Kun belgilanmagan"}
-          </div>
-        </div>
-      </div>
-
-      <div style={{
-        display:'flex', alignItems:'center', justifyContent:'space-between',
-        padding:'8px 11px', background:'var(--primary-bg)', borderRadius:9,
-        border:'1px solid var(--border)', marginBottom:8,
-      }}>
-        <span style={{ fontSize:11.5, color:'var(--text-2)' }}>O'quvchilar</span>
-        <span style={{ fontFamily:'var(--display)', fontSize:17, fontWeight:700, color:'var(--primary-l)' }}>
-          {g.studentCount || 0}
-        </span>
-      </div>
-
-      {g.topStudent && (
-        <div style={{
-          display:'flex', alignItems:'center', gap:8,
-          padding:'7px 10px', borderRadius:9,
-          background:'var(--bg-subtle)', border:'1px solid var(--border)',
-          marginBottom:10, fontSize:11.5,
-        }} title="Eng ko'p olmos to'plagan o'quvchi">
-          <span style={{ fontSize:13 }}>🏆</span>
-          <span style={{ flex:1, color:'var(--text-2)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-            {g.topStudent.name}
-          </span>
-          <span style={{ fontWeight:700, color:'var(--primary-l)', display:'flex', alignItems:'center', gap:3 }}>
-            💎 {g.topStudent.gems}
-          </span>
-        </div>
-      )}
-
-      <div style={{ display:'flex', gap:6, marginTop:'auto', justifyContent:'flex-end' }} onClick={e => e.stopPropagation()}>
-        <button className="btn btn-ghost btn-icon" style={{ width:30, height:30, color:'var(--rose)' }}
-          onClick={() => onRemove(g)} title="O'chirish">
-          <Icon name="trash" size={12}/>
-        </button>
-      </div>
-    </motion.div>
   );
 }
 
@@ -260,39 +202,35 @@ export default function MyClasses({ onOpenStudent, onOpenGroup }) {
   return (
     <motion.div className="page"
       initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.32 }}>
-      <div className="page-hd">
-        <div>
-          <h1 className="page-title">
-            {tab === 'groups'
-              ? (showClosed ? 'Yopilgan guruhlar' : 'Mening guruhlarim')
-              : tab === 'pending' ? "Yangi o'quvchilar" : "O'quvchilarim"}
-          </h1>
-          <div className="page-sub">
-            {tab === 'groups'
-              ? (showClosed
-                  ? `${groups.length} ta yopilgan guruh`
-                  : `${groups.length} ta guruh · jami ${totalStudents} ta o'quvchi`)
-              : tab === 'pending'
-              ? `${pendingCount} ta tasdiq kutmoqda`
-              : `${totalStudents} ta o'quvchi`}
-          </div>
+      <PageHero
+        title={tab === 'groups'
+          ? (showClosed ? 'Yopilgan guruhlar' : 'Mening guruhlarim')
+          : tab === 'pending' ? "Yangi o'quvchilar" : "O'quvchilarim"}
+        subtitle={tab === 'groups'
+          ? (showClosed ? `${groups.length} ta yopilgan guruh` : `${groups.length} ta guruh · jami ${totalStudents} ta o'quvchi`)
+          : tab === 'pending' ? `${pendingCount} ta tasdiq kutmoqda` : `${totalStudents} ta o'quvchi`}
+        stats={[
+          { value: groups.length, label:'Guruhlar',   icon:'groups', bg:'var(--primary-bg)',     color:'var(--primary)' },
+          { value: totalStudents, label:"O'quvchilar", icon:'user',   bg:'rgba(56,189,248,0.14)', color:'#0ea5e9' },
+          { value: pendingCount,  label:'Tasdiqlash',  icon:'clock',  bg:'var(--amber-bg)',       color:'var(--amber)' },
+        ]}
+      />
+
+      {tab === 'groups' && (
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap', justifyContent:'flex-end', marginBottom:14 }}>
+          {(closedCount > 0 || showClosed) && (
+            <button className="btn btn-secondary" onClick={() => setShowClosed(s => !s)}
+              style={showClosed ? { background:'var(--rose-bg)', color:'var(--rose)' } : undefined}>
+              <Icon name="check" size={13}/> {showClosed ? 'Faollar' : `Yopilganlar (${closedCount})`}
+            </button>
+          )}
+          {!showClosed && (
+            <button className="btn btn-primary btn-lg" onClick={() => setCreateOpen(true)}>
+              <Icon name="plus" size={15}/> Yangi guruh
+            </button>
+          )}
         </div>
-        {tab === 'groups' && (
-          <div className="page-acts" style={{ display:'flex', gap:6 }}>
-            {(closedCount > 0 || showClosed) && (
-              <button className="btn btn-ghost" onClick={() => setShowClosed(s => !s)}
-                style={showClosed ? { background:'var(--rose-bg)', color:'var(--rose)' } : undefined}>
-                <Icon name="check" size={12}/> {showClosed ? 'Faollar' : `Yopilganlar (${closedCount})`}
-              </button>
-            )}
-            {!showClosed && (
-              <button className="btn btn-primary" onClick={() => setCreateOpen(true)}>
-                <Icon name="plus" size={13}/> Yangi guruh
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+      )}
 
       <div className="tabs" style={{ marginBottom:14 }}>
         <button className={`tab ${tab==='groups'?'active':''}`} onClick={() => setTab('groups')}>
@@ -327,7 +265,8 @@ export default function MyClasses({ onOpenStudent, onOpenGroup }) {
           {groups.map(g => (
             <GroupCard key={g._id} g={g}
               onRemove={remove}
-              onOpenGroup={onOpenGroup}/>
+              onOpenGroup={onOpenGroup}
+              showTeacher={false}/>
           ))}
         </motion.div>
       )}

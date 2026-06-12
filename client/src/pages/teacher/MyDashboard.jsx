@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { Icon, useCountUp, ChartTooltip } from '../../components/ui.jsx';
 import { Spinner, ErrorBox, listContainer, listItem } from '../../components/Feedback.jsx';
+import PageHero from '../../components/PageHero.jsx';
+import GroupCard from '../../components/GroupCard.jsx';
 import { useFetch } from '../../hooks/useFetch.js';
 import api from '../../services/api.js';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -94,37 +96,25 @@ export default function MyDashboard({ onNav }) {
   const doneCount     = hw.filter(h => h.col === 'done').length;
   const firstName = (t.name || '').trim().split(/\s+/)[0] || 'Ustoz';
   const groupsList = Array.isArray(t.groups) ? t.groups : [];
+  const totalStudents = groupsList.reduce((s, g) =>
+    s + (typeof g.studentCount === 'number' ? g.studentCount : (Array.isArray(g.students) ? g.students.length : 0)), 0);
 
   return (
     <motion.div className="page"
       initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.32 }}>
 
-      {/* Welcome hero */}
-      <motion.div
-        initial={{ opacity:0, y:-8 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.04 }}
-        style={{ marginBottom:16 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
-          <span style={{ fontSize:13, color:'var(--text-2)' }}>Salom,</span>
-          <span style={{ fontSize:13, fontWeight:600, color:'var(--text)' }}>{firstName}</span>
-          <span style={{ fontSize:17 }}>👋</span>
-        </div>
-        <h1 className="page-title">
-          {pendingCount > 0
-            ? <><span style={{ color:'var(--primary-l)' }}>{pendingCount} ta vazifa</span> topshirilgan</>
-            : <>Bugun hammasi joyida</>}
-        </h1>
-        <div className="page-sub" style={{ fontSize:13, marginTop:4 }}>
-          {t.subject || 'Ingliz tili'} · {groupsList.length} ta guruh
-        </div>
-      </motion.div>
-
-      {/* 2 ta ixcham stat tile */}
-      <motion.div variants={listContainer} initial="hidden" animate="show"
-        className="my-stat-grid"
-        style={{ gridTemplateColumns:'repeat(2, 1fr)', gap:10, marginBottom:12 }}>
-        <StatTile label="Topshirilgan" value={pendingCount} icon="clock" tone="amber"/>
-        <StatTile label="Belgilangan"          value={doneCount}    icon="check" tone="primary"/>
-      </motion.div>
+      <PageHero
+        title={`Salom, ${firstName}! 👋`}
+        subtitle={pendingCount > 0
+          ? `${pendingCount} ta vazifa tekshiruv kutmoqda`
+          : 'Bugun hammasi joyida 🎉'}
+        stats={[
+          { value: pendingCount,    label:'Topshirilgan', icon:'clock',    bg:'var(--amber-bg)',       color:'var(--amber)' },
+          { value: doneCount,       label:'Belgilangan',  icon:'check',    bg:'var(--primary-bg)',     color:'var(--primary)' },
+          { value: groupsList.length, label:'Guruhlar',   icon:'groups',   bg:'rgba(16,185,129,0.14)', color:'#059669' },
+          { value: totalStudents,   label:"O'quvchilar",  icon:'user',     bg:'rgba(56,189,248,0.14)', color:'#0ea5e9' },
+        ]}
+      />
 
       {/* Chart — alohida qator */}
       <motion.div className="card" style={{ marginBottom:12, overflow:'hidden' }}
@@ -203,49 +193,10 @@ export default function MyDashboard({ onNav }) {
             </button>
           </div>
           <motion.div className="groups-grid" variants={listContainer} initial="hidden" animate="show">
-            {groupsList.slice(0, 3).map(g => {
-              const studentCount = typeof g.studentCount === 'number'
-                ? g.studentCount
-                : Array.isArray(g.students) ? g.students.length : 0;
-              const schedule = dayLabels(g.scheduleDays);
-              return (
-                <motion.div key={g._id} className="card card-hov" variants={listItem}
-                  style={{ padding:13 }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:8, marginBottom:9 }}>
-                    <div style={{ minWidth:0, flex:1 }}>
-                      {g.code && (
-                        <div style={{ fontSize:10.5, fontFamily:'var(--mono)', color:'var(--text-2)', background:'var(--bg-subtle)', padding:'2px 7px', borderRadius:5, fontWeight:500, display:'inline-block', marginBottom:5 }}>
-                          {g.code}
-                        </div>
-                      )}
-                      <div style={{ fontSize:14, fontWeight:700, fontFamily:'var(--display)', letterSpacing:'-0.02em', lineHeight:1.25 }}>
-                        {g.name || '—'}
-                      </div>
-                      {(schedule || g.scheduleTime) && (
-                        <div style={{ fontSize:11.5, color:'var(--text-2)', marginTop:3 }}>
-                          {schedule}{schedule && g.scheduleTime ? ' · ' : ''}{g.scheduleTime || ''}
-                        </div>
-                      )}
-                    </div>
-                    {g.level && (
-                      <span className={`chip ${LVL_CHIP[g.level] || 'chip-neutral'}`} style={{ flexShrink:0 }}>
-                        {g.level}
-                      </span>
-                    )}
-                  </div>
-                  <div style={{
-                    display:'flex', alignItems:'center', justifyContent:'space-between',
-                    padding:'7px 10px', background:'var(--primary-bg)', borderRadius:8,
-                    border:'1px solid var(--border)',
-                  }}>
-                    <span style={{ fontSize:11.5, color:'var(--text-2)' }}>O'quvchilar</span>
-                    <span style={{ fontFamily:'var(--display)', fontSize:15, fontWeight:700, color:'var(--primary-l)' }}>
-                      {studentCount}
-                    </span>
-                  </div>
-                </motion.div>
-              );
-            })}
+            {groupsList.slice(0, 3).map(g => (
+              <GroupCard key={g._id} g={g} showTeacher={false}
+                onOpenGroup={() => onNav?.('my-classes')}/>
+            ))}
           </motion.div>
         </motion.div>
       )}

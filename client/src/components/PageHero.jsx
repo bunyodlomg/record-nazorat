@@ -1,34 +1,18 @@
 import { motion } from 'framer-motion';
 import { Icon, useCountUp } from './ui.jsx';
 
-/* Abstrakt dekorativ grafik — gradient orblar, halqa va nuqtalar */
-export function HeroArt({ className = 'phero-art' }) {
+/* Gradient neon blur orblar — suzuvchi va pulslanuvchi dekoratsiya */
+export function HeroNeon({ className = '' }) {
   return (
-    <svg className={className} width="180" height="132" viewBox="0 0 180 132" fill="none" aria-hidden="true">
-      <defs>
-        <linearGradient id="ha-orb" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%"  stopColor="#a78bfa"/>
-          <stop offset="100%" stopColor="#4f46e5"/>
-        </linearGradient>
-        <linearGradient id="ha-ring" x1="0" y1="1" x2="1" y2="0">
-          <stop offset="0%"  stopColor="#818cf8"/>
-          <stop offset="100%" stopColor="#c4b5fd"/>
-        </linearGradient>
-      </defs>
-      {/* katta orb */}
-      <circle cx="120" cy="66" r="48" fill="url(#ha-orb)" opacity="0.94"/>
-      {/* yaltiroq highlight */}
-      <ellipse cx="104" cy="48" rx="19" ry="12" fill="#fff" opacity="0.22"/>
-      {/* halqa */}
-      <circle cx="52" cy="46" r="27" stroke="url(#ha-ring)" strokeWidth="7" opacity="0.72"/>
-      {/* kichik orb */}
-      <circle cx="60" cy="100" r="15" fill="url(#ha-ring)" opacity="0.88"/>
-      {/* nuqtalar */}
-      <circle cx="160" cy="22" r="5"   fill="#c4b5fd" opacity="0.85"/>
-      <circle cx="22"  cy="90" r="3.5" fill="#818cf8" opacity="0.7"/>
-    </svg>
+    <div className={`hero-neon ${className}`} aria-hidden="true">
+      <span className="neon-orb n1"/>
+      <span className="neon-orb n2"/>
+      <span className="neon-orb n3"/>
+    </div>
   );
 }
+/* Eski nom bilan moslik uchun alias */
+export const HeroArt = HeroNeon;
 
 /* Hero ichidagi mini-statistika kartasi (count-up animatsiya bilan) */
 function HeroStat({ stat, idx }) {
@@ -60,14 +44,12 @@ export default function PageHero({ title, subtitle, emoji = '🎒', stats = [] }
   return (
     <motion.div className="phero"
       initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4 }}>
-      <div className="phero-blob"/>
-      <div className="phero-blob phero-blob-2"/>
+      <HeroNeon/>
       <div className="phero-head">
         <div className="phero-head-txt">
           <h1 className="phero-title">{title}</h1>
           {subtitle && <div className="phero-sub">{subtitle}</div>}
         </div>
-        <HeroArt/>
       </div>
       {stats.length > 0 && (
         <div className="phero-stats">
