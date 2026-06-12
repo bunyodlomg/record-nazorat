@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon, Avatar } from '../components/ui.jsx';
 import { Spinner, ErrorBox, listContainer, listItem } from '../components/Feedback.jsx';
+import PageHero from '../components/PageHero.jsx';
 import { useFetch } from '../hooks/useFetch.js';
 import api from '../services/api.js';
 
@@ -144,16 +145,19 @@ export default function HomeworkPage({ onOpenHomework, onOpenTeacher }) {
   return (
     <motion.div className="page"
       initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.32 }}>
-      <div className="page-hd">
-        <div>
-          <h1 className="page-title">Vazifalar</h1>
-          <div className="page-sub">
-            {totals.pending > 0
-              ? <><span style={{ color:'var(--amber)', fontWeight:600 }}>{totals.pending} ta kutmoqda</span> · {totals.reviewed} ta belgilangan</>
-              : `Hammasi belgilangan · jami ${totals.reviewed} ta`}
-          </div>
-        </div>
-      </div>
+      <PageHero
+        title="Vazifalar"
+        subtitle={totals.pending > 0
+          ? `${totals.pending} ta tekshiruv kutmoqda`
+          : 'Hammasi belgilangan — ajoyib!'}
+        emoji="📚"
+        stats={[
+          { value: totals.pending,                  label:'Kutilmoqda',   icon:'clock',    bg:'var(--amber-bg)',       color:'var(--amber)' },
+          { value: totals.reviewed,                 label:'Belgilangan',  icon:'check',    bg:'var(--primary-bg)',     color:'var(--primary)' },
+          { value: teachers.length,                 label:"O'qituvchilar",icon:'teachers', bg:'rgba(16,185,129,0.14)', color:'#059669' },
+          { value: totals.pending + totals.reviewed,label:'Jami',         icon:'homework', bg:'var(--accent-bg)',      color:'var(--accent)' },
+        ]}
+      />
 
       <div className="tabs" style={{ marginBottom:14 }}>
         {TABS.map(t => {

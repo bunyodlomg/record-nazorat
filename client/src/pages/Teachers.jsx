@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Icon, Avatar, StatusDot } from '../components/ui.jsx';
 import { Spinner, ErrorBox, listContainer, listItem, usePaged, Pagination } from '../components/Feedback.jsx';
 import { Modal, Field, Input, Select } from '../components/Modal.jsx';
+import PageHero from '../components/PageHero.jsx';
 import { useFetch } from '../hooks/useFetch.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import api from '../services/api.js';
@@ -665,12 +666,15 @@ export default function TeachersPage({ onOpenTeacher, onOpenStudent }) {
   return (
     <motion.div className="page"
       initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35 }}>
-      <div className="page-hd">
-        <div>
-          <h1 className="page-title">{meta[tab].title}</h1>
-          <div className="page-sub">{meta[tab].sub}</div>
-        </div>
-      </div>
+      <PageHero
+        title={meta[tab].title}
+        subtitle={meta[tab].sub}
+        emoji="🧑‍🏫"
+        stats={[
+          { value: adminsCount,  label:'Adminlar',     icon:'shield',   bg:'var(--violet-bg)',      color:'var(--violet)' },
+          { value: pendingCount, label:'Kutayotganlar', icon:'clock',    bg:'var(--amber-bg)',       color:'var(--amber)' },
+        ]}
+      />
 
       <div className="tabs" style={{ marginBottom:14 }}>
         <button className={`tab ${tab==='teachers'?'active':''}`} onClick={() => setTab('teachers')}>

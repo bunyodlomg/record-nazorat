@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Icon } from '../components/ui.jsx';
 import { Spinner, ErrorBox } from '../components/Feedback.jsx';
+import PageHero from '../components/PageHero.jsx';
 import { useFetch } from '../hooks/useFetch.js';
 import api from '../services/api.js';
 import { sfx } from '../hooks/useSound.js';
@@ -81,12 +82,15 @@ export default function SettingsPage() {
   return (
     <motion.div className="page"
       initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.32 }}>
-      <div className="page-hd">
-        <div>
-          <h1 className="page-title">💎 Olmoslar</h1>
-          <div className="page-sub">Har vazifa uchun qancha olmos berilishini sozlang</div>
-        </div>
-      </div>
+      <PageHero
+        title="Olmoslar"
+        subtitle="Har vazifa uchun qancha olmos berilishini sozlang"
+        emoji="💎"
+        stats={[
+          { value: lessonGem,   suffix:' 💎', label:'Kunlik vazifa',   icon:'check',    bg:'var(--primary-bg)', color:'var(--primary)' },
+          { value: speakingGem, suffix:' 💎', label:'Speaking vazifa', icon:'activity', bg:'var(--amber-bg)',   color:'var(--amber)' },
+        ]}
+      />
 
       <div style={{ marginBottom:14, padding:'14px 16px', background:'var(--primary-bg)', borderRadius:12, border:'1px solid var(--border)' }}>
         <div style={{ fontSize:12.5, color:'var(--text-2)', lineHeight:1.55 }}>

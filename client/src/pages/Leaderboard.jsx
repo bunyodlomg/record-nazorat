@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon, Avatar, useCountUp } from '../components/ui.jsx';
 import { Spinner, ErrorBox, listContainer, listItem } from '../components/Feedback.jsx';
+import PageHero from '../components/PageHero.jsx';
 import { useFetch } from '../hooks/useFetch.js';
 import api from '../services/api.js';
 
@@ -186,19 +187,27 @@ export default function LeaderboardPage({ onOpenTeacher, onOpenStudent }) {
   const groups   = groupsData ?? [];
   const groupOptions = groupListData?.data ?? [];
 
+  const totalGems = students.reduce((s, x) => s + (x.gems || 0), 0);
+  const heroStats = [
+    { value: teachers.length,                      label:"O'qituvchilar", icon:'teachers', bg:'var(--primary-bg)',     color:'var(--primary)' },
+    { value: students.length,                      label:"O'quvchilar",   icon:'user',     bg:'rgba(56,189,248,0.14)', color:'#0ea5e9' },
+    { value: groups.length || groupOptions.length, label:'Guruhlar',      icon:'groups',   bg:'rgba(16,185,129,0.14)', color:'#059669' },
+    { value: totalGems,                            label:'Jami olmos',    icon:'gem',      bg:'var(--accent-bg)',      color:'var(--accent)' },
+  ];
+
   return (
     <motion.div className="page"
       initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35 }}>
-      <div className="page-hd">
-        <div>
-          <h1 className="page-title">Reyting 🏆</h1>
-          <div className="page-sub">
-            {tab === 'teachers' && "Eng yaxshi o'qituvchilar"}
-            {tab === 'groups'   && "Guruhlar bo'yicha jami olmoslar"}
-            {tab === 'students' && (groupId ? "Tanlangan guruh ichida — olmos bo'yicha" : "Barcha o'quvchilar — olmos bo'yicha")}
-          </div>
-        </div>
-      </div>
+      <PageHero
+        title="Reyting"
+        subtitle={
+          tab === 'teachers' ? "Eng yaxshi o'qituvchilar"
+          : tab === 'groups' ? "Guruhlar bo'yicha jami olmoslar"
+          : (groupId ? "Tanlangan guruh — olmos bo'yicha" : "Barcha o'quvchilar — olmos bo'yicha")
+        }
+        emoji="🏆"
+        stats={heroStats}
+      />
 
       <div className="tabs" style={{ marginBottom:14 }}>
         <button className={`tab ${tab==='teachers'?'active':''}`} onClick={() => setTab('teachers')}>

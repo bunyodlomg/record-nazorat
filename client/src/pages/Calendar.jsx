@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Icon, Avatar } from '../components/ui.jsx';
 import { Spinner, ErrorBox } from '../components/Feedback.jsx';
 import { Modal, Select } from '../components/Modal.jsx';
+import PageHero from '../components/PageHero.jsx';
 import { useFetch } from '../hooks/useFetch.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import api from '../services/api.js';
@@ -249,27 +250,29 @@ export default function CalendarPage({ onOpenTeacher }) {
   return (
     <motion.div className="page"
       initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35 }}>
-      <div className="page-hd">
-        <div>
-          <h1 className="page-title">Kalendar</h1>
-          <div className="page-sub">
-            {isAdmin
-              ? (selectedTeacher
-                  ? <>Filter: <strong style={{ color:'var(--primary-l)' }}>{selectedTeacher.name}</strong> · {headerLabel}</>
-                  : `Tekshirish aktivligi · ${headerLabel}`)
-              : `Darslar jadvali · ${headerLabel}`}
-            {loading ? ' · yangilanmoqda' : ` · ${totalEvents} ta hodisa`}
-          </div>
+      <PageHero
+        title="Kalendar"
+        subtitle={isAdmin
+          ? (selectedTeacher ? `Filter: ${selectedTeacher.name}` : 'Tekshirish aktivligi')
+          : 'Darslar jadvali'}
+        emoji="📅"
+      />
+
+      <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap', marginBottom:14 }}>
+        <div style={{ fontFamily:'var(--display)', fontSize:18, fontWeight:700, letterSpacing:'-0.02em' }}>
+          {headerLabel}
+          <span style={{ fontSize:13, fontWeight:500, color:'var(--text-3)', marginLeft:8 }}>
+            {loading ? 'yangilanmoqda…' : `${totalEvents} ta hodisa`}
+          </span>
         </div>
-        <div className="page-acts" style={{ flexWrap:'wrap' }}>
-          <div className="seg">
-            <button className={`seg-btn ${mode==='month'?'active':''}`} onClick={() => setMode('month')}>Oy</button>
-            <button className={`seg-btn ${mode==='week'?'active':''}`} onClick={() => setMode('week')}>Hafta</button>
-          </div>
-          <button className="btn btn-secondary btn-icon" onClick={prev} title="Oldingi"><Icon name="chevronLeft" size={14}/></button>
-          <button className="btn btn-ghost" onClick={goToday} style={{ fontSize:12 }}>Bugun</button>
-          <button className="btn btn-secondary btn-icon" onClick={next} title="Keyingi"><Icon name="chevronRight" size={14}/></button>
+        <div style={{ flex:1 }}/>
+        <div className="seg">
+          <button className={`seg-btn ${mode==='month'?'active':''}`} onClick={() => setMode('month')}>Oy</button>
+          <button className={`seg-btn ${mode==='week'?'active':''}`} onClick={() => setMode('week')}>Hafta</button>
         </div>
+        <button className="btn btn-secondary btn-icon" onClick={prev} title="Oldingi"><Icon name="chevronLeft" size={14}/></button>
+        <button className="btn btn-ghost" onClick={goToday}>Bugun</button>
+        <button className="btn btn-secondary btn-icon" onClick={next} title="Keyingi"><Icon name="chevronRight" size={14}/></button>
       </div>
 
       {error && <ErrorBox message={error} onRetry={refetch}/>}

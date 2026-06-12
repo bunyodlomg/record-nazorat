@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area } from 'recharts';
 import { Icon, Avatar, useCountUp, ChartTooltip } from '../components/ui.jsx';
 import { Spinner, ErrorBox, listContainer, listItem } from '../components/Feedback.jsx';
+import { HeroArt } from '../components/PageHero.jsx';
 import { useFetch } from '../hooks/useFetch.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import api from '../services/api.js';
@@ -140,7 +141,7 @@ export default function DashboardPage({ onOpenTeacher, onOpenStudent, onNav }) {
             {new Date().toLocaleDateString('uz-UZ',{ weekday:'long', month:'long', day:'numeric' })} · bugun ajoyib kun bo'lsin!
           </div>
         </div>
-        <div className="hero-deco">🎒</div>
+        <div className="hero-deco"><HeroArt className="hero-art"/></div>
       </motion.div>
 
       <motion.div className="kpi-grid" variants={listContainer} initial="hidden" animate="show">
