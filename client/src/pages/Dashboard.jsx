@@ -4,9 +4,10 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Toolti
 import { Icon, Avatar, useCountUp, ChartTooltip } from '../components/ui.jsx';
 import { Spinner, ErrorBox, listContainer, listItem } from '../components/Feedback.jsx';
 import { useFetch } from '../hooks/useFetch.js';
+import { useAuth } from '../context/AuthContext.jsx';
 import api from '../services/api.js';
 
-function KpiCard({ label, value = 0, delta, deltaDir, icon, iconBg, iconColor, idx }) {
+function KpiCard({ label, value = 0, suffix = '', icon, iconBg, iconColor }) {
   const v = useCountUp(value);
   return (
     <motion.div className="kpi"
@@ -14,16 +15,11 @@ function KpiCard({ label, value = 0, delta, deltaDir, icon, iconBg, iconColor, i
       whileHover={{ y:-4 }}
       transition={{ type:'spring', stiffness:300 }}
     >
-      <div className="kpi-row">
-        <span className="kpi-label">{label}</span>
-        <div className="kpi-icon" style={{ background:iconBg, color:iconColor }}><Icon name={icon} size={16}/></div>
+      <div className="kpi-ico2" style={{ background:iconBg, color:iconColor }}>
+        <Icon name={icon} size={19}/>
       </div>
-      <div className="kpi-val">{v.toLocaleString()}</div>
-      {delta != null && (
-        <div className={`kpi-delta ${deltaDir}`}>
-          <Icon name={deltaDir === 'up' ? 'arrowUp' : 'arrowDown'} size={11}/>{delta} o'tgan haftaga nisbatan
-        </div>
-      )}
+      <div className="kpi-num">{v.toLocaleString()}{suffix}</div>
+      <div className="kpi-cap">{label}</div>
     </motion.div>
   );
 }
@@ -108,6 +104,7 @@ function ProblemTeacherCard({ t, onOpenTeacher, onOpenStudent }) {
 }
 
 export default function DashboardPage({ onOpenTeacher, onOpenStudent, onNav }) {
+  const { user } = useAuth();
   const [trendRange, setTrendRange] = useState('month'); // 'month' | 'year'
   const { data, loading, error, refetch } = useFetch(() => api.dashboard.get({ range: trendRange }), [trendRange]);
 
@@ -120,7 +117,10 @@ export default function DashboardPage({ onOpenTeacher, onOpenStudent, onNav }) {
   if (loading) return <div className="page"><Spinner/></div>;
   if (error)   return <div className="page"><ErrorBox message={error} onRetry={refetch}/></div>;
 
-  const { kpis, problemTeachers, totalPendingStudents, activityData, attendanceTrend } = data;
+  const { kpis, topTeachers, problemTeachers, totalPendingStudents, activityData, attendanceTrend } = data;
+  const firstName = (user?.name || '').trim().split(/\s+/)[0] || 'Xush kelibsiz';
+  const hour = new Date().getHours();
+  const greetWord = hour < 12 ? 'Xayrli tong' : hour < 18 ? 'Xayrli kun' : 'Xayrli kech';
   const hasActivity = (activityData ?? []).some(d => (d.lessons ?? 0) + (d.hw ?? 0) > 0);
   const hasTrend    = (attendanceTrend ?? []).length > 0;
   const trendDelta  = hasTrend
@@ -130,23 +130,24 @@ export default function DashboardPage({ onOpenTeacher, onOpenStudent, onNav }) {
   return (
     <motion.div className="page"
       initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35 }}>
-      <div className="page-hd">
-        <div>
-          <h1 className="page-title">Dashboard</h1>
-          <div className="page-sub">
-            {new Date().toLocaleDateString('uz-UZ',{ weekday:'long', month:'long', day:'numeric' })} · {kpis.activeTeachers}/{kpis.totalTeachers} faol o'qituvchi
+
+      <motion.div className="hero"
+        initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4 }}>
+        <div className="hero-blob"/>
+        <div className="hero-content">
+          <div className="hero-greet">{greetWord}, {firstName}! 👋</div>
+          <div className="hero-sub">
+            {new Date().toLocaleDateString('uz-UZ',{ weekday:'long', month:'long', day:'numeric' })} · bugun ajoyib kun bo'lsin!
           </div>
         </div>
-        <div className="page-acts">
-          <button className="btn btn-primary" onClick={() => onNav('teachers')}><Icon name="plus" size={13}/> O'qituvchi taklif qilish</button>
-        </div>
-      </div>
+        <div className="hero-deco">🎒</div>
+      </motion.div>
 
       <motion.div className="kpi-grid" variants={listContainer} initial="hidden" animate="show">
-        <KpiCard label="Jami o'qituvchilar"  value={kpis.totalTeachers}    icon="teachers" iconBg="var(--primary-bg)" iconColor="var(--primary-l)"/>
-        <KpiCard label="Faol o'qituvchilar"  value={kpis.activeTeachers}   icon="activity" iconBg="var(--accent-bg)"  iconColor="var(--accent-l)"/>
-        <KpiCard label="Faol bo'lmaganlar"   value={kpis.inactiveTeachers} icon="user"     iconBg="var(--rose-bg)"    iconColor="var(--rose)"/>
-        <KpiCard label="Kutilmoqda"          value={kpis.totalUnchecked}   icon="homework" iconBg="var(--amber-bg)"   iconColor="var(--amber)"/>
+        <KpiCard label="Jami o'quvchilar" value={kpis.totalStudents}  icon="user"     iconBg="var(--primary-bg)" iconColor="var(--primary)"/>
+        <KpiCard label="O'qituvchilar"     value={kpis.totalTeachers}  icon="teachers" iconBg="var(--accent-bg)"  iconColor="var(--accent)"/>
+        <KpiCard label="O'rtacha davomat"  value={kpis.avgAttendance} suffix="%" icon="activity" iconBg="var(--amber-bg)" iconColor="var(--amber)"/>
+        <KpiCard label="Aktiv guruhlar"    value={kpis.totalGroups}    icon="grid"     iconBg="rgba(16,185,129,0.13)" iconColor="var(--emerald)"/>
       </motion.div>
 
       <motion.div className="chart-grid" variants={listContainer} initial="hidden" animate="show">
@@ -241,6 +242,43 @@ export default function DashboardPage({ onOpenTeacher, onOpenStudent, onNav }) {
           </div>
         </motion.div>
       </motion.div>
+
+      {(topTeachers?.length > 0) && (
+        <motion.div className="card" variants={listItem} initial="hidden" animate="show" style={{ marginBottom:12 }}>
+          <div className="card-head">
+            <div>
+              <div className="card-title">Eng faol o'qituvchilar</div>
+              <div className="card-sub">Faollik ko'rsatkichi bo'yicha yetakchilar</div>
+            </div>
+            <button className="btn btn-ghost btn-sm" onClick={() => onNav?.('teachers')}>
+              Barchasini ko'rish <Icon name="chevronRight" size={13}/>
+            </button>
+          </div>
+          <div style={{ padding:'4px 0' }}>
+            {topTeachers.map((t, i) => (
+              <div key={t._id} className={`rank-row r${i+1}`}
+                onClick={() => onOpenTeacher?.(t._id)}
+                style={{ cursor: onOpenTeacher ? 'pointer' : 'default' }}>
+                <div className="rank-badge">{i + 1}</div>
+                <Avatar name={t.name} hue={t.hue} size="sm" photoUrl={t.photoUrl}/>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:14, fontWeight:600, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{t.name}</div>
+                  <div style={{ fontSize:12, color:'var(--text-3)', marginTop:1 }}>{t.subject}</div>
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
+                  <div className="prog" style={{ width:64 }}>
+                    <div className="prog-fill" style={{ width:`${t.score || 0}%` }}/>
+                  </div>
+                  <span style={{ fontFamily:'var(--display)', fontSize:14, fontWeight:700, minWidth:38, textAlign:'right' }}>
+                    {t.score || 0}%
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
 
       {problemTeachers?.length > 0 && (
         <motion.div className="card" variants={listItem} initial="hidden" animate="show">

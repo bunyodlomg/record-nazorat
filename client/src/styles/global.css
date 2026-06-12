@@ -507,6 +507,80 @@ a { color:inherit; text-decoration:none; }
 .kpi-delta.up { color:var(--primary-l); }
 .kpi-delta.dn { color:var(--rose); }
 
+/* ── DASHBOARD HERO BANNER ── */
+.hero {
+  position:relative; overflow:hidden;
+  border-radius:var(--r-xl);
+  padding:26px 28px;
+  margin-bottom:16px;
+  border:1px solid var(--border);
+  background:
+    radial-gradient(120% 140% at 100% 0%, rgba(167,139,250,0.22), transparent 55%),
+    linear-gradient(115deg, rgba(99,102,241,0.16) 0%, rgba(129,140,248,0.10) 45%, rgba(167,139,250,0.16) 100%);
+  box-shadow:var(--shadow-sm), inset 0 1px 0 rgba(255,255,255,0.10);
+}
+[data-theme="light"] .hero {
+  background:
+    radial-gradient(120% 140% at 100% 0%, rgba(167,139,250,0.20), transparent 55%),
+    linear-gradient(115deg, #eef0ff 0%, #f1eeff 50%, #faf0fe 100%);
+  border-color:rgba(99,102,241,0.14);
+}
+.hero-content { position:relative; z-index:1; max-width:78%; }
+.hero-greet {
+  font-family:var(--display); font-size:24px; font-weight:700;
+  letter-spacing:-0.02em; line-height:1.2; color:var(--text);
+}
+.hero-sub { font-size:14px; color:var(--text-2); margin-top:6px; }
+.hero-deco {
+  position:absolute; right:18px; bottom:-6px;
+  font-size:84px; line-height:1; opacity:0.92;
+  filter:drop-shadow(0 8px 22px rgba(79,70,229,0.25));
+  pointer-events:none; user-select:none;
+}
+.hero-blob {
+  position:absolute; right:-40px; top:-50px;
+  width:200px; height:200px; border-radius:50%;
+  background:radial-gradient(circle, rgba(167,139,250,0.35), transparent 70%);
+  pointer-events:none;
+}
+@media (max-width:560px) {
+  .hero { padding:20px 20px; }
+  .hero-content { max-width:72%; }
+  .hero-greet { font-size:20px; }
+  .hero-sub { font-size:13px; }
+  .hero-deco { font-size:60px; right:10px; }
+}
+
+/* ── KPI v2 — icon top-left, big number, label, delta ── */
+.kpi-ico2 {
+  width:42px; height:42px; border-radius:13px;
+  display:grid; place-items:center; flex-shrink:0;
+  margin-bottom:13px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.18);
+}
+.kpi-num { font-family:var(--display); font-size:30px; font-weight:700; letter-spacing:-0.025em; line-height:1; color:var(--text); }
+.kpi-cap { font-size:13px; color:var(--text-2); font-weight:500; margin-top:6px; }
+
+/* ── TOP-TEACHER / RANKED LIST ROW ── */
+.rank-row {
+  display:flex; align-items:center; gap:13px;
+  padding:11px 16px;
+  border-bottom:1px solid var(--border);
+  transition:background 150ms var(--ease);
+}
+.rank-row:last-child { border-bottom:none; }
+.rank-row:hover { background:var(--bg-subtle); }
+.rank-badge {
+  width:26px; height:26px; border-radius:9px; flex-shrink:0;
+  display:grid; place-items:center;
+  font-family:var(--display); font-size:13px; font-weight:700;
+  background:var(--bg-subtle); color:var(--text-3);
+  font-variant-numeric:tabular-nums;
+}
+.rank-row.r1 .rank-badge { background:linear-gradient(135deg,#fde68a,#f59e0b); color:#7c4a03; }
+.rank-row.r2 .rank-badge { background:linear-gradient(135deg,#e2e8f0,#94a3b8); color:#334155; }
+.rank-row.r3 .rank-badge { background:linear-gradient(135deg,#fed7aa,#fb923c); color:#7c2d12; }
+
 /* ── PAGE HEADER ── */
 .page-hd {
   display:flex; align-items:flex-start; justify-content:space-between; gap:16px;

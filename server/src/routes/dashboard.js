@@ -24,7 +24,7 @@ router.get('/', asyncHandler(async (req, res) => {
     Group.countDocuments({ isActive: true }),
     Student.countDocuments({ status: 'active' }),
     Homework.aggregate([{ $group:{ _id:'$col', count:{ $sum:1 } } }]),
-    Teacher.find({ status:'active' }).sort('-score').limit(3).select('name subject score hue'),
+    Teacher.find({ status:'active' }).sort('-score').limit(3).select('name subject score hue photoUrl'),
     // "Tekshirilmagan" = teacher hali tasdiqlamagan (pending/submitted/returned)
     Submission.aggregate([
       { $match: { status: { $ne: 'reviewed' } } },
