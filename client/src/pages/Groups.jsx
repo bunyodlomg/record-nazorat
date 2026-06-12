@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Icon, Avatar } from '../components/ui.jsx';
 import { Spinner, ErrorBox, listContainer, listItem } from '../components/Feedback.jsx';
 import { Modal, Field, Input, Select, UserPicker } from '../components/Modal.jsx';
+import PageHero from '../components/PageHero.jsx';
 import { useFetch } from '../hooks/useFetch.js';
 import api from '../services/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -132,49 +133,80 @@ function GroupForm({ open, onClose, initial, onSaved, teachers, isAdmin }) {
 
 const dayLabels = (days = []) => DAYS.filter(d => days.includes(d.id)).map(d => d.label).join(' · ');
 
+const GROUP_GRADS = [
+  'linear-gradient(165deg,#60a5fa,#4f46e5)', // G1 — blue→indigo
+  'linear-gradient(165deg,#a78bfa,#7c3aed)', // G2 — violet
+  'linear-gradient(165deg,#34d399,#059669)', // G3 — emerald
+  'linear-gradient(165deg,#fbbf24,#f59e0b)', // G4 — amber
+  'linear-gradient(165deg,#fb7185,#e11d48)', // G5 — rose
+  'linear-gradient(165deg,#38bdf8,#0891b2)', // G6 — cyan
+];
+
+/* "Iyun-G1" → { num:1, big:"G1", sub:"IYUN" } */
+function codeParts(code = '') {
+  const s = String(code || '');
+  const m = s.match(/G\s*(\d+)/i);
+  const num = m ? parseInt(m[1], 10) : 0;
+  const big = m ? `G${num}` : (s.replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase() || 'GR');
+  const sub = s.replace(/-?G\s*\d+/i, '').replace(/[-_]+/g, ' ').trim().toUpperCase();
+  return { num, big, sub };
+}
+
 function GroupCard({ g, onOpenTeacher, onOpenGroup, onEdit, onRemove, isAdmin }) {
+  const { num, big, sub } = codeParts(g.code);
+  const grad = GROUP_GRADS[((num || 1) - 1) % GROUP_GRADS.length];
+  const days = dayLabels(g.scheduleDays);
   return (
-    <motion.div className="card card-hov" variants={listItem}
+    <motion.div className="gcard card card-hov" variants={listItem}
       whileHover={{ y:-3 }}
       onClick={() => onOpenGroup?.(g._id)}
-      style={{ padding:17, position:'relative', cursor: onOpenGroup ? 'pointer' : 'default' }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:14 }}>
-        <div style={{ minWidth:0, flex:1 }}>
-          <div style={{ fontFamily:'var(--display)', fontSize:16, fontWeight:700, letterSpacing:'-0.02em' }}>{g.name}</div>
-          <div style={{ fontSize:12, color:'var(--text-2)', marginTop:5 }}>
-            {dayLabels(g.scheduleDays) || 'Jadval kiritilmagan'}{g.scheduleTime ? ` · ${g.scheduleTime}` : ''}
-          </div>
-        </div>
-        {isAdmin && (
-          <div style={{ display:'flex', gap:4 }} onClick={e => e.stopPropagation()}>
-            <button className="btn btn-ghost btn-icon" style={{ width:28, height:28 }} onClick={() => onEdit(g)}><Icon name="settings" size={13}/></button>
-            <button className="btn btn-ghost btn-icon" style={{ width:28, height:28, color:'var(--rose)' }} onClick={() => onRemove(g)}><Icon name="alert" size={13}/></button>
-          </div>
-        )}
+      style={{ cursor: onOpenGroup ? 'pointer' : 'default' }}>
+
+      <div className="gcard-side" style={{ background:grad }}>
+        <span className="gcard-star"><Icon name="star" size={12}/></span>
+        <div className="gcard-code">{big}</div>
+        {sub && <div className="gcard-codesub">{sub}</div>}
       </div>
 
-      {g.teacher && (
-        <button onClick={e=>{e.stopPropagation();onOpenTeacher && onOpenTeacher(g.teacher._id)}}
-          style={{ display:'flex', alignItems:'center', gap:9, padding:'8px 10px',
-            background:'var(--bg-subtle)', borderRadius:9, border:'1px solid var(--border)',
-            marginBottom:12, width:'100%', cursor: onOpenTeacher ? 'pointer' : 'default' }}>
-          <Avatar name={g.teacher.name} hue={g.teacher.hue} size="sm" photoUrl={g.teacher.photoUrl}/>
-          <div style={{ textAlign:'left' }}>
-            <div style={{ fontSize:12.5, fontWeight:600 }}>{g.teacher.name}</div>
-            <div style={{ fontSize:10.5, color:'var(--text-3)' }}>Mas'ul o'qituvchi</div>
+      <div className="gcard-main">
+        <div className="gcard-r1">
+          <div className="gcard-name">{g.name}</div>
+          <div style={{ display:'flex', alignItems:'center', gap:6, flexShrink:0 }} onClick={e => e.stopPropagation()}>
+            <span className={`chip ${g.isActive ? 'chip-success' : 'chip-neutral'}`}>
+              <span style={{ width:6, height:6, borderRadius:'50%', background: g.isActive ? '#34d399' : 'var(--text-3)', display:'inline-block' }}/>
+              {g.isActive ? 'Faol' : 'Yopilgan'}
+            </span>
+            {isAdmin && (
+              <>
+                <button className="btn btn-ghost btn-icon" style={{ width:28, height:28 }} onClick={() => onEdit(g)} title="Tahrirlash"><Icon name="settings" size={13}/></button>
+                <button className="btn btn-ghost btn-icon" style={{ width:28, height:28, color:'var(--rose)' }} onClick={() => onRemove(g)} title="O'chirish"><Icon name="alert" size={13}/></button>
+              </>
+            )}
           </div>
-        </button>
-      )}
+        </div>
 
-      <div style={{
-        display:'flex', alignItems:'center', justifyContent:'space-between',
-        padding:'8px 10px', background:'var(--primary-bg)', borderRadius:9,
-        border:'1px solid rgba(45,212,191,0.18)',
-      }}>
-        <span style={{ fontSize:11.5, color:'var(--text-2)' }}>O'quvchilar</span>
-        <span style={{ fontFamily:'var(--display)', fontSize:18, fontWeight:700, color:'var(--primary-l)' }}>
-          {g.studentCount || 0}
-        </span>
+        <button className="gcard-meta"
+          onClick={e => { e.stopPropagation(); g.teacher && onOpenTeacher?.(g.teacher._id); }}
+          style={{ background:'transparent', padding:0, cursor: g.teacher && onOpenTeacher ? 'pointer' : 'default' }}>
+          <Icon name="teachers" size={13} color="var(--text-3)"/>
+          <span className="txt">{g.teacher?.name || "Mas'ul biriktirilmagan"}</span>
+        </button>
+
+        {days && (
+          <div className="gcard-meta">
+            <Icon name="calendar" size={13} color="var(--text-3)"/>
+            <span className="txt">{days}{g.scheduleTime ? ` · ${g.scheduleTime}` : ''}</span>
+          </div>
+        )}
+
+        <div className="gcard-foot">
+          <span className="gcard-foot-lbl"><Icon name="user" size={13} color="var(--text-3)"/> O'quvchilar</span>
+          <span className="gcard-count">{g.studentCount || 0}</span>
+          <div style={{ flex:1 }}/>
+          {g.totalGems > 0 && (
+            <span className="chip chip-accent"><Icon name="gem" size={11}/> {g.totalGems}</span>
+          )}
+        </div>
       </div>
     </motion.div>
   );
@@ -238,6 +270,15 @@ export default function GroupsPage({ onOpenTeacher, onOpenGroup }) {
     g.teacher?.name?.toLowerCase().includes(search.toLowerCase()));
 
   const totalStudents = allGroups.reduce((s, g) => s + (g.studentCount || 0), 0);
+  const totalGems     = allGroups.reduce((s, g) => s + (g.totalGems || 0), 0);
+  const teacherCount  = new Set(allGroups.map(g => String(g.teacher?._id || g.teacher)).filter(v => v && v !== 'undefined')).size;
+
+  const heroStats = [
+    { value: allGroups.length, label:'Guruhlar',      icon:'groups',   bg:'var(--primary-bg)',       color:'var(--primary)' },
+    { value: totalStudents,    label:"O'quvchilar",   icon:'user',     bg:'rgba(56,189,248,0.14)',   color:'#0ea5e9' },
+    { value: teacherCount,     label:"O'qituvchilar", icon:'teachers', bg:'rgba(16,185,129,0.14)',   color:'#059669' },
+    { value: totalGems,        label:'Olmoslar',      icon:'gem',      bg:'var(--accent-bg)',        color:'var(--accent)' },
+  ];
 
   const groupedByTeacher = useMemo(() => {
     if (groupBy !== 'teacher') return [];
@@ -265,28 +306,31 @@ export default function GroupsPage({ onOpenTeacher, onOpenGroup }) {
   return (
     <motion.div className="page"
       initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35 }}>
-      <div className="page-hd">
-        <div>
-          <h1 className="page-title">Guruhlar</h1>
-          <div className="page-sub">{allGroups.length} ta guruh · {totalStudents} ta o'quvchi</div>
+      <PageHero
+        title="Guruhlar"
+        subtitle={`${allGroups.length} ta guruh · ${totalStudents} ta o'quvchi`}
+        emoji="🎒"
+        stats={heroStats}
+      />
+
+      <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap', marginBottom:16 }}>
+        <div className="sw" style={{ flex:'1 1 240px', height:42 }}>
+          <Icon name="search" size={14} color="var(--text-3)"/>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Qidirish..." style={{ width:'100%' }}/>
         </div>
-        <div className="page-acts">
-          <div className="seg">
-            <button className={`seg-btn ${groupBy==='group'?'active':''}`} onClick={()=>setGroupBy('group')}>
-              <Icon name="groups" size={12}/> Guruh
-            </button>
-            <button className={`seg-btn ${groupBy==='teacher'?'active':''}`} onClick={()=>setGroupBy('teacher')}>
-              <Icon name="teachers" size={12}/> O'qituvchi
-            </button>
-          </div>
-          <div className="sw">
-            <Icon name="search" size={13} color="var(--text-3)"/>
-            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Qidirish..." style={{ width:160 }}/>
-          </div>
-          {isAdmin && (
-            <button className="btn btn-primary" onClick={openAdd}><Icon name="plus" size={13}/> Yangi guruh</button>
-          )}
+        <div className="seg" style={{ flexShrink:0 }}>
+          <button className={`seg-btn ${groupBy==='group'?'active':''}`} onClick={()=>setGroupBy('group')}>
+            <Icon name="groups" size={12}/> Guruh
+          </button>
+          <button className={`seg-btn ${groupBy==='teacher'?'active':''}`} onClick={()=>setGroupBy('teacher')}>
+            <Icon name="teachers" size={12}/> O'qituvchi
+          </button>
         </div>
+        {isAdmin && (
+          <button className="btn btn-primary btn-lg" onClick={openAdd} style={{ flexShrink:0 }}>
+            <Icon name="plus" size={15}/> Yangi guruh
+          </button>
+        )}
       </div>
 
       {loading && <Spinner/>}
