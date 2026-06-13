@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Icon, Avatar, StatusDot } from '../components/ui.jsx';
+import { Icon, Avatar, StatusDot, TgUsername } from '../components/ui.jsx';
 import { Spinner, ErrorBox } from '../components/Feedback.jsx';
 import { Modal, Field, Input, Select, Textarea } from '../components/Modal.jsx';
 import { useFetch } from '../hooks/useFetch.js';
@@ -221,7 +221,7 @@ export default function StudentDetailPage({ studentId, onBack }) {
               {s.group?.level && <> · {LVL_LABEL[s.group.level] || s.group.level}</>}
             </div>
             <div style={{ display:'flex', gap:14, fontSize:12, color:'var(--text-2)', flexWrap:'wrap' }}>
-              {s.telegramUsername && <span style={{ display:'flex', alignItems:'center', gap:4 }}><Icon name="user" size={12}/>@{s.telegramUsername}</span>}
+              {s.telegramUsername && <span style={{ display:'flex', alignItems:'center', gap:4 }}><Icon name="user" size={12}/><TgUsername username={s.telegramUsername}/></span>}
               {s.phone && <span style={{ display:'flex', alignItems:'center', gap:4 }}><Icon name="phone" size={12}/>{s.phone}</span>}
               {s.joinedAt && <span style={{ display:'flex', alignItems:'center', gap:4 }}><Icon name="calendar" size={12}/>{new Date(s.joinedAt).toLocaleDateString('uz-UZ')}</span>}
             </div>

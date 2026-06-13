@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Icon, Avatar, StatusDot } from '../components/ui.jsx';
+import { Icon, Avatar, StatusDot, TgUsername } from '../components/ui.jsx';
 import { Spinner, ErrorBox } from '../components/Feedback.jsx';
 import { Modal, Field, Textarea } from '../components/Modal.jsx';
 import { useFetch } from '../hooks/useFetch.js';
@@ -181,7 +181,7 @@ export function TeacherDrawer({ teacherId, onClose, onOpenFull }) {
                 {teacherHandle(t) && (
                   <div style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, marginBottom: t.phone ? 6 : 0 }}>
                     <Icon name={t.telegramUsername ? 'send' : 'mail'} size={13} color="var(--text-3)"/>
-                    <span style={{ color:'var(--text-2)' }}>{teacherHandle(t)}</span>
+                    <span style={{ color:'var(--text-2)' }}>{t.telegramUsername ? <TgUsername username={t.telegramUsername}/> : teacherHandle(t)}</span>
                   </div>
                 )}
                 {t.phone && (

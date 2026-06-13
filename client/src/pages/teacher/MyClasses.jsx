@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Icon } from '../../components/ui.jsx';
+import { Icon, TgUsername } from '../../components/ui.jsx';
 import { Spinner, ErrorBox, listContainer, listItem } from '../../components/Feedback.jsx';
 import { Modal, Field, Input } from '../../components/Modal.jsx';
 import PageHero from '../../components/PageHero.jsx';
@@ -168,7 +168,7 @@ function PendingStudentsPanel({ onChange }) {
               overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{s.name}</div>
             <div style={{ fontSize:11.5, color:'var(--text-2)' }}>
               {s.group?.name || '—'}
-              {s.telegramUsername && <> · @{s.telegramUsername}</>}
+              {s.telegramUsername && <> · <TgUsername username={s.telegramUsername}/></>}
             </div>
           </div>
 

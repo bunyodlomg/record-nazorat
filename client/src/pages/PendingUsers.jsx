@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Icon, Avatar } from '../components/ui.jsx';
+import { Icon, Avatar, TgUsername } from '../components/ui.jsx';
 import { Spinner, ErrorBox, listContainer, listItem, usePaged, Pagination } from '../components/Feedback.jsx';
 import { Modal, Field } from '../components/Modal.jsx';
 import { useFetch } from '../hooks/useFetch.js';
@@ -69,7 +69,7 @@ function ApproveModal({ open, onClose, user, onDone }) {
         padding:'12px 14px', background:'var(--bg-subtle)',
         borderRadius:10, fontSize:12.5, color:'var(--text-2)', lineHeight:1.6,
       }}>
-        Telegram: <b style={{ color:'var(--text)' }}>{user.telegramUsername ? `@${user.telegramUsername}` : '—'}</b><br/>
+        Telegram: <b style={{ color:'var(--text)' }}>{user.telegramUsername ? <TgUsername username={user.telegramUsername}/> : '—'}</b><br/>
         ID: <code style={{ fontFamily:'var(--mono)', fontSize:11.5 }}>{user.telegramId || '—'}</code>
       </div>
     </Modal>
@@ -116,7 +116,7 @@ function PendingTable({ users, onApprove, onReject }) {
                     </span>
                   </td>
                   <td style={{ color:'var(--text-2)', fontSize:12.5 }}>
-                    {u.telegramUsername ? `@${u.telegramUsername}` : (u.telegramId ? `ID ${u.telegramId}` : '—')}
+                    {u.telegramUsername ? <TgUsername username={u.telegramUsername}/> : (u.telegramId ? `ID ${u.telegramId}` : '—')}
                   </td>
                   <td style={{ color:'var(--text-2)', fontSize:12.5 }}>
                     {u.pendingGroupRef

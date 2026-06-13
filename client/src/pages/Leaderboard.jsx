@@ -34,7 +34,7 @@ function PodiumCard({ entry, place, height, subtitleKey = 'subject', metricKey =
       initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }}
       transition={{ delay:0.1 + place*0.08, duration:0.5 }}
       onClick={() => onClick?.(entry)}
-      style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:11, cursor: onClick ? 'pointer' : 'default' }}>
+      style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:11, minWidth:0, cursor: onClick ? 'pointer' : 'default' }}>
       <motion.div
         whileHover={{ scale:1.08, rotate:5 }}
         style={{ width:48, height:48, borderRadius:'50%', background:m.bg, display:'grid', placeItems:'center',
@@ -42,8 +42,13 @@ function PodiumCard({ entry, place, height, subtitleKey = 'subject', metricKey =
         {m.icon}
       </motion.div>
       <Avatar name={entry.name} hue={entry.hue || 200} size={place===1?'xl':'lg'} photoUrl={entry.photoUrl}/>
-      <div style={{ textAlign:'center', maxWidth:140 }}>
-        <div style={{ fontFamily:'var(--display)', fontSize:place===1?16:13.5, fontWeight:700, letterSpacing:'-0.02em', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{entry.name}</div>
+      <div style={{ textAlign:'center', width:'100%', maxWidth:140, minWidth:0 }}>
+        <div style={{
+          fontFamily:'var(--display)', fontSize:place===1?16:13.5, fontWeight:700, letterSpacing:'-0.02em',
+          lineHeight:1.18, minHeight:'2.36em',
+          display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical',
+          overflow:'hidden', overflowWrap:'anywhere', wordBreak:'break-word',
+        }}>{entry.name}</div>
         <div style={{ fontSize:11.5, color:'var(--text-2)', marginTop:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{subtitle}</div>
       </div>
       <motion.div

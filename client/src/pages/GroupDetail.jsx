@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Icon, Avatar } from '../components/ui.jsx';
+import { Icon, Avatar, TgUsername } from '../components/ui.jsx';
 import { Spinner, ErrorBox } from '../components/Feedback.jsx';
 import { Modal } from '../components/Modal.jsx';
 import { useFetch } from '../hooks/useFetch.js';
@@ -66,7 +66,7 @@ function StudentRow({ s, onOpen }) {
           {s.name}
         </div>
         <div style={{ fontSize:11, color:'var(--text-3)', marginTop:2 }}>
-          {s.telegramUsername ? `@${s.telegramUsername}` : (s.joinedViaBot ? 'Bot orqali' : "Qo'lda qo'shilgan")}
+          {s.telegramUsername ? <TgUsername username={s.telegramUsername}/> : (s.joinedViaBot ? 'Bot orqali' : "Qo'lda qo'shilgan")}
         </div>
       </div>
       <div style={{ textAlign:'right', flexShrink:0 }}>
@@ -138,7 +138,7 @@ function PendingStudentCard({ s, onApprove, onReject, busy }) {
           {s.name}
         </div>
         {s.telegramUsername && (
-          <div style={{ fontSize:11, color:'var(--text-2)', marginTop:2 }}>@{s.telegramUsername}</div>
+          <div style={{ fontSize:11, color:'var(--text-2)', marginTop:2 }}><TgUsername username={s.telegramUsername}/></div>
         )}
       </div>
       <button className="btn btn-primary btn-sm" disabled={busy} onClick={() => onApprove(s._id)}

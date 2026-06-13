@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Icon, Avatar, StatusDot } from '../components/ui.jsx';
+import { Icon, Avatar, StatusDot, TgUsername } from '../components/ui.jsx';
 import { Spinner, ErrorBox, listContainer, listItem, usePaged, Pagination } from '../components/Feedback.jsx';
 import { Modal, Field, Input, Select } from '../components/Modal.jsx';
 import PageHero from '../components/PageHero.jsx';
@@ -90,7 +90,7 @@ function TeacherEditForm({ open, onClose, initial, onSaved }) {
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ fontSize:13.5, fontWeight:600 }}>{name || '—'}</div>
           <div style={{ fontSize:12, color:'var(--text-3)', marginTop:2 }}>
-            {handle || "Telegram username yo'q"}
+            {initial.telegramUsername ? <TgUsername username={initial.telegramUsername}/> : "Telegram username yo'q"}
           </div>
         </div>
       </div>
@@ -299,7 +299,7 @@ function TeacherChatRow({ t, onClick, onEdit, onDelete }) {
             </span>
             {t.telegramUsername ? (
               <span style={{ fontSize:11.5, color:'var(--primary-l)', fontWeight:500, whiteSpace:'nowrap', flexShrink:0 }}>
-                @{t.telegramUsername}
+                <TgUsername username={t.telegramUsername} style={{ color:'inherit' }}/>
               </span>
             ) : t.telegramId ? (
               <span style={{ fontSize:11, color:'var(--text-3)', fontWeight:500, whiteSpace:'nowrap', flexShrink:0 }}>
@@ -518,7 +518,7 @@ function TeachersListView({ onOpenTeacher }) {
                           <div>
                             <div style={{ fontWeight:600 }}>{t.name}</div>
                             <div style={{ fontSize:11.5, color:'var(--text-3)' }}>
-                              {t.telegramUsername ? `@${t.telegramUsername}` : (t.email && !/^tg-[\w-]+@local$/i.test(t.email) ? t.email : '—')}
+                              {t.telegramUsername ? <TgUsername username={t.telegramUsername}/> : (t.email && !/^tg-[\w-]+@local$/i.test(t.email) ? t.email : '—')}
                             </div>
                           </div>
                         </div>

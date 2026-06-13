@@ -1,4 +1,42 @@
 import { useState, useEffect } from 'react';
+import { tg } from '../hooks/useTelegram.js';
+
+/**
+ * Telegram chatni ochish — username bo'yicha (https://t.me/<username>).
+ * Telegram mini-app ichida tg.openTelegramLink, aks holda yangi tab.
+ */
+export function openTelegramChat(username) {
+  if (!username) return;
+  const handle = String(username).replace(/^@+/, '').trim();
+  if (!handle) return;
+  const url = `https://t.me/${handle}`;
+  if (tg?.openTelegramLink) tg.openTelegramLink(url);
+  else window.open(url, '_blank', 'noopener');
+}
+
+/**
+ * Bosiladigan Telegram username — bosilganda chatga o'tadi.
+ * Inline ishlatish uchun <span role="button"> (button ichiga ham qo'yiladi).
+ * @param at — '@' prefiksini ko'rsatish (default true)
+ */
+export function TgUsername({ username, at = true, style, title = "Telegramda ochish" }) {
+  if (!username) return null;
+  const handle = String(username).replace(/^@+/, '').trim();
+  if (!handle) return null;
+  const open = (e) => { e.stopPropagation(); e.preventDefault(); openTelegramChat(handle); };
+  return (
+    <span role="button" tabIndex={0} title={title}
+      onClick={open}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') open(e); }}
+      style={{
+        cursor:'pointer', color:'var(--accent-l, #38bdf8)',
+        textDecorationLine:'underline', textDecorationStyle:'dotted',
+        textUnderlineOffset:2, ...style,
+      }}>
+      {at ? '@' : ''}{handle}
+    </span>
+  );
+}
 
 export function useCountUp(target, duration = 1000) {
   const [v, setV] = useState(0);
