@@ -14,12 +14,14 @@ const GROUP_GRADS = [
 const DAYS = { mon:'Du', tue:'Se', wed:'Ch', thu:'Pa', fri:'Ju', sat:'Sh', sun:'Ya' };
 export const groupDayLabels = (days = []) => (days || []).map(d => DAYS[d]).filter(Boolean).join(' · ');
 
-/* "Iyun-G1" → { num:1, big:"G1", sub:"IYUN" } */
-function codeParts(code = '') {
+/* badge raqami — avval guruh NOMIDAGI raqamdan (masalan "IELTS GROUP 11" → 11),
+   bo'lmasa avto-koddan ("Iyun-G9" → 9). sub = oy (koddan). */
+function codeParts(code = '', name = '') {
   const s = String(code || '');
-  const m = s.match(/G\s*(\d+)/i);
-  const num = m ? parseInt(m[1], 10) : 0;
-  const big = m ? `G${num}` : (s.replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase() || 'GR');
+  const nameNum = String(name || '').match(/(\d+)(?!.*\d)/); // nomdagi oxirgi raqam
+  const codeM   = s.match(/G\s*(\d+)/i);
+  const num = nameNum ? parseInt(nameNum[1], 10) : (codeM ? parseInt(codeM[1], 10) : 0);
+  const big = num ? `G${num}` : (s.replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase() || 'GR');
   const sub = s.replace(/-?G\s*\d+/i, '').replace(/[-_]+/g, ' ').trim().toUpperCase();
   return { num, big, sub };
 }
@@ -30,7 +32,7 @@ function codeParts(code = '') {
  * @param showTeacher     — mas'ul o'qituvchi qatorini ko'rsatish (admin: true)
  */
 export default function GroupCard({ g, onOpenGroup, onOpenTeacher, onEdit, onRemove, showTeacher = true }) {
-  const { num, big, sub } = codeParts(g.code);
+  const { num, big, sub } = codeParts(g.code, g.name);
   const grad = GROUP_GRADS[((num || 1) - 1) % GROUP_GRADS.length];
   const days = groupDayLabels(g.scheduleDays);
   const active = g.isActive !== false;

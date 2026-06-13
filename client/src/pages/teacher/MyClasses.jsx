@@ -18,10 +18,27 @@ const dayLabels = (days = []) => DAYS.filter(d => days.includes(d.id)).map(d => 
 
 const EMPTY_FORM = { name:'', scheduleDays:[], speakingPerWeek:2 };
 
-function GroupCreateForm({ open, onClose, onSaved }) {
+function GroupCreateForm({ open, onClose, onSaved, initial }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const isEdit = !!initial?._id;
+
+  // Modal har doim mount qilingani uchun, ochilganda formani to'ldiramiz
+  useEffect(() => {
+    if (!open) return;
+    setError('');
+    if (initial) {
+      setForm({
+        ...EMPTY_FORM,
+        name: initial.name || '',
+        scheduleDays: initial.scheduleDays || [],
+        speakingPerWeek: initial.speakingPerWeek ?? 2,
+      });
+    } else {
+      setForm(EMPTY_FORM);
+    }
+  }, [open, initial]);
 
   const upd = (k, v) => setForm(f => ({ ...f, [k]:v }));
   const toggleDay = (day) => setForm(f => ({
@@ -34,11 +51,13 @@ function GroupCreateForm({ open, onClose, onSaved }) {
   const submit = async () => {
     setError(''); setSaving(true);
     try {
-      await api.groups.create({
+      const payload = {
         name: form.name.trim(),
         scheduleDays: form.scheduleDays,
         speakingPerWeek: form.speakingPerWeek,
-      });
+      };
+      if (isEdit) await api.groups.update(initial._id, payload);
+      else        await api.groups.create(payload);
       sfx.success();
       onSaved?.();
       setForm(EMPTY_FORM);
@@ -50,13 +69,13 @@ function GroupCreateForm({ open, onClose, onSaved }) {
 
   return (
     <Modal open={open} onClose={onClose}
-      title="Yangi guruh"
-      subtitle="Guruh kodi avtomatik beriladi (Masalan: May-G1)"
+      title={isEdit ? 'Guruhni tahrirlash' : 'Yangi guruh'}
+      subtitle={isEdit ? "Guruh ma'lumotlarini yangilash" : "Guruh kodi avtomatik beriladi (Masalan: May-G1)"}
       width={460}
       footer={<>
         <button className="btn btn-ghost" onClick={onClose} disabled={saving}>Bekor</button>
         <button className="btn btn-primary" onClick={submit} disabled={saving || !form.name.trim()}>
-          {saving ? 'Yaratilmoqda...' : 'Yaratish'}
+          {saving ? 'Saqlanmoqda...' : (isEdit ? 'Saqlash' : 'Yaratish')}
         </button>
       </>}>
       {error && <div style={{ marginBottom:12, padding:'10px 12px', background:'var(--rose-bg)', borderRadius:8, color:'var(--rose)', fontSize:12.5 }}>{error}</div>}
@@ -171,6 +190,7 @@ export default function MyClasses({ onOpenStudent, onOpenGroup }) {
   const [tab, setTab] = useState('groups');
   const [showClosed, setShowClosed] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
   const { data, loading, error, refetch } = useFetch(
     () => api.groups.list({ limit:100, isActive: showClosed ? 'false' : 'true' }),
     [showClosed],
@@ -193,6 +213,10 @@ export default function MyClasses({ onOpenStudent, onOpenGroup }) {
     try { await api.groups.delete(g._id); refetch(); }
     catch (e) { alert(e.message); }
   };
+
+  const openAdd  = () => { setEditing(null); setCreateOpen(true); };
+  const openEdit = (g) => { setEditing(g); setCreateOpen(true); };
+  const closeForm = () => { setCreateOpen(false); setEditing(null); };
 
   if (loading) return <div className="page"><Spinner/></div>;
   if (error)   return <div className="page"><ErrorBox message={error} onRetry={refetch}/></div>;
@@ -225,7 +249,7 @@ export default function MyClasses({ onOpenStudent, onOpenGroup }) {
             </button>
           )}
           {!showClosed && (
-            <button className="btn btn-primary btn-lg" onClick={() => setCreateOpen(true)}>
+            <button className="btn btn-primary btn-lg" onClick={openAdd}>
               <Icon name="plus" size={15}/> Yangi guruh
             </button>
           )}
@@ -264,6 +288,7 @@ export default function MyClasses({ onOpenStudent, onOpenGroup }) {
         <motion.div className="groups-grid" variants={listContainer} initial="hidden" animate="show">
           {groups.map(g => (
             <GroupCard key={g._id} g={g}
+              onEdit={openEdit}
               onRemove={remove}
               onOpenGroup={onOpenGroup}
               showTeacher={false}/>
@@ -272,8 +297,10 @@ export default function MyClasses({ onOpenStudent, onOpenGroup }) {
       )}
 
       <GroupCreateForm
+        key={editing?._id || 'new'}
         open={createOpen}
-        onClose={() => setCreateOpen(false)}
+        initial={editing}
+        onClose={closeForm}
         onSaved={refetch}/>
     </motion.div>
   );

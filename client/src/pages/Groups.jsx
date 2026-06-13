@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon, Avatar } from '../components/ui.jsx';
 import { Spinner, ErrorBox, listContainer, listItem } from '../components/Feedback.jsx';
@@ -30,17 +30,25 @@ const EMPTY_FORM = {
 };
 
 function GroupForm({ open, onClose, initial, onSaved, teachers, isAdmin }) {
-  const [form, setForm] = useState(() => {
-    if (initial) return {
-      ...EMPTY_FORM, ...initial,
-      teacher: initial.teacher?._id || initial.teacher || '',
-      scheduleDays: initial.scheduleDays || [],
-    };
-    return EMPTY_FORM;
-  });
+  const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState('');
   const isEdit = !!initial?._id;
+
+  // Modal har doim mount qilingani uchun, ochilganda formani initial bilan to'ldiramiz
+  useEffect(() => {
+    if (!open) return;
+    setError('');
+    if (initial) {
+      setForm({
+        ...EMPTY_FORM, ...initial,
+        teacher: initial.teacher?._id || initial.teacher || '',
+        scheduleDays: initial.scheduleDays || [],
+      });
+    } else {
+      setForm(EMPTY_FORM);
+    }
+  }, [open, initial]);
 
   const upd = (k, v) => setForm(f => ({ ...f, [k]:v }));
   const toggleDay = (day) => setForm(f => ({
@@ -292,6 +300,7 @@ export default function GroupsPage({ onOpenTeacher, onOpenGroup }) {
       </AnimatePresence>
 
       <GroupForm
+        key={editing?._id || 'new'}
         open={modalOpen}
         initial={editing}
         teachers={teachers}
