@@ -245,6 +245,7 @@ export function Header({ theme, onToggleTheme, page }) {
     dashboard:'Bosh sahifa', teachers:"O'qituvchilar", groups:'Guruhlar',
     leaderboard:'Reyting', homework:'Vazifalar', calendar:'Kalendar',
     'my-classes':'Mening guruhlarim', 'my-homework':'Vazifalarim', 'my-students':"O'quvchilarim",
+    activity:'Faollik jadvali',
     profile:'Profil',
   };
 

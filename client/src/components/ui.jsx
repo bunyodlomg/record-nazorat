@@ -1,6 +1,89 @@
 import { useState, useEffect } from 'react';
 import { tg } from '../hooks/useTelegram.js';
 
+/* ── Animate UI ikonkalari (animate-ui.com/docs/icons) ──
+   Lucide + Motion. Mavjud bo'lganlari shu yerdan ishlatiladi; qolganlari
+   pastdagi statik SVG (ICONS) bilan ko'rsatiladi. */
+import { LayoutDashboard } from '@/components/animate-ui/icons/layout-dashboard';
+import { Users }          from '@/components/animate-ui/icons/users';
+import { UsersRound }     from '@/components/animate-ui/icons/users-round';
+import { User }           from '@/components/animate-ui/icons/user';
+import { ClipboardList }  from '@/components/animate-ui/icons/clipboard-list';
+import { Settings }       from '@/components/animate-ui/icons/settings';
+import { Search }         from '@/components/animate-ui/icons/search';
+import { Bell }           from '@/components/animate-ui/icons/bell';
+import { Plus }           from '@/components/animate-ui/icons/plus';
+import { ChevronLeft }    from '@/components/animate-ui/icons/chevron-left';
+import { ChevronRight }   from '@/components/animate-ui/icons/chevron-right';
+import { ChevronDown }    from '@/components/animate-ui/icons/chevron-down';
+import { ChevronUp }      from '@/components/animate-ui/icons/chevron-up';
+import { ArrowUp }        from '@/components/animate-ui/icons/arrow-up';
+import { ArrowDown }      from '@/components/animate-ui/icons/arrow-down';
+import { ArrowRight }     from '@/components/animate-ui/icons/arrow-right';
+import { X as XIcon }     from '@/components/animate-ui/icons/x';
+import { Check }          from '@/components/animate-ui/icons/check';
+import { CircleCheck }    from '@/components/animate-ui/icons/circle-check';
+import { Sun }            from '@/components/animate-ui/icons/sun';
+import { Moon }           from '@/components/animate-ui/icons/moon';
+import { Activity }       from '@/components/animate-ui/icons/activity';
+import { Clock }          from '@/components/animate-ui/icons/clock';
+import { Sparkles }       from '@/components/animate-ui/icons/sparkles';
+import { Ellipsis }       from '@/components/animate-ui/icons/ellipsis';
+import { List }           from '@/components/animate-ui/icons/list';
+import { Star }           from '@/components/animate-ui/icons/star';
+import { Key }            from '@/components/animate-ui/icons/key';
+import { LogOut }         from '@/components/animate-ui/icons/log-out';
+import { PanelLeft }      from '@/components/animate-ui/icons/panel-left';
+import { Download }       from '@/components/animate-ui/icons/download';
+import { Copy }           from '@/components/animate-ui/icons/copy';
+import { Link as LinkIcon } from '@/components/animate-ui/icons/link';
+import { Send }           from '@/components/animate-ui/icons/send';
+import { Volume2 }        from '@/components/animate-ui/icons/volume-2';
+import { VolumeOff }      from '@/components/animate-ui/icons/volume-off';
+import { Trash2 }         from '@/components/animate-ui/icons/trash-2';
+
+// App ikonka nomi → animate-ui komponenti
+const ANIM_ICONS = {
+  dashboard: LayoutDashboard,
+  teachers: Users,
+  groups: UsersRound,
+  users: Users,
+  user: User,
+  homework: ClipboardList,
+  settings: Settings,
+  search: Search,
+  bell: Bell,
+  plus: Plus,
+  chevronLeft: ChevronLeft,
+  chevronRight: ChevronRight,
+  chevronDown: ChevronDown,
+  chevronUp: ChevronUp,
+  arrowUp: ArrowUp,
+  arrowDown: ArrowDown,
+  arrowRight: ArrowRight,
+  close: XIcon,
+  check: Check,
+  checkCircle: CircleCheck,
+  sun: Sun,
+  moon: Moon,
+  activity: Activity,
+  clock: Clock,
+  sparkles: Sparkles,
+  moreH: Ellipsis,
+  list: List,
+  star: Star,
+  key: Key,
+  logOut: LogOut,
+  panelLeft: PanelLeft,
+  download: Download,
+  copy: Copy,
+  link: LinkIcon,
+  send: Send,
+  volume: Volume2,
+  volumeOff: VolumeOff,
+  trash: Trash2,
+};
+
 /**
  * Telegram chatni ochish — username bo'yicha (https://t.me/<username>).
  * Telegram mini-app ichida tg.openTelegramLink, aks holda yangi tab.
@@ -57,15 +140,20 @@ export function useCountUp(target, duration = 1000) {
 
 export function Avatar({ name = '?', hue = 180, size = 'md', photoUrl = null }) {
   const cls = { xs:'av-xs', sm:'av-sm', md:'av-md', lg:'av-lg', xl:'av-xl', '2xl':'av-2xl' }[size] || 'av-md';
-  if (photoUrl) {
+  // Rasm yuklanmasa (null URL, 404 yoki Telegram URL eskirgan bo'lsa) — initiallarga qaytamiz
+  const [failed, setFailed] = useState(false);
+  // photoUrl o'zgarsa, xato holatini reset qilamiz
+  useEffect(() => { setFailed(false); }, [photoUrl]);
+
+  if (photoUrl && !failed) {
     return (
       <img src={photoUrl} alt={name}
         className={`avatar ${cls}`}
-        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+        onError={() => setFailed(true)}
         style={{ objectFit:'cover', background:'var(--bg-subtle)' }}/>
     );
   }
-  const initials = name.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
+  const initials = (name || '?').split(' ').map(p => p[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || '?';
   return (
     <div className={`avatar ${cls}`}
       style={{ background:`linear-gradient(145deg,oklch(0.68 0.18 ${hue}),oklch(0.44 0.22 ${hue + 20}))` }}>
@@ -134,7 +222,22 @@ const ICONS = {
   gem:         <><path d="M6 3h12l4 6-10 13L2 9l4-6z"/><path d="M11 3L8 9l4 13 4-13-3-6"/><path d="M2 9h20"/></>,
 };
 
-export function Icon({ name, size = 18, color, style }) {
+export function Icon({ name, size = 18, color, style, animate = true }) {
+  // Animate UI ikonkasi mavjud bo'lsa — hover'da animatsiyalanadi
+  const Anim = ANIM_ICONS[name];
+  if (Anim) {
+    return (
+      <span className="ic-wrap" style={style}>
+        <Anim
+          size={size}
+          strokeWidth={1.75}
+          animateOnHover={animate}
+          style={color ? { color } : undefined}
+        />
+      </span>
+    );
+  }
+  // Aks holda — statik SVG (animate-ui'da bu ikonka yo'q)
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
       stroke={color || 'currentColor'} strokeWidth="1.75"

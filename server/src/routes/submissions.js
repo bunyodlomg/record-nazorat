@@ -2,6 +2,9 @@ const express  = require('express');
 const { body, param, validationResult } = require('express-validator');
 const Submission = require('../models/Submission');
 const Teacher    = require('../models/Teacher');
+const Group      = require('../models/Group');
+const Student    = require('../models/Student');
+const Homework   = require('../models/Homework');
 const { protect, requireActive } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
 
@@ -13,6 +16,119 @@ const ok = (req,res,next) => {
   if (!e.isEmpty()) return res.status(422).json({ success:false, errors:e.array() });
   next();
 };
+
+// ── TZ yordamchilari — kun chegaralari Asia/Tashkent (UTC+5) bo'yicha ──
+const TZ_MIN = 5 * 60; // UTC+5
+// Berilgan instant qaysi Tashkent kuniga tegishli — 'YYYY-MM-DD'
+const dayKey = (date) => new Date(new Date(date).getTime() + TZ_MIN * 60000).toISOString().slice(0, 10);
+
+// GRID  GET /api/submissions/grid?range=week|month&groupId=
+// Har o'quvchi uchun kunma-kun: topshirgan (green) / topshirmagan (red) holati.
+router.get('/grid', asyncHandler(async (req, res) => {
+  const range = req.query.range === 'month' ? 30 : 7;
+
+  // ── Guruh doirasi (teacher faqat o'zini, admin hammasini yoki tanlangan guruhni) ──
+  let groupIds;
+  if (req.user.role === 'teacher') {
+    if (!req.user.teacherRef) return res.json({ success:true, data:{ range, days:[], students:[] } });
+    const groups = await Group.find({ teacher: req.user.teacherRef }).select('_id').lean();
+    groupIds = groups.map(g => g._id);
+  } else if (req.user.role === 'admin') {
+    const groups = await Group.find(req.query.groupId ? { _id: req.query.groupId } : {}).select('_id').lean();
+    groupIds = groups.map(g => g._id);
+  } else {
+    return res.status(403).json({ success:false, message:'Ruxsat yo\'q' });
+  }
+  if (req.query.groupId) groupIds = groupIds.filter(id => String(id) === String(req.query.groupId));
+
+  // ── Kun ro'yxati (Tashkent yarim tunlari) ──
+  const now = new Date();
+  const tashNow = new Date(now.getTime() + TZ_MIN * 60000);
+  // Bugungi Tashkent yarim tunining UTC instanti
+  const todayMidnightUTC = new Date(
+    Date.UTC(tashNow.getUTCFullYear(), tashNow.getUTCMonth(), tashNow.getUTCDate()) - TZ_MIN * 60000
+  );
+  const startUTC = new Date(todayMidnightUTC.getTime() - (range - 1) * 864e5);
+  const endUTC   = new Date(todayMidnightUTC.getTime() + 864e5); // bugun tugashi (exclusive)
+
+  const WD = ['Yak', 'Du', 'Se', 'Cho', 'Pay', 'Ju', 'Sha']; // Sun..Sat
+  const days = [];
+  for (let i = 0; i < range; i++) {
+    const instant = new Date(startUTC.getTime() + i * 864e5);
+    const shifted = new Date(instant.getTime() + TZ_MIN * 60000); // Tashkent ko'rinishi
+    days.push({
+      key:    dayKey(instant),
+      dom:    shifted.getUTCDate(),
+      month:  shifted.getUTCMonth() + 1,
+      dow:    WD[shifted.getUTCDay()],
+      weekend: shifted.getUTCDay() === 0 || shifted.getUTCDay() === 6,
+      isToday: i === range - 1,
+    });
+  }
+  const dayKeys = days.map(d => d.key);
+
+  if (groupIds.length === 0) return res.json({ success:true, data:{ range, days, students:[] } });
+
+  // ── Ma'lumotlar: o'quvchilar, vazifalar (oraliqda), submissionlar ──
+  const [students, homeworks] = await Promise.all([
+    Student.find({ group: { $in: groupIds }, status: 'active' })
+      .select('name hue photoUrl group').populate('group', 'name code').sort('name').lean(),
+    Homework.find({ group: { $in: groupIds }, dueDate: { $gte: startUTC, $lt: endUTC } })
+      .select('group dueDate').lean(),
+  ]);
+
+  // group+day → vazifalar soni
+  const hwByGroupDay = {}; // 'groupId|dayKey' → count
+  const hwIds = [];
+  for (const h of homeworks) {
+    hwIds.push(h._id);
+    const k = `${h.group}|${dayKey(h.dueDate)}`;
+    hwByGroupDay[k] = (hwByGroupDay[k] || 0) + 1;
+  }
+
+  const submissions = hwIds.length
+    ? await Submission.find({ homework: { $in: hwIds }, student: { $in: students.map(s => s._id) } })
+        .select('homework student status').lean()
+    : [];
+
+  // Vazifa → uning guruh|kun kaliti (submissionni to'g'ri kunga bog'lash uchun)
+  const hwMeta = Object.fromEntries(homeworks.map(h => [String(h._id), { group: String(h.group), key: dayKey(h.dueDate) }]));
+  // student|day → { total, done }   (done = submitted yoki reviewed)
+  const cellAgg = {};
+  for (const sub of submissions) {
+    const meta = hwMeta[String(sub.homework)];
+    if (!meta) continue;
+    const ck = `${sub.student}|${meta.key}`;
+    (cellAgg[ck] ||= { done: 0 });
+    if (sub.status === 'submitted' || sub.status === 'reviewed') cellAgg[ck].done += 1;
+  }
+
+  const todayKey = dayKeys[dayKeys.length - 1];
+
+  const studentRows = students.map(s => {
+    let done = 0, missed = 0, partial = 0;
+    const cells = days.map(d => {
+      const total = hwByGroupDay[`${s.group?._id || s.group}|${d.key}`] || 0;
+      if (total === 0) return { status: 'none' };
+      const ok = cellAgg[`${s._id}|${d.key}`]?.done || 0;
+      let status;
+      if (ok >= total)      { status = 'done';    done++; }
+      else if (ok > 0)      { status = 'partial'; partial++; }
+      else if (d.key > todayKey) status = 'upcoming';
+      else                  { status = 'missed';  missed++; }
+      return { status, done: ok, total };
+    });
+    const graded = done + partial + missed;
+    return {
+      _id: s._id, name: s.name, hue: s.hue, photoUrl: s.photoUrl || null,
+      group: s.group,
+      cells,
+      stats: { done, partial, missed, rate: graded ? Math.round((done / graded) * 100) : null },
+    };
+  });
+
+  res.json({ success:true, data:{ range, days, students: studentRows } });
+}));
 
 // LIST  GET /api/submissions?homework=&student=&status=
 router.get('/', asyncHandler(async (req, res) => {

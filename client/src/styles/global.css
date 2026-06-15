@@ -1300,3 +1300,141 @@ body.tg-app .login-bg,
 body.tg-app .status-screen {
   padding-top: max(56px, env(safe-area-inset-top), var(--tg-safe-top, 0px));
 }
+
+
+/* ══════════════════════════════════════════
+   ACTIVITY GRID — topshirgan/topshirmagan jadval
+   ══════════════════════════════════════════ */
+.ag-legend {
+  display:flex; flex-wrap:wrap; gap:14px;
+  margin-bottom:12px; padding:0 2px;
+  font-size:12px; color:var(--text-2); font-weight:500;
+}
+.ag-legend > span { display:inline-flex; align-items:center; gap:6px; }
+
+/* Gorizontal scroll konteyneri */
+.ag-scroll {
+  width:100%; overflow-x:auto; overflow-y:hidden;
+  -webkit-overflow-scrolling:touch;
+}
+.ag-table {
+  border-collapse:separate; border-spacing:0;
+  width:100%; min-width:max-content;
+  font-size:13px;
+}
+.ag-table th, .ag-table td {
+  padding:0; text-align:center; vertical-align:middle;
+}
+
+/* Kun sarlavhasi */
+.ag-table thead th {
+  position:sticky; top:0; z-index:2;
+  background:var(--bg-card-s, var(--bg-2));
+  padding:9px 0 8px; min-width:34px;
+  border-bottom:1px solid var(--border);
+}
+.ag-table.ag-compact thead th { min-width:24px; }
+.ag-day { font-weight:600; }
+.ag-dow {
+  display:block; font-size:9.5px; text-transform:uppercase;
+  letter-spacing:0.04em; color:var(--text-3); line-height:1.2;
+}
+.ag-dom {
+  display:block; font-size:12px; font-weight:700; color:var(--text-2);
+  font-variant-numeric:tabular-nums;
+}
+.ag-table.ag-compact .ag-dow { font-size:8px; }
+.ag-table.ag-compact .ag-dom { font-size:10px; }
+.ag-day.ag-weekend .ag-dom { color:var(--text-3); }
+.ag-day.ag-today {
+  background:var(--primary-bg, rgba(20,184,166,0.10));
+}
+.ag-day.ag-today .ag-dom { color:var(--primary-l, #2dd4bf); }
+.ag-table tbody td.ag-today { background:var(--primary-bg, rgba(20,184,166,0.06)); }
+
+/* O'quvchi ustuni — chapda yopishib turadi */
+.ag-name-col {
+  position:sticky; left:0; z-index:3;
+  background:var(--bg-card-s, var(--bg-2));
+  text-align:left !important;
+  min-width:170px; max-width:200px;
+  border-right:1px solid var(--border);
+  padding:0 12px !important;
+}
+thead .ag-name-col {
+  z-index:4; font-size:11px; text-transform:uppercase;
+  letter-spacing:0.05em; color:var(--text-3); font-weight:700;
+}
+.ag-table tbody tr:hover .ag-name-col { background:var(--bg-subtle); }
+.ag-student { display:flex; align-items:center; gap:9px; padding:9px 0; min-width:0; }
+.ag-student-name {
+  font-size:13px; font-weight:600; color:var(--text);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:120px;
+}
+.ag-student-sub {
+  font-size:11px; color:var(--text-3); margin-top:1px;
+  font-variant-numeric:tabular-nums;
+}
+
+/* % ustuni */
+.ag-rate-col {
+  min-width:40px; padding:0 10px !important;
+  font-variant-numeric:tabular-nums; font-size:13px;
+}
+.ag-table tbody tr { border-bottom:1px solid var(--border); }
+.ag-table tbody tr:hover td { background:var(--bg-subtle); }
+
+/* Katakcha + neon nuqta */
+.ag-cell { display:grid; place-items:center; height:40px; }
+.ag-table.ag-compact .ag-cell { height:30px; }
+.ag-dot {
+  display:inline-block; width:13px; height:13px; border-radius:50%;
+  position:relative;
+}
+.ag-table.ag-compact .ag-dot { width:10px; height:10px; }
+.ag-dash {
+  display:inline-block; width:7px; height:2px; border-radius:2px;
+  background:var(--border-md, #444); opacity:0.5;
+}
+
+/* Yashil — topshirgan (neon) */
+.ag-dot.ag-done {
+  background:radial-gradient(circle at 35% 30%, #6ee7b7, #10b981 60%, #059669);
+  box-shadow:0 0 4px rgba(16,185,129,0.7), 0 0 9px rgba(16,185,129,0.45);
+  animation:ag-pulse-green 2.4s ease-in-out infinite;
+}
+/* Qizil — topshirmagan (neon) */
+.ag-dot.ag-missed {
+  background:radial-gradient(circle at 35% 30%, #fda4af, #f43f5e 60%, #e11d48);
+  box-shadow:0 0 4px rgba(244,63,94,0.7), 0 0 9px rgba(244,63,94,0.45);
+  animation:ag-pulse-red 2.0s ease-in-out infinite;
+}
+/* Amber — qisman */
+.ag-dot.ag-partial {
+  background:radial-gradient(circle at 35% 30%, #fde68a, #f59e0b 60%, #d97706);
+  box-shadow:0 0 4px rgba(245,158,11,0.65), 0 0 8px rgba(245,158,11,0.4);
+}
+/* Kutilmoqda — muddati kelmagan */
+.ag-dot.ag-upcoming {
+  background:transparent;
+  border:1.5px dashed var(--border-md, #555);
+  box-shadow:none;
+}
+
+@keyframes ag-pulse-green {
+  0%,100% { box-shadow:0 0 4px rgba(16,185,129,0.6), 0 0 8px rgba(16,185,129,0.35); }
+  50%     { box-shadow:0 0 6px rgba(16,185,129,0.9), 0 0 14px rgba(16,185,129,0.6); }
+}
+@keyframes ag-pulse-red {
+  0%,100% { box-shadow:0 0 4px rgba(244,63,94,0.6), 0 0 8px rgba(244,63,94,0.35); }
+  50%     { box-shadow:0 0 6px rgba(244,63,94,0.95), 0 0 15px rgba(244,63,94,0.65); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ag-dot.ag-done, .ag-dot.ag-missed { animation:none; }
+}
+
+
+/* Animate UI ikonka o'rovi — inline joylashuv va to'g'ri tekislash */
+.ic-wrap { display:inline-flex; align-items:center; justify-content:center; line-height:0; }
+.ic-wrap > span { display:inline-flex; }

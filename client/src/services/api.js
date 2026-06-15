@@ -108,6 +108,7 @@ const api = {
   },
   submissions: {
     list:   (params = {})  => http.get('/submissions', { params }),
+    grid:   (params = {})  => http.get('/submissions/grid', { params }),
     update: (id, data)     => http.patch(`/submissions/${id}`, data),
     bulk:   (ids, status)  => http.patch('/submissions/bulk', { ids, status }),
   },

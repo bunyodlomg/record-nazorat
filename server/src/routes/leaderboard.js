@@ -2,6 +2,7 @@ const express = require('express');
 const Teacher = require('../models/Teacher');
 const Student = require('../models/Student');
 const Group   = require('../models/Group');
+const User    = require('../models/User');
 const { protect, requireActive } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
 
@@ -11,8 +12,20 @@ router.use(protect, requireActive);
 // GET /api/leaderboard/teachers
 router.get('/teachers', asyncHandler(async (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 100, 500);
-  const teachers = await Teacher.find({ status: 'active' }).sort('-score').limit(limit);
-  res.json({ success:true, data: teachers });
+  const teachers = await Teacher.find({ status: 'active' }).sort('-score').limit(limit).lean();
+
+  // Teacher modelida photoUrl yo'q — u User'da. Bog'langan User'lardan rasmni qo'shamiz.
+  const ids = teachers.map(t => t._id);
+  const users = await User.find({ teacherRef: { $in: ids } })
+    .select('teacherRef photoUrl telegramUsername').lean();
+  const byTeacher = Object.fromEntries(users.map(u => [String(u.teacherRef), u]));
+  const data = teachers.map(t => ({
+    ...t,
+    photoUrl:         byTeacher[String(t._id)]?.photoUrl         || null,
+    telegramUsername: byTeacher[String(t._id)]?.telegramUsername || null,
+  }));
+
+  res.json({ success:true, data });
 }));
 
 // GET /api/leaderboard/students?groupId=&sortBy=gems|score
