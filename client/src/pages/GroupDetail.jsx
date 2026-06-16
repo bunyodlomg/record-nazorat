@@ -245,7 +245,9 @@ function SubmissionMatrix({ groupId }) {
   if (error)   return <ErrorBox message={error} onRetry={refetch}/>;
 
   const students = data?.students || [];
-  const rows     = data?.rows     || [];
+  // Server sanalarni o'sish tartibida (eng eski → eng yangi) qaytaradi.
+  // Jadvalda sanalar ustun bo'lib, chapdan o'ngga eski→yangi tartibda chiqadi.
+  const cols     = data?.rows     || [];
   const summary  = data?.summary  || {};
 
   if (students.length === 0) {
@@ -256,7 +258,7 @@ function SubmissionMatrix({ groupId }) {
       </div>
     );
   }
-  if (rows.length === 0) {
+  if (cols.length === 0) {
     return (
       <div style={{ padding:'40px 20px', textAlign:'center', color:'var(--text-3)' }}>
         <div style={{ fontSize:36, marginBottom:8 }}>📊</div>
@@ -268,12 +270,14 @@ function SubmissionMatrix({ groupId }) {
 
   const cellBase = {
     width:40, minWidth:40, textAlign:'center', padding:'5px 0',
-    borderBottom:'1px solid var(--border)', borderLeft:'1px solid var(--border)',
+    borderBottom:'1px solid var(--border)', borderRight:'1px solid var(--border)',
   };
-  const dateCellStyle = {
+  // Qator boshi — o'quvchi ism-familyasi (chapda yopishib turadi)
+  const nameCellStyle = {
     position:'sticky', left:0, zIndex:1, background:'var(--bg-card)',
-    padding:'5px 10px', whiteSpace:'nowrap', borderBottom:'1px solid var(--border)',
-    borderRight:'1px solid var(--border)', fontVariantNumeric:'tabular-nums',
+    padding:'6px 12px', whiteSpace:'nowrap', minWidth:160, maxWidth:200,
+    borderBottom:'1px solid var(--border)', borderRight:'1px solid var(--border)',
+    textAlign:'left',
   };
 
   return (
@@ -283,69 +287,63 @@ function SubmissionMatrix({ groupId }) {
         <table style={{ borderCollapse:'collapse', width:'100%', fontSize:12 }}>
           <thead>
             <tr>
-              <th style={{ ...dateCellStyle, zIndex:3, textAlign:'left', fontSize:11, color:'var(--text-3)', fontWeight:700, top:0 }}>
-                Sana
+              <th style={{ ...nameCellStyle, zIndex:3, top:0, fontSize:11, color:'var(--text-3)', fontWeight:700 }}>
+                O'quvchi
               </th>
-              {students.map(s => (
-                <th key={s._id} title={s.name}
-                  style={{ ...cellBase, padding:'8px 0 6px', verticalAlign:'bottom' }}>
-                  <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
-                    <Avatar name={s.name} hue={s.hue ?? 200} size="xs" photoUrl={s.photoUrl}/>
-                    <span style={{
-                      maxWidth:38, fontSize:9.5, color:'var(--text-2)', fontWeight:600,
-                      whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis',
-                    }}>{(s.name || '').split(' ')[0]}</span>
+              {cols.map(c => (
+                <th key={c.key} title={`${c.dom} ${MONTHS_SHORT[(c.month ?? 1) - 1]} · ${c.dow}`}
+                  style={{ ...cellBase, padding:'7px 0 6px', verticalAlign:'bottom' }}>
+                  <div style={{ fontSize:11.5, fontWeight:700, color:'var(--text-1)' }}>
+                    {c.dom} {MONTHS_SHORT[(c.month ?? 1) - 1]}
                   </div>
+                  <div style={{ fontSize:9.5, color:'var(--text-3)' }}>{c.dow}</div>
                 </th>
               ))}
+              <th style={{ ...cellBase, padding:'7px 6px', minWidth:54, fontSize:10.5, color:'var(--text-3)', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.04em' }}>
+                Foiz
+              </th>
             </tr>
           </thead>
           <tbody>
-            {rows.map(r => (
-              <tr key={r.key}>
-                <td style={dateCellStyle}>
-                  <div style={{ fontSize:12.5, fontWeight:700, color:'var(--text-1)' }}>
-                    {r.dom} {MONTHS_SHORT[(r.month ?? 1) - 1]}
-                  </div>
-                  <div style={{ fontSize:10, color:'var(--text-3)' }}>{r.dow}</div>
-                </td>
-                {students.map(s => {
-                  const cell = r.cells?.[s._id];
-                  const tone = CELL_TONE[cell?.status || 'none'] || CELL_TONE.none;
-                  const tip  = cell?.total ? `${cell.done || 0}/${cell.total}` : '';
-                  return (
-                    <td key={s._id} title={tip} style={cellBase}>
+            {students.map(s => {
+              const sm = summary[s._id] || {};
+              const rate = sm.rate;
+              const rateColor = rate == null ? 'var(--text-3)' : rate >= 70 ? 'var(--emerald-l)' : rate >= 40 ? 'var(--amber)' : 'var(--rose)';
+              return (
+                <tr key={s._id}>
+                  <td style={nameCellStyle}>
+                    <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                      <Avatar name={s.name} hue={s.hue ?? 200} size="xs" photoUrl={s.photoUrl}/>
                       <span style={{
-                        display:'inline-grid', placeItems:'center',
-                        width:24, height:24, borderRadius:6,
-                        background:tone.bg, color:tone.fg, fontSize:13, fontWeight:800,
-                      }}>{tone.ch}</span>
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr>
-              <td style={{ ...dateCellStyle, fontSize:10.5, color:'var(--text-3)', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.04em' }}>
-                Foiz
-              </td>
-              {students.map(s => {
-                const sm = summary[s._id] || {};
-                const rate = sm.rate;
-                const color = rate == null ? 'var(--text-3)' : rate >= 70 ? 'var(--emerald-l)' : rate >= 40 ? 'var(--amber)' : 'var(--rose)';
-                return (
-                  <td key={s._id} title={`${sm.done||0} topshirgan · ${sm.missed||0} topshirmagan`}
-                    style={{ ...cellBase, padding:'7px 0' }}>
-                    <span style={{ fontSize:11.5, fontWeight:800, color }}>
+                        fontSize:12.5, fontWeight:600, color:'var(--text-1)',
+                        whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis',
+                      }}>{s.name}</span>
+                    </div>
+                  </td>
+                  {cols.map(c => {
+                    const cell = c.cells?.[s._id];
+                    const tone = CELL_TONE[cell?.status || 'none'] || CELL_TONE.none;
+                    const tip  = cell?.total ? `${cell.done || 0}/${cell.total}` : '';
+                    return (
+                      <td key={c.key} title={tip} style={cellBase}>
+                        <span style={{
+                          display:'inline-grid', placeItems:'center',
+                          width:24, height:24, borderRadius:6,
+                          background:tone.bg, color:tone.fg, fontSize:13, fontWeight:800,
+                        }}>{tone.ch}</span>
+                      </td>
+                    );
+                  })}
+                  <td title={`${sm.done||0} topshirgan · ${sm.missed||0} topshirmagan`}
+                    style={{ ...cellBase, padding:'7px 6px' }}>
+                    <span style={{ fontSize:11.5, fontWeight:800, color:rateColor }}>
                       {rate == null ? '–' : `${rate}%`}
                     </span>
                   </td>
-                );
-              })}
-            </tr>
-          </tfoot>
+                </tr>
+              );
+            })}
+          </tbody>
         </table>
       </div>
     </div>
