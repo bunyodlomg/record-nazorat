@@ -7,6 +7,7 @@ const Submission = require('../models/Submission');
 const { protect, requireRole, requireActive } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { ensureLessonHomeworkForGroup } = require('../utils/ensureLessonHomework');
+const { getTeacherPhotoMap } = require('../utils/teacherPhotos');
 
 const router = express.Router();
 const ok = (req,res,next) => {
@@ -61,12 +62,17 @@ router.get('/', asyncHandler(async (req,res) => {
   ]);
   const countMap = Object.fromEntries(counts.map(c => [String(c._id), c]));
   const topMap   = Object.fromEntries(topStudents.map(t => [String(t._id), t]));
+  // Teacher rasmlari User'da — guruh egasi rasmini qo'shamiz
+  const photoMap = await getTeacherPhotoMap(data.map(g => g.teacher?._id || g.teacher));
   const enriched = data.map(g => {
     const id = String(g._id);
     const top = topMap[id];
+    const tObj = g.teacher
+      ? { ...(g.teacher.toObject ? g.teacher.toObject() : g.teacher), photoUrl: photoMap[String(g.teacher._id || g.teacher)] || null }
+      : g.teacher;
     return {
       ...g.toObject({ virtuals:false }),
-      teacher: g.teacher,
+      teacher: tObj,
       studentCount: countMap[id]?.n || 0,
       totalGems:    countMap[id]?.totalGems || 0,
       topStudent:   top ? { _id: top.topId, name: top.topName, gems: top.topGems, hue: top.topHue } : null,
@@ -113,10 +119,18 @@ router.get('/:id', param('id').isMongoId(), ok, asyncHandler(async (req,res) => 
   // Invite link — guruhga avval generatsiya qilingan token bo'lsa
   const inviteLink = g.inviteToken ? buildStudentInviteLink(g.inviteToken) : null;
 
+  // Teacher rasmi (User'da) — guruh egasiga qo'shamiz
+  const gObj = g.toObject();
+  if (gObj.teacher) {
+    const tid = String(gObj.teacher._id || gObj.teacher);
+    const photoMap = await getTeacherPhotoMap([tid]);
+    gObj.teacher = { ...gObj.teacher, photoUrl: photoMap[tid] || null };
+  }
+
   res.json({
     success: true,
     data: {
-      ...g.toObject(),
+      ...gObj,
       studentList:         enrichedStudents,
       studentCount:        enrichedStudents.length,
       pendingStudents,
@@ -193,6 +207,113 @@ const canEditGroup = (req, group) => {
   if (req.user.role === 'admin') return true;
   return req.user.role === 'teacher' && req.user.teacherRef && String(group.teacher) === String(req.user.teacherRef);
 };
+
+// ── TZ yordamchisi — kun chegaralari Asia/Tashkent (UTC+5) bo'yicha ──
+const TZ_MIN = 5 * 60; // UTC+5
+const dayKeyTash = (date) => new Date(new Date(date).getTime() + TZ_MIN * 60000).toISOString().slice(0, 10);
+
+// GET /api/groups/:id/submission-matrix
+// Guruh ochilgan kundan (startDate) bugungacha — har dars kuni uchun
+// har bir o'quvchining topshirgan/topshirmagan holati.
+// Qatorlar (tbody) = sanalar, ustunlar = o'quvchilar. Admin + guruh teacher'i ko'ra oladi.
+router.get('/:id/submission-matrix', param('id').isMongoId(), ok, asyncHandler(async (req, res) => {
+  const g = await Group.findById(req.params.id).select('teacher startDate createdAt name').lean();
+  if (!g) return res.status(404).json({ success:false, message:'Guruh topilmadi' });
+
+  // Ruxsat: admin har doim, teacher — faqat o'zining guruhi
+  const teacherIdStr = String(g.teacher);
+  if (req.user.role === 'teacher' && (!req.user.teacherRef || teacherIdStr !== String(req.user.teacherRef))) {
+    return res.status(403).json({ success:false, message:"Ruxsat yo'q" });
+  }
+
+  const now   = new Date();
+  const start = new Date(g.startDate || g.createdAt || now);
+
+  const [students, homeworks] = await Promise.all([
+    Student.find({ group: g._id, status: 'active' })
+      .select('name hue photoUrl joinedAt createdAt').sort('name').lean(),
+    Homework.find({ group: g._id, dueDate: { $gte: start, $lte: now } })
+      .select('dueDate kind title').sort('dueDate').lean(),
+  ]);
+
+  // Vazifalarni kun bo'yicha guruhlash (faqat vazifa bo'lgan kunlar qatorga tushadi)
+  const dayMap = {}; // dayKey → { key, dueDate, total }
+  for (const h of homeworks) {
+    const k = dayKeyTash(h.dueDate);
+    (dayMap[k] ||= { key: k, dueDate: h.dueDate, total: 0 });
+    dayMap[k].total += 1;
+  }
+  const dayKeys = Object.keys(dayMap).sort(); // o'sish tartibida
+  const allHwIds = homeworks.map(h => h._id);
+
+  const submissions = allHwIds.length
+    ? await Submission.find({ homework: { $in: allHwIds }, student: { $in: students.map(s => s._id) } })
+        .select('homework student status').lean()
+    : [];
+
+  const hwDay = Object.fromEntries(homeworks.map(h => [String(h._id), dayKeyTash(h.dueDate)]));
+  // student|dayKey → topshirilgan (submitted yoki reviewed) soni
+  const doneAgg = {};
+  for (const sub of submissions) {
+    const dk = hwDay[String(sub.homework)];
+    if (!dk) continue;
+    if (sub.status === 'submitted' || sub.status === 'reviewed') {
+      const ck = `${sub.student}|${dk}`;
+      doneAgg[ck] = (doneAgg[ck] || 0) + 1;
+    }
+  }
+
+  const WD = ['Yak', 'Du', 'Se', 'Cho', 'Pay', 'Ju', 'Sha']; // Sun..Sat
+  const todayKey = dayKeyTash(now);
+
+  const rows = dayKeys.map(k => {
+    const meta = dayMap[k];
+    const shifted = new Date(new Date(meta.dueDate).getTime() + TZ_MIN * 60000);
+    const cells = {};
+    for (const s of students) {
+      const joinedKey = dayKeyTash(s.joinedAt || s.createdAt || start);
+      // O'quvchi shu kundan keyin qo'shilgan bo'lsa — hisobga olinmaydi
+      if (joinedKey > k) { cells[String(s._id)] = { status: 'none' }; continue; }
+      const done = doneAgg[`${s._id}|${k}`] || 0;
+      let status;
+      if (done >= meta.total)      status = 'done';
+      else if (done > 0)           status = 'partial';
+      else if (k > todayKey)       status = 'upcoming';
+      else                         status = 'missed';
+      cells[String(s._id)] = { status, done, total: meta.total };
+    }
+    return {
+      key:   k,
+      dom:   shifted.getUTCDate(),
+      month: shifted.getUTCMonth() + 1,
+      dow:   WD[shifted.getUTCDay()],
+      total: meta.total,
+      cells,
+    };
+  });
+
+  // O'quvchi bo'yicha umumiy ko'rsatkich (done / baholangan kunlar)
+  const summary = {};
+  for (const s of students) {
+    let done = 0, partial = 0, missed = 0;
+    for (const r of rows) {
+      const c = r.cells[String(s._id)];
+      if (!c || c.status === 'none' || c.status === 'upcoming') continue;
+      if (c.status === 'done') done++;
+      else if (c.status === 'partial') partial++;
+      else if (c.status === 'missed') missed++;
+    }
+    const graded = done + partial + missed;
+    summary[String(s._id)] = { done, partial, missed, rate: graded ? Math.round((done / graded) * 100) : null };
+  }
+
+  res.json({ success:true, data: {
+    startDate: start,
+    students: students.map(s => ({ _id: s._id, name: s.name, hue: s.hue, photoUrl: s.photoUrl || null })),
+    rows,
+    summary,
+  }});
+}));
 
 // GET /api/groups/:id/invite-link — joriy token (yo'q bo'lsa yaratiladi)
 router.get('/:id/invite-link', param('id').isMongoId(), ok, asyncHandler(async (req,res) => {

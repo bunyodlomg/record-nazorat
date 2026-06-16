@@ -58,9 +58,7 @@ function StudentRow({ s, onOpen }) {
         background:'var(--bg-subtle)', border:'1px solid var(--border)',
         cursor: onOpen ? 'pointer' : 'default', textAlign:'left', width:'100%',
       }}>
-      {s.photoUrl
-        ? <img src={s.photoUrl} alt="" style={{ width:34, height:34, borderRadius:'50%', objectFit:'cover', flexShrink:0 }}/>
-        : <Avatar name={s.name} hue={s.hue ?? 200} size="sm"/>}
+      <Avatar name={s.name} hue={s.hue ?? 200} size="sm" photoUrl={s.photoUrl}/>
       <div style={{ flex:1, minWidth:0 }}>
         <div style={{ fontSize:13.5, fontWeight:600, lineHeight:1.2, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
           {s.name}
@@ -130,9 +128,7 @@ function PendingStudentCard({ s, onApprove, onReject, busy }) {
       padding:'11px 12px', display:'flex', alignItems:'center', gap:10,
       background:'var(--amber-bg)', border:'1px solid rgba(251,191,36,0.30)',
     }}>
-      {s.photoUrl
-        ? <img src={s.photoUrl} alt="" style={{ width:32, height:32, borderRadius:'50%', objectFit:'cover', flexShrink:0 }}/>
-        : <Avatar name={s.name} hue={s.hue ?? 200} size="sm"/>}
+      <Avatar name={s.name} hue={s.hue ?? 200} size="sm" photoUrl={s.photoUrl}/>
       <div style={{ flex:1, minWidth:0 }}>
         <div style={{ fontSize:13, fontWeight:700, lineHeight:1.2, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
           {s.name}
@@ -202,6 +198,157 @@ function CloseGroupModal({ open, group, onClose, onDone }) {
         )}
       </div>
     </Modal>
+  );
+}
+
+/* ── Topshirish statistikasi matritsasi — qatorlar=sanalar, ustunlar=o'quvchilar ── */
+const MONTHS_SHORT = ['Yan','Fev','Mar','Apr','May','Iyn','Iyl','Avg','Sen','Okt','Noy','Dek'];
+
+const CELL_TONE = {
+  done:     { bg:'var(--primary-bg)', fg:'var(--emerald-l)', ch:'✓' },
+  partial:  { bg:'var(--amber-bg)',   fg:'var(--amber)',     ch:'◑' },
+  missed:   { bg:'var(--rose-bg)',    fg:'var(--rose)',      ch:'✕' },
+  upcoming: { bg:'transparent',       fg:'var(--text-3)',    ch:'·' },
+  none:     { bg:'transparent',       fg:'var(--text-3)',    ch:'–' },
+};
+
+function MatrixLegend() {
+  const items = [
+    { tone:'done',    label:'Topshirgan' },
+    { tone:'partial', label:'Qisman' },
+    { tone:'missed',  label:'Topshirmagan' },
+    { tone:'none',    label:"Yo'q / qo'shilmagan" },
+  ];
+  return (
+    <div style={{ display:'flex', flexWrap:'wrap', gap:10, marginBottom:10 }}>
+      {items.map(it => {
+        const c = CELL_TONE[it.tone];
+        return (
+          <div key={it.tone} style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, color:'var(--text-2)' }}>
+            <span style={{
+              width:18, height:18, borderRadius:5, background:c.bg, color:c.fg,
+              border:'1px solid var(--border)', display:'grid', placeItems:'center',
+              fontSize:11, fontWeight:800,
+            }}>{c.ch}</span>
+            {it.label}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function SubmissionMatrix({ groupId }) {
+  const { data, loading, error, refetch } = useFetch(() => api.groups.submissionMatrix(groupId), [groupId]);
+
+  if (loading) return <div style={{ padding:'30px 0' }}><Spinner/></div>;
+  if (error)   return <ErrorBox message={error} onRetry={refetch}/>;
+
+  const students = data?.students || [];
+  const rows     = data?.rows     || [];
+  const summary  = data?.summary  || {};
+
+  if (students.length === 0) {
+    return (
+      <div style={{ padding:'40px 20px', textAlign:'center', color:'var(--text-3)' }}>
+        <div style={{ fontSize:36, marginBottom:8 }}>👥</div>
+        <div style={{ fontSize:14, fontWeight:600, color:'var(--text-2)' }}>Hozircha o'quvchi yo'q</div>
+      </div>
+    );
+  }
+  if (rows.length === 0) {
+    return (
+      <div style={{ padding:'40px 20px', textAlign:'center', color:'var(--text-3)' }}>
+        <div style={{ fontSize:36, marginBottom:8 }}>📊</div>
+        <div style={{ fontSize:14, fontWeight:600, color:'var(--text-2)' }}>Hali vazifa berilmagan</div>
+        <div style={{ fontSize:12.5, marginTop:5 }}>Dars kunlari vazifa yaratilgach, statistika shu yerda chiqadi.</div>
+      </div>
+    );
+  }
+
+  const cellBase = {
+    width:40, minWidth:40, textAlign:'center', padding:'5px 0',
+    borderBottom:'1px solid var(--border)', borderLeft:'1px solid var(--border)',
+  };
+  const dateCellStyle = {
+    position:'sticky', left:0, zIndex:1, background:'var(--bg-card)',
+    padding:'5px 10px', whiteSpace:'nowrap', borderBottom:'1px solid var(--border)',
+    borderRight:'1px solid var(--border)', fontVariantNumeric:'tabular-nums',
+  };
+
+  return (
+    <div>
+      <MatrixLegend/>
+      <div className="card" style={{ padding:0, overflowX:'auto' }}>
+        <table style={{ borderCollapse:'collapse', width:'100%', fontSize:12 }}>
+          <thead>
+            <tr>
+              <th style={{ ...dateCellStyle, zIndex:3, textAlign:'left', fontSize:11, color:'var(--text-3)', fontWeight:700, top:0 }}>
+                Sana
+              </th>
+              {students.map(s => (
+                <th key={s._id} title={s.name}
+                  style={{ ...cellBase, padding:'8px 0 6px', verticalAlign:'bottom' }}>
+                  <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
+                    <Avatar name={s.name} hue={s.hue ?? 200} size="xs" photoUrl={s.photoUrl}/>
+                    <span style={{
+                      maxWidth:38, fontSize:9.5, color:'var(--text-2)', fontWeight:600,
+                      whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis',
+                    }}>{(s.name || '').split(' ')[0]}</span>
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(r => (
+              <tr key={r.key}>
+                <td style={dateCellStyle}>
+                  <div style={{ fontSize:12.5, fontWeight:700, color:'var(--text-1)' }}>
+                    {r.dom} {MONTHS_SHORT[(r.month ?? 1) - 1]}
+                  </div>
+                  <div style={{ fontSize:10, color:'var(--text-3)' }}>{r.dow}</div>
+                </td>
+                {students.map(s => {
+                  const cell = r.cells?.[s._id];
+                  const tone = CELL_TONE[cell?.status || 'none'] || CELL_TONE.none;
+                  const tip  = cell?.total ? `${cell.done || 0}/${cell.total}` : '';
+                  return (
+                    <td key={s._id} title={tip} style={cellBase}>
+                      <span style={{
+                        display:'inline-grid', placeItems:'center',
+                        width:24, height:24, borderRadius:6,
+                        background:tone.bg, color:tone.fg, fontSize:13, fontWeight:800,
+                      }}>{tone.ch}</span>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td style={{ ...dateCellStyle, fontSize:10.5, color:'var(--text-3)', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.04em' }}>
+                Foiz
+              </td>
+              {students.map(s => {
+                const sm = summary[s._id] || {};
+                const rate = sm.rate;
+                const color = rate == null ? 'var(--text-3)' : rate >= 70 ? 'var(--emerald-l)' : rate >= 40 ? 'var(--amber)' : 'var(--rose)';
+                return (
+                  <td key={s._id} title={`${sm.done||0} topshirgan · ${sm.missed||0} topshirmagan`}
+                    style={{ ...cellBase, padding:'7px 0' }}>
+                    <span style={{ fontSize:11.5, fontWeight:800, color }}>
+                      {rate == null ? '–' : `${rate}%`}
+                    </span>
+                  </td>
+                );
+              })}
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
   );
 }
 
@@ -413,6 +560,9 @@ export default function GroupDetailPage({ groupId, onBack, onOpenStudent, onOpen
           <Icon name="homework" size={12} style={{ marginRight:4, verticalAlign:-1 }}/> Vazifalar
           <span style={{ marginLeft:5, fontSize:10.5, color:'var(--text-3)' }}>{homework.length}</span>
         </button>
+        <button className={`tab ${tab==='stats'?'active':''}`} onClick={() => setTab('stats')}>
+          <Icon name="activity" size={12} style={{ marginRight:4, verticalAlign:-1 }}/> Statistika
+        </button>
         {pending.length > 0 && (
           <button className={`tab ${tab==='pending'?'active':''}`} onClick={() => setTab('pending')}
             style={{ color:'var(--amber)', fontWeight:700 }}>
@@ -448,6 +598,8 @@ export default function GroupDetailPage({ groupId, onBack, onOpenStudent, onOpen
             {homework.map(hw => <HomeworkItem key={hw._id} hw={hw} onOpen={onOpenHomework}/>)}
           </div>
         )
+      ) : tab === 'stats' ? (
+        <SubmissionMatrix groupId={groupId}/>
       ) : (
         pending.length === 0 ? (
           <div style={{ padding:'40px 20px', textAlign:'center', color:'var(--text-3)' }}>

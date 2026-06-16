@@ -84,6 +84,7 @@ const api = {
     delete: id        => http.delete(`/groups/${id}`),
     inviteLink:       id => http.get(`/groups/${id}/invite-link`),
     rotateInviteLink: id => http.post(`/groups/${id}/invite-link/rotate`),
+    submissionMatrix: id => http.get(`/groups/${id}/submission-matrix`),
   },
   notifications: {
     list: (params = {}) => http.get('/notifications', { params }),
