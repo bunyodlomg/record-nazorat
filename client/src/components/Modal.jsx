@@ -495,9 +495,7 @@ export function UserPicker({ value, options = [], placeholder = 'Tanlang...', on
         }}>
         {selected ? (
           <>
-            {selected.photoUrl
-              ? <img src={selected.photoUrl} alt="" style={{ width:24, height:24, borderRadius:'50%', objectFit:'cover' }}/>
-              : <Avatar name={selected.name} hue={selected.hue ?? 200} size="xs"/>}
+            <Avatar name={selected.name} hue={selected.hue ?? 200} size="xs" photoUrl={selected.photoUrl}/>
             <div style={{ flex:1, minWidth:0, overflow:'hidden' }}>
               <div style={{ fontSize:13.5, color:'var(--text)', fontWeight:500, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{selected.name}</div>
               {selected.subtitle && (
@@ -562,9 +560,7 @@ export function UserPicker({ value, options = [], placeholder = 'Tanlang...', on
                     }}
                     onMouseEnter={e => { if (!isActive) e.currentTarget.style.background='var(--bg-hover)'; }}
                     onMouseLeave={e => { if (!isActive) e.currentTarget.style.background='transparent'; }}>
-                    {o.photoUrl
-                      ? <img src={o.photoUrl} alt="" style={{ width:28, height:28, borderRadius:'50%', objectFit:'cover' }}/>
-                      : <Avatar name={o.name} hue={o.hue ?? 200} size="sm"/>}
+                    <Avatar name={o.name} hue={o.hue ?? 200} size="sm" photoUrl={o.photoUrl}/>
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontSize:13, fontWeight:500, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{o.name}</div>
                       {o.subtitle && <div style={{ fontSize:11, color:'var(--text-3)' }}>{o.subtitle}</div>}

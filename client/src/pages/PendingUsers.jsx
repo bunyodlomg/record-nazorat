@@ -101,12 +101,7 @@ function PendingTable({ users, onApprove, onReject }) {
                 <tr key={u._id}>
                   <td>
                     <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                      {u.photoUrl ? (
-                        <img src={u.photoUrl} alt={u.name}
-                          style={{ width:34, height:34, borderRadius:'50%', objectFit:'cover', flexShrink:0 }}/>
-                      ) : (
-                        <Avatar name={u.name} hue={u.role === 'student' ? 200 : u.role === 'teacher' ? 165 : 270} size="sm"/>
-                      )}
+                      <Avatar name={u.name} hue={u.role === 'student' ? 200 : u.role === 'teacher' ? 165 : 270} size="sm" photoUrl={u.photoUrl}/>
                       <div style={{ fontWeight:600 }}>{u.name}</div>
                     </div>
                   </td>

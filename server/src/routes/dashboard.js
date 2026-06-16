@@ -4,6 +4,7 @@ const Group      = require('../models/Group');
 const Student    = require('../models/Student');
 const Homework   = require('../models/Homework');
 const Submission = require('../models/Submission');
+const { getTeacherPhotoMap } = require('../utils/teacherPhotos');
 const { protect, requireActive } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
 
@@ -24,7 +25,7 @@ router.get('/', asyncHandler(async (req, res) => {
     Group.countDocuments({ isActive: true }),
     Student.countDocuments({ status: 'active' }),
     Homework.aggregate([{ $group:{ _id:'$col', count:{ $sum:1 } } }]),
-    Teacher.find({ status:'active' }).sort('-score').limit(3).select('name subject score hue photoUrl'),
+    Teacher.find({ status:'active' }).sort('-score').limit(3).select('name subject score hue').lean(),
     // "Tekshirilmagan" = teacher hali tasdiqlamagan (pending/submitted/returned)
     Submission.aggregate([
       { $match: { status: { $ne: 'reviewed' } } },
@@ -74,12 +75,22 @@ router.get('/', asyncHandler(async (req, res) => {
     }
   }
 
+  // Teacher rasmlari User'da — topTeachers va problemTeachers uchun birlashtiramiz
+  const teacherPhotoMap = await getTeacherPhotoMap([
+    ...topTeachers.map(t => t._id),
+    ...problemTeacherIds,
+  ]);
+  const topTeachersWithPhoto = topTeachers.map(t => ({
+    ...t, photoUrl: teacherPhotoMap[String(t._id)] || null,
+  }));
+
   const problemTeachers = problemTeachersRaw
     .map(t => {
       const map = pendingStudentsByTeacher[String(t._id)] || new Map();
       const pendingStudents = Array.from(map.values()).sort((a, b) => b.count - a.count);
       return {
         ...t,
+        photoUrl:        teacherPhotoMap[String(t._id)] || null,
         pendingReview:   countMap[String(t._id)] || 0,
         pendingStudents,
       };
@@ -165,7 +176,7 @@ router.get('/', asyncHandler(async (req, res) => {
       hwChecking:       hwM.checking ?? 0,
       hwDone:           hwM.done     ?? 0,
     },
-    topTeachers,
+    topTeachers: topTeachersWithPhoto,
     problemTeachers,
     totalPendingStudents,
     activityData,

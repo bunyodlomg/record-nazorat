@@ -137,9 +137,7 @@ export function StudentRow({ sub, onUpdate, canEdit, busy }) {
           padding:'11px 12px',
           userSelect:'none',
         }}>
-        {s.photoUrl
-          ? <img src={s.photoUrl} alt="" style={{ width:34, height:34, borderRadius:'50%', objectFit:'cover', flexShrink:0 }}/>
-          : <Avatar name={s.name || '?'} hue={s.hue ?? 200} size="sm"/>}
+        <Avatar name={s.name || '?'} hue={s.hue ?? 200} size="sm" photoUrl={s.photoUrl}/>
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{
             fontSize:13.5, fontWeight:600,

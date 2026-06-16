@@ -125,12 +125,7 @@ function UseChip({ user }) {
       display:'flex', alignItems:'center', gap:8, padding:'8px 10px',
       background:'var(--bg-subtle)', borderRadius:8,
     }}>
-      {user?.photoUrl ? (
-        <img src={user.photoUrl} alt={user.name}
-          style={{ width:26, height:26, borderRadius:'50%', objectFit:'cover', flexShrink:0 }}/>
-      ) : (
-        <Avatar name={user?.name || '?'} hue={user?.hue ?? 210} size="sm"/>
-      )}
+      <Avatar name={user?.name || '?'} hue={user?.hue ?? 210} size="sm" photoUrl={user?.photoUrl}/>
       <div style={{ flex:1, minWidth:0 }}>
         <div style={{ fontSize:12.5, fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
           {user?.name || 'Nomalum'}

@@ -2,7 +2,7 @@ const express = require('express');
 const Teacher = require('../models/Teacher');
 const Student = require('../models/Student');
 const Group   = require('../models/Group');
-const User    = require('../models/User');
+const { getTeacherPhotoMap } = require('../utils/teacherPhotos');
 const { protect, requireActive } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
 
@@ -15,15 +15,8 @@ router.get('/teachers', asyncHandler(async (req, res) => {
   const teachers = await Teacher.find({ status: 'active' }).sort('-score').limit(limit).lean();
 
   // Teacher modelida photoUrl yo'q — u User'da. Bog'langan User'lardan rasmni qo'shamiz.
-  const ids = teachers.map(t => t._id);
-  const users = await User.find({ teacherRef: { $in: ids } })
-    .select('teacherRef photoUrl telegramUsername').lean();
-  const byTeacher = Object.fromEntries(users.map(u => [String(u.teacherRef), u]));
-  const data = teachers.map(t => ({
-    ...t,
-    photoUrl:         byTeacher[String(t._id)]?.photoUrl         || null,
-    telegramUsername: byTeacher[String(t._id)]?.telegramUsername || null,
-  }));
+  const photoMap = await getTeacherPhotoMap(teachers.map(t => t._id));
+  const data = teachers.map(t => ({ ...t, photoUrl: photoMap[String(t._id)] || null }));
 
   res.json({ success:true, data });
 }));

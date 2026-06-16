@@ -614,9 +614,7 @@ function AdminsListView() {
               padding:'10px 12px',
               borderBottom:'1px solid var(--border)',
             }}>
-            {u.photoUrl
-              ? <img src={u.photoUrl} alt="" style={{ width:42, height:42, borderRadius:'50%', objectFit:'cover', flexShrink:0 }}/>
-              : <Avatar name={u.name} hue={270} size="lg"/>}
+            <Avatar name={u.name} hue={270} size="lg" photoUrl={u.photoUrl}/>
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:14, fontWeight:600, letterSpacing:'-0.01em' }}>
                 <span style={{ whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{u.name}</span>

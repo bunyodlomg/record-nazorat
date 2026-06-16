@@ -477,9 +477,7 @@ export function TeacherDetailPage({ teacherId, onBack, onOpenGroup }) {
                                       background:'var(--bg-card-s)',
                                       border:'1px solid var(--border)',
                                     }}>
-                                    {s.photoUrl
-                                      ? <img src={s.photoUrl} alt="" style={{ width:30, height:30, borderRadius:'50%', objectFit:'cover', flexShrink:0 }}/>
-                                      : <Avatar name={s.name} hue={s.hue ?? 200} size="sm"/>}
+                                    <Avatar name={s.name} hue={s.hue ?? 200} size="sm" photoUrl={s.photoUrl}/>
                                     <div style={{ flex:1, minWidth:0 }}>
                                       <div style={{ fontSize:12.5, fontWeight:600, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{s.name}</div>
                                       {s.latestHwTitle && (

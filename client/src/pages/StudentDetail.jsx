@@ -202,12 +202,7 @@ export default function StudentDetailPage({ studentId, onBack }) {
         style={{ padding:20, marginBottom:14, position:'relative', overflow:'hidden' }}>
         <div style={{ position:'absolute', inset:0, background:`radial-gradient(ellipse at top right, oklch(0.74 0.16 ${s.hue} / 0.20), transparent 55%)`, pointerEvents:'none' }}/>
         <div style={{ display:'flex', alignItems:'center', gap:14, position:'relative', flexWrap:'wrap' }}>
-          {s.photoUrl ? (
-            <img src={s.photoUrl} alt={s.name}
-              style={{ width:64, height:64, borderRadius:'50%', objectFit:'cover', flexShrink:0 }}/>
-          ) : (
-            <Avatar name={s.name} hue={s.hue} size="xl"/>
-          )}
+          <Avatar name={s.name} hue={s.hue} size="xl" photoUrl={s.photoUrl}/>
           <div style={{ flex:1, minWidth:200 }}>
             <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:5, flexWrap:'wrap' }}>
               <h2 style={{ fontFamily:'var(--display)', fontSize:22, fontWeight:700, letterSpacing:'-0.04em' }}>{s.name}</h2>

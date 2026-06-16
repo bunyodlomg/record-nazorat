@@ -95,12 +95,7 @@ export default function StudentsPage({ embedded = false, onOpenStudent, groupId 
                   padding:14, display:'flex', alignItems:'center', gap:12,
                   textAlign:'left', cursor: onOpenStudent ? 'pointer' : 'default',
                 }}>
-                {s.photoUrl ? (
-                  <img src={s.photoUrl} alt={s.name}
-                    style={{ width:42, height:42, borderRadius:'50%', objectFit:'cover', flexShrink:0 }}/>
-                ) : (
-                  <Avatar name={s.name} hue={s.hue || 200} size="md"/>
-                )}
+                <Avatar name={s.name} hue={s.hue || 200} size="md" photoUrl={s.photoUrl}/>
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:14, fontWeight:600 }}>
                     {s.name}
