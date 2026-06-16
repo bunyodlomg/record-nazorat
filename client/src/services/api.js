@@ -51,6 +51,7 @@ const api = {
     list:    (params = {})  => http.get('/students', { params }),
     pending: ()             => http.get('/students/pending/list'),
     get:     id             => http.get(`/students/${id}`),
+    stats:   id             => http.get(`/students/${id}/stats`),
     create:  data           => http.post('/students', data),
     update:  (id, data)     => http.patch(`/students/${id}`, data),
     approve: id             => http.patch(`/students/${id}/approve`),

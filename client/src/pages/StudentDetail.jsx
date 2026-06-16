@@ -162,6 +162,128 @@ function EditModal({ open, onClose, student, onSaved }) {
   );
 }
 
+/* ── To'liq statistika — submission breakdown, foizlar, vazifalar tarixi ── */
+const SUB_MONTHS = ['Yan','Fev','Mar','Apr','May','Iyn','Iyl','Avg','Sen','Okt','Noy','Dek'];
+const fmtSubDate = (v) => { const d = new Date(v); return `${d.getDate()} ${SUB_MONTHS[d.getMonth()]}`; };
+
+const SUB_TONE = {
+  done:      { bg:'var(--primary-bg)', fg:'var(--emerald-l)', bar:'var(--emerald)', label:'Topshirgan',   ch:'✓' },
+  submitted: { bg:'var(--amber-bg)',   fg:'var(--amber)',     bar:'var(--amber)',   label:'Tekshiruvda',  ch:'⏳' },
+  returned:  { bg:'var(--amber-bg)',   fg:'var(--amber)',     bar:'#f59e0b',        label:'Qaytarilgan',  ch:'↩' },
+  missed:    { bg:'var(--rose-bg)',    fg:'var(--rose)',      bar:'var(--rose)',    label:'Topshirmagan', ch:'✕' },
+  upcoming:  { bg:'transparent',       fg:'var(--text-3)',    bar:'var(--text-3)',  label:'Kutilmoqda',   ch:'·' },
+};
+
+function StatBox({ label, value, suffix = '', accent }) {
+  return (
+    <div className="card" style={{
+      padding:'13px 15px',
+      background: accent ? 'var(--primary-bg)' : undefined,
+      border: accent ? '1px solid var(--primary)' : '1px solid var(--border)',
+    }}>
+      <div style={{ fontSize:10.5, fontWeight:600, color: accent ? 'var(--primary-l)' : 'var(--text-3)',
+        textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:6 }}>{label}</div>
+      <div style={{ fontFamily:'var(--display)', fontSize:26, fontWeight:700, letterSpacing:'-0.04em', lineHeight:1,
+        color: accent ? 'var(--primary-l)' : 'var(--text)' }}>
+        {value}<span style={{ fontSize:13, color:'var(--text-3)' }}>{suffix}</span>
+      </div>
+    </div>
+  );
+}
+
+function StudentStats({ studentId }) {
+  const { data, loading, error, refetch } = useFetch(() => api.students.stats(studentId), [studentId]);
+
+  if (loading) return <div className="card" style={{ padding:30 }}><Spinner/></div>;
+  if (error)   return <ErrorBox message={error} onRetry={refetch}/>;
+
+  const { totals = {}, completionRate, avgScore, attendance, history = [] } = data || {};
+  const order = ['done','submitted','returned','missed','upcoming'];
+  const total = totals.total || 0;
+  const segs = order
+    .map(k => ({ k, n: totals[k] || 0 }))
+    .filter(x => x.n > 0);
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+      {/* KPI qatori */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(120px, 1fr))', gap:10 }}>
+        <StatBox label="Bajarish" value={completionRate == null ? '–' : completionRate} suffix={completionRate == null ? '' : '%'} accent/>
+        <StatBox label="O'rtacha ball" value={avgScore == null ? '–' : avgScore} suffix={avgScore == null ? '' : ''}/>
+        <StatBox label="Davomat" value={attendance == null ? '–' : attendance} suffix={attendance == null ? '' : '%'}/>
+        <StatBox label="Jami vazifa" value={total}/>
+      </div>
+
+      {/* Breakdown bar + legenda */}
+      <div className="card" style={{ padding:16 }}>
+        <div className="card-title" style={{ marginBottom:12 }}>Vazifalar holati</div>
+        {total === 0 ? (
+          <div style={{ fontSize:13, color:'var(--text-3)' }}>Hozircha vazifa biriktirilmagan.</div>
+        ) : (
+          <>
+            <div style={{ display:'flex', height:10, borderRadius:6, overflow:'hidden', background:'var(--bg-subtle)', marginBottom:12 }}>
+              {segs.map(({ k, n }) => (
+                <div key={k} title={`${SUB_TONE[k].label}: ${n}`}
+                  style={{ width:`${(n/total)*100}%`, background:SUB_TONE[k].bar }}/>
+              ))}
+            </div>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:'8px 16px' }}>
+              {order.map(k => (
+                <div key={k} style={{ display:'flex', alignItems:'center', gap:6, fontSize:12, color:'var(--text-2)' }}>
+                  <span style={{ width:10, height:10, borderRadius:3, background:SUB_TONE[k].bar, display:'inline-block' }}/>
+                  {SUB_TONE[k].label}
+                  <b style={{ color:'var(--text)' }}>{totals[k] || 0}</b>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Vazifalar tarixi */}
+      {history.length > 0 && (
+        <div className="card" style={{ padding:0, overflow:'hidden' }}>
+          <div className="card-title" style={{ padding:'16px 16px 10px' }}>So'nggi vazifalar</div>
+          <div style={{ display:'flex', flexDirection:'column' }}>
+            {history.map(h => {
+              const tone = SUB_TONE[h.status] || SUB_TONE.upcoming;
+              return (
+                <div key={h._id} style={{
+                  display:'flex', alignItems:'center', gap:11, padding:'10px 16px',
+                  borderTop:'1px solid var(--border)',
+                }}>
+                  <span style={{
+                    flexShrink:0, display:'inline-grid', placeItems:'center',
+                    width:28, height:28, borderRadius:8,
+                    background:tone.bg, color:tone.fg, fontSize:14, fontWeight:800,
+                  }}>{tone.ch}</span>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:13, fontWeight:600, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                      {h.title}
+                      {h.kind === 'speaking' && <span style={{ marginLeft:6, fontSize:10, color:'var(--text-3)' }}>· speaking</span>}
+                    </div>
+                    <div style={{ fontSize:11, color:'var(--text-3)', marginTop:1 }}>
+                      {fmtSubDate(h.dueDate)} · {tone.label}
+                    </div>
+                  </div>
+                  <div style={{ display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
+                    {h.score != null && (
+                      <span style={{ fontSize:12.5, fontWeight:700, color:'var(--text)' }}>{h.score}</span>
+                    )}
+                    {h.gems > 0 && (
+                      <span style={{ fontSize:12, fontWeight:700, color:'var(--primary-l)' }}>💎 {h.gems}</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function StudentDetailPage({ studentId, onBack }) {
   const { user } = useAuth();
   const isTeacher = user?.role === 'teacher';
@@ -281,6 +403,13 @@ export default function StudentDetailPage({ studentId, onBack }) {
             </div>
           </div>
         ))}
+      </motion.div>
+
+      {/* To'liq statistika */}
+      <motion.div
+        initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.12 }}
+        style={{ marginBottom:14 }}>
+        <StudentStats studentId={s._id}/>
       </motion.div>
 
       {/* Group info */}

@@ -71,6 +71,75 @@ router.get('/:id', param('id').isMongoId(), ok, asyncHandler(async (req, res) =>
   res.json({ success:true, data: s });
 }));
 
+// GET /api/students/:id/stats — o'quvchining to'liq statistikasi
+// Submission'lardan: topshirgan/topshirmagan/tekshiruvda breakdown,
+// bajarish foizi, o'rtacha ball, olmoslar va so'nggi vazifalar tarixi.
+router.get('/:id/stats', param('id').isMongoId(), ok, asyncHandler(async (req, res) => {
+  const baseFilter = await filterForUser(req);
+  const s = await Student.findOne({ _id: req.params.id, ...baseFilter })
+    .select('name gems gemsThisWeek attendance homeworkRate score joinedAt')
+    .lean();
+  if (!s) return res.status(404).json({ success:false, message:"O'quvchi topilmadi" });
+
+  const now = new Date();
+  const subs = await Submission.find({ student: s._id })
+    .populate('homework', 'title dueDate kind')
+    .lean();
+
+  let reviewed = 0, submitted = 0, returned = 0, missed = 0, upcoming = 0;
+  let scoreSum = 0, scoreCount = 0, gemsSum = 0;
+
+  const displayOf = (sub) => {
+    if (sub.status === 'reviewed')  return 'done';
+    if (sub.status === 'submitted') return 'submitted';
+    if (sub.status === 'returned')  return 'returned';
+    const due = sub.homework?.dueDate ? new Date(sub.homework.dueDate) : null;
+    return (due && due < now) ? 'missed' : 'upcoming';
+  };
+
+  for (const sub of subs) {
+    const d = displayOf(sub);
+    if      (d === 'done')      { reviewed++; gemsSum += sub.gemsAwarded || 0;
+                                  if (sub.score != null) { scoreSum += sub.score; scoreCount++; } }
+    else if (d === 'submitted')  submitted++;
+    else if (d === 'returned')   returned++;
+    else if (d === 'missed')     missed++;
+    else                         upcoming++;
+  }
+
+  const total  = subs.length;
+  // Baholanadigan vazifalar (kelajakdagilar hisobga olinmaydi)
+  const graded = reviewed + submitted + returned + missed;
+  const completionRate = graded > 0 ? Math.round((reviewed / graded) * 100) : null;
+  const avgScore = scoreCount > 0 ? Math.round(scoreSum / scoreCount) : null;
+
+  const history = subs
+    .filter(x => x.homework)
+    .sort((a, b) => new Date(b.homework.dueDate) - new Date(a.homework.dueDate))
+    .slice(0, 30)
+    .map(x => ({
+      _id:     x._id,
+      title:   x.homework.title,
+      dueDate: x.homework.dueDate,
+      kind:    x.homework.kind,
+      status:  displayOf(x),
+      score:   x.score,
+      gems:    x.gemsAwarded || 0,
+    }));
+
+  res.json({ success:true, data: {
+    totals: { total, reviewed, submitted, returned, missed, upcoming },
+    completionRate,
+    avgScore,
+    gems:         s.gems ?? 0,
+    gemsThisWeek: s.gemsThisWeek ?? 0,
+    gemsFromHw:   gemsSum,
+    attendance:   s.attendance ?? null,
+    homeworkRate: s.homeworkRate ?? null,
+    history,
+  }});
+}));
+
 // CREATE /api/students  (faqat admin — teacher endi faqat link orqali qo'sha oladi)
 router.post('/',
   [
