@@ -99,9 +99,6 @@ function EditModal({ open, onClose, student, onSaved }) {
     phone: student.phone || '',
     notes: student.notes || '',
     status: student.status || 'active',
-    score: student.score ?? 0,
-    attendance: student.attendance ?? 100,
-    homeworkRate: student.homeworkRate ?? 0,
   } : {});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -111,12 +108,7 @@ function EditModal({ open, onClose, student, onSaved }) {
   const submit = async () => {
     setError(''); setSaving(true);
     try {
-      const payload = {
-        ...form,
-        score: Number(form.score),
-        attendance: Number(form.attendance),
-        homeworkRate: Number(form.homeworkRate),
-      };
+      const payload = { ...form };
       await api.students.update(student._id, payload);
       onSaved?.();
       onClose();
@@ -150,11 +142,6 @@ function EditModal({ open, onClose, student, onSaved }) {
           </Select>
         </Field>
       </div>
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:14 }}>
-        <Field label="Ball"><Input type="number" min="0" max="100" value={form.score ?? 0} onChange={e=>upd('score', e.target.value)}/></Field>
-        <Field label="Davomat %"><Input type="number" min="0" max="100" value={form.attendance ?? 0} onChange={e=>upd('attendance', e.target.value)}/></Field>
-        <Field label="Vazifa %"><Input type="number" min="0" max="100" value={form.homeworkRate ?? 0} onChange={e=>upd('homeworkRate', e.target.value)}/></Field>
-      </div>
       <Field label="Eslatma (ixtiyoriy)">
         <Textarea value={form.notes || ''} onChange={e=>upd('notes', e.target.value)} maxLength={500}/>
       </Field>
@@ -162,10 +149,7 @@ function EditModal({ open, onClose, student, onSaved }) {
   );
 }
 
-/* ── To'liq statistika — submission breakdown, foizlar, vazifalar tarixi ── */
-const SUB_MONTHS = ['Yan','Fev','Mar','Apr','May','Iyn','Iyl','Avg','Sen','Okt','Noy','Dek'];
-const fmtSubDate = (v) => { const d = new Date(v); return `${d.getDate()} ${SUB_MONTHS[d.getMonth()]}`; };
-
+/* ── To'liq statistika — olmoslar va vazifa holati (jadval) ── */
 const SUB_TONE = {
   done:      { bg:'var(--primary-bg)', fg:'var(--emerald-l)', bar:'var(--emerald)', label:'Topshirgan',   ch:'✓' },
   submitted: { bg:'var(--amber-bg)',   fg:'var(--amber)',     bar:'var(--amber)',   label:'Tekshiruvda',  ch:'⏳' },
@@ -174,112 +158,70 @@ const SUB_TONE = {
   upcoming:  { bg:'transparent',       fg:'var(--text-3)',    bar:'var(--text-3)',  label:'Kutilmoqda',   ch:'·' },
 };
 
-function StatBox({ label, value, suffix = '', accent }) {
-  return (
-    <div className="card" style={{
-      padding:'13px 15px',
-      background: accent ? 'var(--primary-bg)' : undefined,
-      border: accent ? '1px solid var(--primary)' : '1px solid var(--border)',
-    }}>
-      <div style={{ fontSize:10.5, fontWeight:600, color: accent ? 'var(--primary-l)' : 'var(--text-3)',
-        textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:6 }}>{label}</div>
-      <div style={{ fontFamily:'var(--display)', fontSize:26, fontWeight:700, letterSpacing:'-0.04em', lineHeight:1,
-        color: accent ? 'var(--primary-l)' : 'var(--text)' }}>
-        {value}<span style={{ fontSize:13, color:'var(--text-3)' }}>{suffix}</span>
-      </div>
-    </div>
-  );
-}
-
 function StudentStats({ studentId }) {
   const { data, loading, error, refetch } = useFetch(() => api.students.stats(studentId), [studentId]);
 
   if (loading) return <div className="card" style={{ padding:30 }}><Spinner/></div>;
   if (error)   return <ErrorBox message={error} onRetry={refetch}/>;
 
-  const { totals = {}, completionRate, avgScore, attendance, history = [] } = data || {};
+  const { totals = {}, gems = 0, gemsThisWeek = 0, gemsFromHw = 0 } = data || {};
   const order = ['done','submitted','returned','missed','upcoming'];
   const total = totals.total || 0;
-  const segs = order
-    .map(k => ({ k, n: totals[k] || 0 }))
-    .filter(x => x.n > 0);
+
+  const rowStyle = { borderTop:'1px solid var(--border)' };
+  const tdLabel  = { padding:'11px 16px', fontSize:13, color:'var(--text-2)' };
+  const tdVal    = { padding:'11px 16px', fontSize:13.5, fontWeight:700, textAlign:'right',
+                     fontVariantNumeric:'tabular-nums', whiteSpace:'nowrap' };
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
-      {/* KPI qatori */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(120px, 1fr))', gap:10 }}>
-        <StatBox label="Bajarish" value={completionRate == null ? '–' : completionRate} suffix={completionRate == null ? '' : '%'} accent/>
-        <StatBox label="O'rtacha ball" value={avgScore == null ? '–' : avgScore} suffix={avgScore == null ? '' : ''}/>
-        <StatBox label="Davomat" value={attendance == null ? '–' : attendance} suffix={attendance == null ? '' : '%'}/>
-        <StatBox label="Jami vazifa" value={total}/>
+      {/* Olmoslar */}
+      <div className="card" style={{ padding:0, overflow:'hidden' }}>
+        <div className="card-title" style={{ padding:'14px 16px 10px' }}>💎 Olmoslar</div>
+        <table style={{ width:'100%', borderCollapse:'collapse' }}>
+          <tbody>
+            <tr style={rowStyle}><td style={tdLabel}>Jami olmos</td><td style={{ ...tdVal, color:'var(--primary-l)' }}>{gems}</td></tr>
+            <tr style={rowStyle}><td style={tdLabel}>Bu hafta</td><td style={tdVal}>{gemsThisWeek}</td></tr>
+            <tr style={rowStyle}><td style={tdLabel}>Vazifalardan yig'ilgan</td><td style={tdVal}>{gemsFromHw}</td></tr>
+          </tbody>
+        </table>
       </div>
 
-      {/* Breakdown bar + legenda */}
-      <div className="card" style={{ padding:16 }}>
-        <div className="card-title" style={{ marginBottom:12 }}>Vazifalar holati</div>
+      {/* Vazifa holati statistikasi */}
+      <div className="card" style={{ padding:0, overflow:'hidden' }}>
+        <div className="card-title" style={{ padding:'14px 16px 10px' }}>Vazifa holati</div>
         {total === 0 ? (
-          <div style={{ fontSize:13, color:'var(--text-3)' }}>Hozircha vazifa biriktirilmagan.</div>
+          <div style={{ padding:'4px 16px 16px', fontSize:13, color:'var(--text-3)' }}>
+            Hozircha vazifa biriktirilmagan.
+          </div>
         ) : (
-          <>
-            <div style={{ display:'flex', height:10, borderRadius:6, overflow:'hidden', background:'var(--bg-subtle)', marginBottom:12 }}>
-              {segs.map(({ k, n }) => (
-                <div key={k} title={`${SUB_TONE[k].label}: ${n}`}
-                  style={{ width:`${(n/total)*100}%`, background:SUB_TONE[k].bar }}/>
-              ))}
-            </div>
-            <div style={{ display:'flex', flexWrap:'wrap', gap:'8px 16px' }}>
-              {order.map(k => (
-                <div key={k} style={{ display:'flex', alignItems:'center', gap:6, fontSize:12, color:'var(--text-2)' }}>
-                  <span style={{ width:10, height:10, borderRadius:3, background:SUB_TONE[k].bar, display:'inline-block' }}/>
-                  {SUB_TONE[k].label}
-                  <b style={{ color:'var(--text)' }}>{totals[k] || 0}</b>
-                </div>
-              ))}
-            </div>
-          </>
+          <table style={{ width:'100%', borderCollapse:'collapse' }}>
+            <tbody>
+              {order.map(k => {
+                const tone = SUB_TONE[k];
+                return (
+                  <tr key={k} style={rowStyle}>
+                    <td style={tdLabel}>
+                      <span style={{ display:'inline-flex', alignItems:'center', gap:9 }}>
+                        <span style={{
+                          display:'inline-grid', placeItems:'center', width:22, height:22, borderRadius:6,
+                          background:tone.bg, color:tone.fg, fontSize:12, fontWeight:800,
+                        }}>{tone.ch}</span>
+                        {tone.label}
+                      </span>
+                    </td>
+                    <td style={{ ...tdVal, color:tone.fg }}>{totals[k] || 0} marta</td>
+                  </tr>
+                );
+              })}
+              <tr style={{ ...rowStyle, background:'var(--bg-subtle)' }}>
+                <td style={{ ...tdLabel, fontWeight:700, color:'var(--text)' }}>Jami</td>
+                <td style={tdVal}>{total} marta</td>
+              </tr>
+            </tbody>
+          </table>
         )}
       </div>
-
-      {/* Vazifalar tarixi */}
-      {history.length > 0 && (
-        <div className="card" style={{ padding:0, overflow:'hidden' }}>
-          <div className="card-title" style={{ padding:'16px 16px 10px' }}>So'nggi vazifalar</div>
-          <div style={{ display:'flex', flexDirection:'column' }}>
-            {history.map(h => {
-              const tone = SUB_TONE[h.status] || SUB_TONE.upcoming;
-              return (
-                <div key={h._id} style={{
-                  display:'flex', alignItems:'center', gap:11, padding:'10px 16px',
-                  borderTop:'1px solid var(--border)',
-                }}>
-                  <span style={{
-                    flexShrink:0, display:'inline-grid', placeItems:'center',
-                    width:28, height:28, borderRadius:8,
-                    background:tone.bg, color:tone.fg, fontSize:14, fontWeight:800,
-                  }}>{tone.ch}</span>
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontSize:13, fontWeight:600, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
-                      {h.title}
-                      {h.kind === 'speaking' && <span style={{ marginLeft:6, fontSize:10, color:'var(--text-3)' }}>· speaking</span>}
-                    </div>
-                    <div style={{ fontSize:11, color:'var(--text-3)', marginTop:1 }}>
-                      {fmtSubDate(h.dueDate)} · {tone.label}
-                    </div>
-                  </div>
-                  <div style={{ display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
-                    {h.score != null && (
-                      <span style={{ fontSize:12.5, fontWeight:700, color:'var(--text)' }}>{h.score}</span>
-                    )}
-                    {h.gems > 0 && (
-                      <span style={{ fontSize:12, fontWeight:700, color:'var(--primary-l)' }}>💎 {h.gems}</span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -294,12 +236,6 @@ export default function StudentDetailPage({ studentId, onBack }) {
 
   if (loading) return <div className="page"><Spinner/></div>;
   if (error || !s) return <div className="page"><ErrorBox message={error || 'Topilmadi'} onRetry={refetch}/></div>;
-
-  const stats = [
-    { label: '💎 Olmos (jami)',    val: s.gems ?? 0,         suffix: '',     accent: true },
-    { label: '💎 Bu hafta',        val: s.gemsThisWeek ?? 0, suffix: '',     accent: true },
-    { label: 'Vazifa',             val: s.homeworkRate,      suffix: '%' },
-  ];
 
   const remove = async () => {
     if (!confirm(`${s.name} ni o'chirishni tasdiqlang?`)) return;
@@ -377,33 +313,6 @@ export default function StudentDetailPage({ studentId, onBack }) {
         kind={msgKind}
         student={s}
         onClose={() => setMsgKind(null)}/>
-
-      {/* Stats */}
-      <motion.div
-        initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.1 }}
-        style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))', gap:10, marginBottom:14 }}>
-        {stats.map((st, i) => (
-          <div key={st.label} className="card" style={{
-            padding:'14px 16px',
-            background: st.accent ? 'var(--primary-bg)' : undefined,
-            border: st.accent ? '1px solid var(--primary)' : '1px solid var(--border)',
-          }}>
-            <div style={{
-              fontSize:11, fontWeight:600,
-              color: st.accent ? 'var(--primary-l)' : 'var(--text-3)',
-              textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:8,
-            }}>
-              {st.label}
-            </div>
-            <div style={{
-              fontFamily:'var(--display)', fontSize:30, fontWeight:700, letterSpacing:'-0.04em',
-              color: st.accent ? 'var(--primary-l)' : 'var(--text)', lineHeight:1,
-            }}>
-              {st.val ?? 0}<span style={{ fontSize:14, color:'var(--text-3)' }}>{st.suffix}</span>
-            </div>
-          </div>
-        ))}
-      </motion.div>
 
       {/* To'liq statistika */}
       <motion.div
