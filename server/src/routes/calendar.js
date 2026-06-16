@@ -4,6 +4,7 @@ const Group      = require('../models/Group');
 const Submission = require('../models/Submission');
 const Homework   = require('../models/Homework');
 const Teacher    = require('../models/Teacher');
+const { getTeacherPhotoMap } = require('../utils/teacherPhotos');
 const { protect, requireActive } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
 
@@ -63,7 +64,10 @@ router.get('/events', asyncHandler(async (req, res) => {
 
     // 3) Teacher info
     const teachers = await Teacher.find({}).select('name hue').lean();
-    const teacherMap = Object.fromEntries(teachers.map(t => [String(t._id), t]));
+    const photoMap = await getTeacherPhotoMap(teachers.map(t => t._id));
+    const teacherMap = Object.fromEntries(
+      teachers.map(t => [String(t._id), { ...t, photoUrl: photoMap[String(t._id)] || null }])
+    );
 
     // Aggregate: stats[date][teacherId] = { assigned, reviewed, pending }
     const stats = {};
@@ -105,6 +109,7 @@ router.get('/events', asyncHandler(async (req, res) => {
           teacherId: tid,
           teacherName: t.name,
           hue: t.hue,
+          photoUrl: t.photoUrl || null,
           assigned: v.assigned || 0,
           reviewed: v.reviewed || 0,
           pending:  v.pending  || 0,
@@ -132,7 +137,14 @@ router.get('/events', asyncHandler(async (req, res) => {
     const days = g.scheduleDays.map(d => DAY_MAP[d]).filter(d => d !== undefined);
     if (!days.length) continue;
 
-    const cur = new Date(rangeStart);
+    // Guruh boshlanish sanasi — bundan oldingi kunlarda dars bo'lmaydi.
+    // startDate (boshlanish) yoki createdAt (yaratilgan) — qaysi biri bo'lsa.
+    const groupStart = new Date(g.startDate || g.createdAt || rangeStart);
+    groupStart.setHours(0, 0, 0, 0);
+
+    // Boshlash nuqtasi: rangeStart va groupStart dan kechrog'i
+    const cur = new Date(Math.max(rangeStart.getTime(), groupStart.getTime()));
+    cur.setHours(0, 0, 0, 0);
     while (cur <= rangeEnd) {
       if (days.includes(cur.getDay())) {
         push(fmtKey(cur), {

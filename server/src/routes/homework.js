@@ -8,9 +8,30 @@ const { protect, requireActive } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { ensureLessonHomeworkForTeacher, ensureLessonHomeworkForAll } = require('../utils/ensureLessonHomework');
 const { ensureSpeakingHomeworkForTeacher, ensureSpeakingHomeworkForAll } = require('../utils/ensureSpeakingHomework');
+const { getTeacherPhotoMap } = require('../utils/teacherPhotos');
 
 const router = express.Router();
 router.use(protect, requireActive);
+
+// Homework(lar) teacher'iga User'dagi photoUrl'ni qo'shadi (rasm Teacher'da emas, User'da)
+async function attachTeacherPhotos(homeworks) {
+  const single = !Array.isArray(homeworks);
+  const arr = single ? [homeworks] : homeworks;
+  const map = await getTeacherPhotoMap(arr.map(h => h && (h.teacher?._id || h.teacher)));
+  const out = arr.map(h => {
+    if (!h) return h;
+    const o = h.toObject ? h.toObject() : h;
+    if (o.teacher && typeof o.teacher === 'object') {
+      const tid = String(o.teacher._id || o.teacher);
+      o.teacher = {
+        ...(o.teacher.toObject ? o.teacher.toObject() : o.teacher),
+        photoUrl: map[tid] || null,
+      };
+    }
+    return o;
+  });
+  return single ? out[0] : out;
+}
 
 const ok = (req,res,next) => {
   const e = validationResult(req);
@@ -59,7 +80,7 @@ router.get('/', asyncHandler(async (req,res) => {
       .sort({ dueDate:-1 }).skip((Number(page)-1)*Number(limit)).limit(Number(limit)),
     Homework.countDocuments(filter),
   ]);
-  res.json({ success:true, data, pagination:{ total, page:Number(page), limit:Number(limit) } });
+  res.json({ success:true, data: await attachTeacherPhotos(data), pagination:{ total, page:Number(page), limit:Number(limit) } });
 }));
 
 // STATS  GET /api/homework/stats
@@ -90,14 +111,14 @@ router.get('/overdue', asyncHandler(async (req,res) => {
     const overdueDays = Math.floor(overdueMs / (24 * 60 * 60 * 1000));
     return { ...hw, overdueDays };
   });
-  res.json({ success:true, data });
+  res.json({ success:true, data: await attachTeacherPhotos(data) });
 }));
 
 // GET ONE
 router.get('/:id', param('id').isMongoId(), ok, asyncHandler(async (req,res) => {
   const hw = await Homework.findById(req.params.id).populate('teacher','name hue').populate('group','name code');
   if (!hw) return res.status(404).json({ success:false, message:'Not found' });
-  res.json({ success:true, data:hw });
+  res.json({ success:true, data: await attachTeacherPhotos(hw) });
 }));
 
 // SUBMISSIONS  GET /api/homework/:id/submissions
@@ -111,12 +132,19 @@ router.get('/:id/submissions', param('id').isMongoId(), ok, asyncHandler(async (
     .populate('student', 'name hue photoUrl telegramUsername')
     .lean();
 
-  // Har bir submission uchun "kech" flag — reviewedAt > dueDate yoki status=pending && now > dueDate
+  // Har bir submission uchun "kech" flag — o'quvchi TOPSHIRGAN vaqtga qarab,
+  // o'qituvchi tekshirgan vaqtga emas. Aks holda muddatdan keyin tekshirilgan
+  // har bir o'quvchi xato "kech" ko'rsatardi.
   const withLate = subs.map(s => {
     let isLate = false;
     if (due) {
-      if (s.reviewedAt && new Date(s.reviewedAt) > due) isLate = true;
-      else if ((s.status === 'pending' || s.status === 'submitted') && now > due) isLate = true;
+      if (s.submittedAt) {
+        // Topshirgan: deadlinedan keyin topshirilgan bo'lsagina "kech"
+        if (new Date(s.submittedAt) > due) isLate = true;
+      } else if (s.status === 'pending' && now > due) {
+        // Hali umuman topshirmagan va muddat o'tib ketgan
+        isLate = true;
+      }
     }
     return { ...s, isLate };
   });
@@ -178,7 +206,7 @@ router.post('/',
       }
     } catch {}
 
-    res.status(201).json({ success:true, data: updated });
+    res.status(201).json({ success:true, data: await attachTeacherPhotos(updated) });
   })
 );
 
