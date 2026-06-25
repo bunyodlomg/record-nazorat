@@ -57,7 +57,6 @@ const api = {
     approve: id             => http.patch(`/students/${id}/approve`),
     reject:  id             => http.patch(`/students/${id}/reject`),
     delete:  id             => http.delete(`/students/${id}`),
-    message: (id, payload)  => http.post(`/students/${id}/message`, payload),
   },
   leaderboard: {
     teachers: (params = {}) => http.get('/leaderboard/teachers', { params }),
@@ -83,8 +82,6 @@ const api = {
     create: data      => http.post('/groups', data),
     update: (id,data) => http.patch(`/groups/${id}`, data),
     delete: id        => http.delete(`/groups/${id}`),
-    inviteLink:       id => http.get(`/groups/${id}/invite-link`),
-    rotateInviteLink: id => http.post(`/groups/${id}/invite-link/rotate`),
     submissionMatrix: id => http.get(`/groups/${id}/submission-matrix`),
   },
   notifications: {

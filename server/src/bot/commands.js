@@ -1,11 +1,6 @@
 const { Markup } = require('telegraf');
 const User = require('../models/User');
-const Student = require('../models/Student');
 const inviteCache = require('./inviteCache');
-const { startStudentJoin, startStudentJoinByInvite, completeStudentJoin, getSession, clearSession } = require('./studentJoin');
-const { notifyStudentPending } = require('./notifications');
-const { handleStudentMessage } = require('./studentSubmit');
-const { fetchTelegramPhotoUrl } = require('../utils/telegramPhoto');
 
 /**
  * WebApp tugma — agar inviteToken berilgan bo'lsa, URL'ga ?invite=xxx
@@ -23,98 +18,32 @@ function webAppButton(label = 'Mini App ochish', inviteToken = null) {
 }
 
 const HELP_TEXT = (
-  `🎓 *Record Nazorat* — o'qituvchi va o'quvchilar uchun nazorat tizimi.\n\n` +
+  `🎓 *Record Nazorat* — o'qituvchi va administratorlar uchun nazorat tizimi.\n\n` +
   `*Buyruqlar:*\n` +
   `• /start — bosh sahifa\n` +
   `• /app — Mini App'ni ochish\n` +
   `• /help — yordam\n\n` +
-  `Tizimga kirish uchun administrator yoki o'qituvchidan taklif link oling.`
+  `⚠️ Bu bot faqat *administrator* va *o'qituvchilar* uchun. ` +
+  `Tizimga kirish uchun administratordan taklif link oling.`
 );
-
-const STUDENT_HELP_TEXT = (
-  `🎓 *Record Nazorat*\n\n` +
-  `Siz o'quvchi sifatida shu botda ishlaysiz — Mini App kerak emas.\n\n` +
-  `*Qanday foydalanasiz:*\n` +
-  `• Vazifa tayyor bo'lsa — shu botga *matn, ovozli xabar, rasm yoki fayl* yuboring\n` +
-  `• O'qituvchi tekshirgach, natijalar va olmoslar shu botga keladi\n` +
-  `• Reyting o'zgarishi haqida ham xabar olasiz`
-);
-
-// Foydalanuvchi student bo'lsa true qaytaradi
-async function isStudent(tgId) {
-  const s = await Student.findOne({ telegramId: String(tgId) }).select('_id status').lean();
-  return !!s;
-}
 
 module.exports = function attach(bot) {
-  // /start (default) yoki /start invite_xxx yoki /start g_<token>
+  // /start (default) yoki /start invite_<token> — faqat admin/teacher onboarding
   bot.start(async (ctx) => {
     const tgId = String(ctx.from.id);
-    const startPayload = ctx.startPayload; // 'invite_xxx' yoki 'g_xxx'
+    const startPayload = ctx.startPayload; // 'invite_xxx'
 
-    // ── 1) STUDENT INVITE (g_<token>) — Mini App emas, faqat bot orqali ulanish
-    if (startPayload && startPayload.startsWith('g_')) {
-      const token = startPayload.slice(2);
-      const result = await startStudentJoin(tgId, token, ctx.from);
-      if (result.error) {
-        await ctx.reply(`❌ ${result.error}`);
-        return;
-      }
-      if (result.alreadyJoined) {
-        await ctx.replyWithMarkdown(`${result.message}\n\nGuruh: *${result.group.name}* (${result.group.code})`);
-        return;
-      }
-      const teacherName = result.group.teacher?.name || "O'qituvchi";
-      await ctx.replyWithMarkdown(
-        `🎓 *${result.group.name}* (${result.group.code}) guruhiga xush kelibsiz!\n\n` +
-        `O'qituvchi: *${teacherName}*\n\n` +
-        `Iltimos, *to'liq ism familyangizni* yozing.\n` +
-        `Masalan: \`Ali Valiyev\``
-      );
-      return;
-    }
-
-    // ── 2) INVITE TOKEN (invite_<token>) — student bo'lsa studentJoin, aks holda Mini App cache
+    // Admin/teacher invite token — Mini App login flow uchun cache'ga olamiz
     if (startPayload && startPayload.startsWith('invite_')) {
-      const token = startPayload.slice('invite_'.length);
-      const result = await startStudentJoinByInvite(tgId, token);
-      if (result.error) {
-        await ctx.reply(`❌ ${result.error}`);
-        return;
-      }
-      if (result.alreadyJoined) {
-        await ctx.replyWithMarkdown(`${result.message}\n\nGuruh: *${result.group.name}* (${result.group.code})`);
-        return;
-      }
-      if (result.group) {
-        // Student invite muvaffaqiyatli — ism so'raymiz
-        const teacherName = result.group.teacher?.name || "O'qituvchi";
-        await ctx.replyWithMarkdown(
-          `🎓 *${result.group.name}* (${result.group.code}) guruhiga xush kelibsiz!\n\n` +
-          `O'qituvchi: *${teacherName}*\n\n` +
-          `Iltimos, *to'liq ism familyangizni* yozing.\n` +
-          `Masalan: \`Ali Valiyev\``
-        );
-        return;
-      }
-      // notStudent: admin/teacher invite — Mini App cache + flow davom etadi
       inviteCache.set(tgId, startPayload);
     }
 
-    // Student bo'lsa Mini App tugmasini ko'rsatmaymiz — bot orqali ishlaydi
-    if (await isStudent(tgId)) {
-      await ctx.replyWithMarkdown(STUDENT_HELP_TEXT);
-      return;
-    }
-
-    // User bazada borligini tekshiramiz
     const user = await User.findOne({ telegramId: tgId }).lean();
 
     let text;
     if (user) {
       const roleLabel = user.role === 'admin' ? 'Admin' :
-                        user.role === 'teacher' ? "O'qituvchi" :
-                        user.role === 'student' ? "O'quvchi" : 'Foydalanuvchi';
+                        user.role === 'teacher' ? "O'qituvchi" : 'Foydalanuvchi';
       const statusLabel = user.status === 'active' ? '✅ Faol' :
                           user.status === 'pending' ? '⏳ Tasdiqlash kutilmoqda' :
                           user.status === 'rejected' ? '❌ Rad etilgan' : user.status;
@@ -128,30 +57,25 @@ module.exports = function attach(bot) {
       text = (
         `🎉 *Record Nazorat'ga xush kelibsiz!*\n\n` +
         `Sizga taklif link yuborilgan. Tizimga kirish uchun pastdagi tugmani bosing — ` +
-        `ma'lumotlaringiz administrator yoki o'qituvchi tomonidan tasdiqlanadi.`
+        `ma'lumotlaringiz administrator tomonidan tasdiqlanadi.`
       );
     } else {
       text = (
         `🎓 *Record Nazorat'ga xush kelibsiz!*\n\n` +
-        `Bu — o'qituvchi va o'quvchilar uchun nazorat tizimi.\n\n` +
-        `⚠️ Tizimga kirish uchun *administrator yoki o'qituvchidan taklif link* olishingiz kerak.\n\n` +
+        `Bu — o'qituvchi va administratorlar uchun nazorat tizimi.\n\n` +
+        `⚠️ Tizimga kirish uchun *administratordan taklif link* olishingiz kerak.\n\n` +
         `Yordam uchun: /help`
       );
     }
 
-    // Agar invite token bor — URL'ga qo'shamiz (client URL search'dan o'qiydi)
     const inviteToken = (startPayload && startPayload.startsWith('invite_'))
       ? startPayload : null;
     const kb = webAppButton('🚀 Mini App ochish', inviteToken);
     await ctx.replyWithMarkdown(text, kb || {});
   });
 
-  // /app — WebApp tugmasi (student'ga emas)
+  // /app — WebApp tugmasi
   bot.command('app', async (ctx) => {
-    if (await isStudent(String(ctx.from.id))) {
-      await ctx.replyWithMarkdown(STUDENT_HELP_TEXT);
-      return;
-    }
     const kb = webAppButton('🚀 Mini App ochish');
     if (!kb) {
       await ctx.reply("WebApp URL sozlanmagan. Administrator bilan bog'laning.");
@@ -162,45 +86,20 @@ module.exports = function attach(bot) {
 
   // /help
   bot.help(async (ctx) => {
-    if (await isStudent(String(ctx.from.id))) {
-      await ctx.replyWithMarkdown(STUDENT_HELP_TEXT);
-      return;
-    }
     const kb = webAppButton('🚀 Mini App ochish');
     await ctx.replyWithMarkdown(HELP_TEXT, kb || {});
   });
 
-  // /me — foydalanuvchi profili
+  // /me — foydalanuvchi profili (faqat admin/teacher)
   bot.command('me', async (ctx) => {
     const tgId = String(ctx.from.id);
-
-    // Avval student'mi tekshiramiz
-    const student = await Student.findOne({ telegramId: tgId }).populate('group','name code').lean();
-    if (student) {
-      const statusLabel = student.status === 'active' ? '✅ Faol'
-                        : student.status === 'pending' ? '⏳ Tasdiq kutmoqda'
-                        : student.status === 'inactive' ? '⏸ To\'xtatilgan'
-                        : student.status;
-      const text =
-        `👤 *Profilingiz*\n\n` +
-        `Ism: *${student.name}*\n` +
-        `Roli: *O'quvchi*\n` +
-        `Holat: ${statusLabel}\n` +
-        (student.group ? `Guruh: *${student.group.name}* (${student.group.code})\n` : '') +
-        `💎 Olmoslar: *${student.gems || 0}*\n` +
-        `ID: \`${tgId}\``;
-      await ctx.replyWithMarkdown(text);
-      return;
-    }
-
     const user = await User.findOne({ telegramId: tgId }).lean();
     if (!user) {
       await ctx.reply("Siz hali tizimda ro'yxatdan o'tmagansiz. /start ni bosing.");
       return;
     }
     const roleLabel = user.role === 'admin' ? 'Admin' :
-                      user.role === 'teacher' ? "O'qituvchi" :
-                      user.role === 'student' ? "O'quvchi" : 'Foydalanuvchi';
+                      user.role === 'teacher' ? "O'qituvchi" : 'Foydalanuvchi';
     const statusLabel = user.status === 'active' ? '✅ Faol' :
                         user.status === 'pending' ? '⏳ Tasdiqlash kutilmoqda' :
                         user.status === 'rejected' ? '❌ Rad etilgan' : user.status;
@@ -215,82 +114,15 @@ module.exports = function attach(bot) {
     await ctx.replyWithMarkdown(text);
   });
 
-  // Boshqa har qanday xabar — text yoki media (voice/photo/video/file):
+  // Boshqa har qanday xabar — admin/teacher Mini App'ga yo'naltiramiz.
+  // O'quvchilar bot bilan ishlamaydi.
   bot.on('message', async (ctx) => {
     const text = ctx.message?.text;
-    // /command bo'lsa o'tkazib yuboramiz (yuqorida bot.command bilan handle qilingan)
-    if (text && text.startsWith('/')) return;
-    const tgId = String(ctx.from.id);
-
-    // ── 1) Student join sessiyasi (ism kutilmoqda — faqat text)
-    if (text) {
-      const session = getSession(tgId);
-      if (session) {
-        const result = await completeStudentJoin(tgId, text.trim(), ctx.from);
-        if (result.error) {
-          await ctx.reply(`❌ ${result.error}`);
-          return;
-        }
-        // Telegram profil rasmini olib student.photoUrl ga saqlaymiz (best-effort)
-        fetchTelegramPhotoUrl(ctx.telegram, ctx.from.id).then(url => {
-          if (url) Student.updateOne({ _id: result.student._id }, { $set:{ photoUrl: url } }).catch(() => {});
-        }).catch(() => {});
-        await ctx.replyWithMarkdown(
-          `✅ *${result.student.name}*, ro'yxatdan o'tdingiz!\n\n` +
-          `Guruh: *${result.group.name}* (${result.group.code})\n` +
-          `Holat: ⏳ *O'qituvchi tasdiqlashini kuting*\n\n` +
-          `Tasdiqlangach, vazifa va baholaringiz haqida shu botga xabar keladi.`
-        );
-        if (result.teacherTgId) {
-          notifyStudentPending(result.teacherTgId, {
-            studentName: result.student.name,
-            groupName:   result.group.name,
-            groupCode:   result.group.code,
-            telegramUsername: ctx.from.username || null,
-          }).catch(() => {});
-        }
-        return;
-      }
-    }
-
-    // ── 2) Student bo'lsa — pending/active holatga qarab
-    const student = await Student.findOne({ telegramId: tgId }).lean();
-    if (student) {
-      // Best-effort: photoUrl yo'q bo'lsa Telegram'dan olib qo'yamiz
-      if (!student.photoUrl) {
-        fetchTelegramPhotoUrl(ctx.telegram, ctx.from.id).then(url => {
-          if (url) Student.updateOne({ _id: student._id }, { $set:{ photoUrl: url } }).catch(() => {});
-        }).catch(() => {});
-      }
-      if (student.status === 'pending') {
-        await ctx.reply("⏳ O'qituvchi tasdiqlashini kuting. Tasdiqlangach xabarlar shu botga keladi.");
-        return;
-      }
-      if (student.status === 'active') {
-        // Vazifa topshirish — har qanday xabar (text yoki media) teacher'ga forward qilinadi
-        try {
-          const res = await handleStudentMessage(ctx, student);
-          if (res?.replyText) {
-            await ctx.replyWithMarkdown(res.replyText);
-          }
-        } catch (e) {
-          console.error('[bot] student submit error:', e);
-          await ctx.reply("Yuborishda xatolik. Birozdan keyin qaytadan urinib ko'ring.");
-        }
-        return;
-      }
-      // rejected / inactive
-      await ctx.reply("Sizning hisobingiz faol emas. O'qituvchingiz bilan bog'laning.");
-      return;
-    }
-
-    // ── 3) Boshqa hollar (admin/teacher yoki noma'lum) — faqat textga javob
-    if (text) {
-      const kb = webAppButton('🚀 Mini App ochish');
-      await ctx.reply(
-        'Mini App orqali tizimni boshqarishingiz mumkin. /help — yordam',
-        kb || {}
-      );
-    }
+    if (text && text.startsWith('/')) return; // buyruqlar yuqorida handle qilingan
+    const kb = webAppButton('🚀 Mini App ochish');
+    await ctx.reply(
+      'Tizimni boshqarish uchun Mini App\'ni oching. /help — yordam',
+      kb || {}
+    );
   });
 };

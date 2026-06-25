@@ -129,7 +129,7 @@ router.get('/:id/submissions', param('id').isMongoId(), ok, asyncHandler(async (
   const now = new Date();
 
   const subs = await Submission.find({ homework: req.params.id })
-    .populate('student', 'name hue photoUrl telegramUsername')
+    .populate('student', 'name hue photoUrl')
     .lean();
 
   // Har bir submission uchun "kech" flag — o'quvchi TOPSHIRGAN vaqtga qarab,
@@ -191,20 +191,6 @@ router.post('/',
 
     await Submission.recomputeHomework(hw._id);
     const updated = await Homework.findById(hw._id).populate('teacher','name hue').populate('group','name code');
-
-    // Bot orqali active student'larga xabar
-    try {
-      const Student = require('../models/Student');
-      const { notifyHomeworkAssigned } = require('../bot/notifications');
-      const activeStudents = await Student.find({
-        group: hw.group,
-        status: 'active',
-        telegramId: { $ne: null },
-      }).select('telegramId status').lean();
-      if (activeStudents.length) {
-        notifyHomeworkAssigned(updated, updated.group, activeStudents).catch(() => {});
-      }
-    } catch {}
 
     res.status(201).json({ success:true, data: await attachTeacherPhotos(updated) });
   })

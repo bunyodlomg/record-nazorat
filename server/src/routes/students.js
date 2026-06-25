@@ -140,7 +140,7 @@ router.get('/:id/stats', param('id').isMongoId(), ok, asyncHandler(async (req, r
   }});
 }));
 
-// CREATE /api/students  (faqat admin — teacher endi faqat link orqali qo'sha oladi)
+// CREATE /api/students  — admin yoki guruh o'qituvchisi o'quvchini qo'lda qo'shadi
 router.post('/',
   [
     body('name').notEmpty().withMessage('Ism majburiy').isLength({ max:120 }).trim(),
@@ -152,8 +152,11 @@ router.post('/',
     const group = await Group.findById(req.body.group);
     if (!group) return res.status(404).json({ success:false, message:"Guruh topilmadi" });
 
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ success:false, message:"O'quvchini faqat admin qo'lda qo'sha oladi. Teacher link orqali qo'shadi." });
+    // Teacher faqat o'z guruhiga qo'sha oladi
+    const isOwnerTeacher = req.user.role === 'teacher' && req.user.teacherRef
+      && String(group.teacher) === String(req.user.teacherRef);
+    if (req.user.role !== 'admin' && !isOwnerTeacher) {
+      return res.status(403).json({ success:false, message:"Bu guruhga o'quvchi qo'sha olmaysiz" });
     }
 
     const payload = {
@@ -257,12 +260,6 @@ router.patch('/:id/approve', param('id').isMongoId(), ok, asyncHandler(async (re
     );
   }
 
-  // Botga "tasdiqlandingiz" xabari
-  try {
-    const { notifyStudentApproved } = require('../bot/notifications');
-    notifyStudentApproved(s).catch(() => {});
-  } catch {}
-
   const populated = await Student.findById(s._id)
     .populate('group', 'name code')
     .populate('teacher', 'name hue');
@@ -281,47 +278,9 @@ router.patch('/:id/reject', param('id').isMongoId(), ok, asyncHandler(async (req
     return res.status(403).json({ success:false, message:"Faqat guruh o'qituvchisi o'quvchini rad eta oladi" });
   }
 
-  // Bot orqali kelgan student'lar uchun: bildirib qo'yamiz, keyin o'chiramiz
-  try {
-    const { notifyStudentRejected } = require('../bot/notifications');
-    notifyStudentRejected(s).catch(() => {});
-  } catch {}
-
   await Student.findByIdAndDelete(s._id);
   res.json({ success:true, message:'Rad etildi' });
 }));
-
-// POST /api/students/:id/message — teacher o'quvchiga bot orqali xabar/maqtov yuboradi
-router.post('/:id/message',
-  [
-    param('id').isMongoId(),
-    body('text').isString().trim().isLength({ min:1, max:1500 }),
-    body('kind').optional().isIn(['message','praise']),
-  ],
-  ok, asyncHandler(async (req, res) => {
-    const s = await Student.findById(req.params.id).populate('group', 'teacher name');
-    if (!s) return res.status(404).json({ success:false, message:"O'quvchi topilmadi" });
-
-    const isOwnerTeacher = req.user.role === 'teacher' && req.user.teacherRef
-      && String(s.group?.teacher) === String(req.user.teacherRef);
-    if (!isOwnerTeacher) {
-      return res.status(403).json({ success:false, message:"Faqat o'z guruhingiz o'quvchisiga yoza olasiz" });
-    }
-    if (!s.telegramId) {
-      return res.status(400).json({ success:false, message:"O'quvchining Telegram akkaunti topilmadi" });
-    }
-
-    const { sendStudentMessage } = require('../bot/notifications');
-    const sent = await sendStudentMessage(s.telegramId, {
-      kind: req.body.kind || 'message',
-      text: req.body.text,
-      from: req.user.name,
-    });
-    if (!sent) return res.status(502).json({ success:false, message:"Telegram orqali yuborib bo'lmadi" });
-
-    res.json({ success:true, message:'Yuborildi' });
-  })
-);
 
 // DELETE /api/students/:id (admin yoki guruh teacheri)
 router.delete('/:id', param('id').isMongoId(), ok, asyncHandler(async (req, res) => {

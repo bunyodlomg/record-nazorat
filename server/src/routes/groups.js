@@ -18,12 +18,6 @@ const ok = (req,res,next) => {
 
 router.use(protect, requireActive);
 
-const buildStudentInviteLink = (token) => {
-  const username = process.env.BOT_USERNAME;
-  if (!username || !token) return null;
-  return `https://t.me/${username}?start=g_${token}`;
-};
-
 // LIST
 router.get('/', asyncHandler(async (req,res) => {
   const { teacherId, level, isActive='true', page=1, limit=50 } = req.query;
@@ -116,9 +110,6 @@ router.get('/:id', param('id').isMongoId(), ok, asyncHandler(async (req,res) => 
   const completedHw = recentHw.filter(h => h.col === 'done').length;
   const pendingHw   = recentHw.filter(h => h.col !== 'done').length;
 
-  // Invite link — guruhga avval generatsiya qilingan token bo'lsa
-  const inviteLink = g.inviteToken ? buildStudentInviteLink(g.inviteToken) : null;
-
   // Teacher rasmi (User'da) — guruh egasiga qo'shamiz
   const gObj = g.toObject();
   if (gObj.teacher) {
@@ -136,7 +127,6 @@ router.get('/:id', param('id').isMongoId(), ok, asyncHandler(async (req,res) => 
       pendingStudents,
       pendingStudentCount: pendingStudents.length,
       homework:            recentHw,
-      inviteLink,
       stats: {
         totalGems:   gemAgg?.[0]?.totalGems || 0,
         avgScore:    Math.round(gemAgg?.[0]?.avgScore || 0),
@@ -313,30 +303,6 @@ router.get('/:id/submission-matrix', param('id').isMongoId(), ok, asyncHandler(a
     rows,
     summary,
   }});
-}));
-
-// GET /api/groups/:id/invite-link — joriy token (yo'q bo'lsa yaratiladi)
-router.get('/:id/invite-link', param('id').isMongoId(), ok, asyncHandler(async (req,res) => {
-  const g = await Group.findById(req.params.id);
-  if (!g) return res.status(404).json({ success:false, message:'Guruh topilmadi' });
-  if (!canEditGroup(req, g)) return res.status(403).json({ success:false, message:'Ruxsat yo\'q' });
-
-  if (!g.inviteToken) {
-    g.inviteToken = Group.generateInviteToken();
-    await g.save();
-  }
-  res.json({ success:true, data: { token: g.inviteToken, link: buildStudentInviteLink(g.inviteToken) } });
-}));
-
-// POST /api/groups/:id/invite-link/rotate — yangi token (eski link bekor)
-router.post('/:id/invite-link/rotate', param('id').isMongoId(), ok, asyncHandler(async (req,res) => {
-  const g = await Group.findById(req.params.id);
-  if (!g) return res.status(404).json({ success:false, message:'Guruh topilmadi' });
-  if (!canEditGroup(req, g)) return res.status(403).json({ success:false, message:'Ruxsat yo\'q' });
-
-  g.inviteToken = Group.generateInviteToken();
-  await g.save();
-  res.json({ success:true, data: { token: g.inviteToken, link: buildStudentInviteLink(g.inviteToken) } });
 }));
 
 // UPDATE

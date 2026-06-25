@@ -51,7 +51,7 @@ async function ensureForGroup(group) {
   }).select('weekStart weekSeq').lean();
   const have = new Set(existing.map(h => `${new Date(h.weekStart).getTime()}_${h.weekSeq}`));
 
-  const students = await Student.find({ group: group._id, status: 'active' }).select('_id telegramId status').lean();
+  const students = await Student.find({ group: group._id, status: 'active' }).select('_id status').lean();
   const total = Math.max(students.length, 1);
 
   const docs = [];
@@ -94,20 +94,6 @@ async function ensureForGroup(group) {
     }
   }
   if (subDocs.length) await Submission.insertMany(subDocs, { ordered: false }).catch(() => {});
-
-  // Bot orqali shu hafta'gi (joriy hafta) yangi speakinglar haqida xabar — tarixga emas
-  try {
-    const { notifyHomeworkAssigned } = require('../bot/notifications');
-    const tgStudents = students.filter(s => s.telegramId);
-    if (tgStudents.length) {
-      const currentMonday = todayMonday.getTime();
-      for (const hw of created) {
-        if (new Date(hw.weekStart).getTime() === currentMonday) {
-          notifyHomeworkAssigned(hw, group, tgStudents).catch(() => {});
-        }
-      }
-    }
-  } catch {}
 
   return created.length;
 }

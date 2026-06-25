@@ -25,7 +25,6 @@ import MyDashboard from './pages/teacher/MyDashboard.jsx';
 import MyClasses   from './pages/teacher/MyClasses.jsx';
 import MyHomework  from './pages/teacher/MyHomework.jsx';
 import ActivityGrid from './pages/teacher/ActivityGrid.jsx';
-import InvitesPage from './pages/Invites.jsx';
 import PendingUsersPage from './pages/PendingUsers.jsx';
 
 
@@ -44,7 +43,6 @@ const TEACHER_DOCK = [
   { id:'my-classes', label:'Mening guruhlarim',   icon:'groups' },
   { id:'my-homework',label:'Vazifalar',            icon:'homework' },
   { id:'activity',   label:'Faollik jadvali',     icon:'grid' },
-  { id:'invites',    label:'Takliflar',           icon:'send' },
   { divider:true },
   { id:'calendar',   label:'Kalendar',            icon:'calendar' },
 ];
@@ -137,7 +135,6 @@ function TeacherApp() {
   else if (page === 'my-classes')  content = <MyClasses onOpenStudent={setStudentId} onOpenGroup={setGroupId}/>;
   else if (page === 'my-homework') content = <MyHomework onOpenHomework={setHomeworkId}/>;
   else if (page === 'activity')    content = <ActivityGrid/>;
-  else if (page === 'invites')     content = <InvitesPage/>;
   else if (page === 'calendar')    content = <CalendarPage/>;
 
   return (

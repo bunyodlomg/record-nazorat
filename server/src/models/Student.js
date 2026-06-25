@@ -3,20 +3,16 @@ const mongoose = require('mongoose');
 const studentSchema = new mongoose.Schema({
   name:    { type:String, required:true, trim:true },
   hue:     { type:Number, min:0, max:360, default:200 },
-  // 'pending' — bot orqali ulangan, lekin teacher hali tasdiqlamagan
+  // 'pending' — eski (link orqali ulangan) o'quvchilar uchun saqlanadi;
+  // qo'lda qo'shilgan o'quvchilar to'g'ridan-to'g'ri 'active' bo'ladi.
   status:  { type:String, enum:['pending','active','inactive','suspended'], default:'active', index:true },
 
   // Guruhga bog'lanish (asosiy guruh)
   group:   { type:mongoose.Schema.Types.ObjectId, ref:'Group', required:true, index:true },
   teacher: { type:mongoose.Schema.Types.ObjectId, ref:'Teacher', default:null, index:true },
 
-  // Telegram'dan keladigan ma'lumotlar — bot orqali ulangan student'lar uchun
-  telegramId:        { type:String, default:null, index:true, sparse:true },
-  telegramUsername:  { type:String, default:null, trim:true },
-  telegramFirstName: { type:String, default:null, trim:true },
-  telegramLastName:  { type:String, default:null, trim:true },
+  // Ixtiyoriy avatar (Telegram bog'liqligisiz — qo'lda kiritish mumkin)
   photoUrl:          { type:String, default:null },
-  joinedViaBot:      { type:Boolean, default:false },
 
   // Performance metrics
   score:      { type:Number, min:0, max:100, default:0 },

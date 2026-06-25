@@ -142,7 +142,7 @@ router.get('/', asyncHandler(async (req, res) => {
     filter.teacher = req.user.teacherRef;
   }
   const data = await Submission.find(filter)
-    .populate('student',  'name hue photoUrl telegramUsername')
+    .populate('student',  'name hue photoUrl')
     .populate('homework', 'title dueDate')
     .populate('group',    'name code')
     .sort('-updatedAt')
@@ -195,32 +195,10 @@ router.patch('/:id',
 
     if (status === 'reviewed' || status === 'returned') {
       Teacher.updateOne({ _id: sub.teacher }, { $set: { lastReviewedAt: new Date() } }).catch(() => {});
-
-      // Student'ga bot orqali xabar (gem ma'lumotlari bilan)
-      try {
-        const Student  = require('../models/Student');
-        const { notifyHomeworkReviewed } = require('../bot/notifications');
-        const st = gemInfo?.studentTgId
-          ? { telegramId: gemInfo.studentTgId, name: gemInfo.studentName, status: 'active' }
-          : await Student.findById(sub.student).select('telegramId name status').lean();
-        if (st?.telegramId && st.status === 'active') {
-          notifyHomeworkReviewed({
-            studentTgId: st.telegramId,
-            studentName: st.name,
-            homeworkTitle: hwForGem?.title,
-            groupName: hwForGem?.group?.name,
-            status: sub.status,
-            score: sub.score,
-            feedback: sub.feedback,
-            gemDelta:  gemInfo?.delta || 0,
-            totalGems: gemInfo?.totalGems || 0,
-          }).catch(() => {});
-        }
-      } catch {}
     }
 
     const updated = await Submission.findById(sub._id)
-      .populate('student','name hue photoUrl telegramUsername').lean();
+      .populate('student','name hue photoUrl').lean();
     res.json({ success:true, data: updated, gem: gemInfo });
   })
 );
@@ -269,24 +247,6 @@ router.patch('/bulk',
     if (status === 'reviewed' || status === 'returned') {
       const teacherIds = [...new Set(subs.map(s => String(s.teacher)))];
       Teacher.updateMany({ _id:{ $in:teacherIds } }, { $set:{ lastReviewedAt:new Date() } }).catch(() => {});
-
-      // Bot xabarlari — gem ma'lumotlari bilan
-      try {
-        const { notifyHomeworkReviewed } = require('../bot/notifications');
-        for (const r of gemResults) {
-          if (r.info?.studentTgId) {
-            notifyHomeworkReviewed({
-              studentTgId: r.info.studentTgId,
-              studentName: r.info.studentName,
-              homeworkTitle: r.hw?.title,
-              groupName: r.hw?.group?.name,
-              status,
-              gemDelta:  r.info.delta || 0,
-              totalGems: r.info.totalGems || 0,
-            }).catch(() => {});
-          }
-        }
-      } catch {}
     }
 
     res.json({ success:true, updated: subs.length });

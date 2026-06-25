@@ -82,7 +82,7 @@ export default function StudentsPage({ embedded = false, onOpenStudent, groupId 
           <div style={{ padding:'60px 0', textAlign:'center', color:'var(--text-3)' }}>
             <div style={{ fontSize:40, marginBottom:8 }}>👤</div>
             <div style={{ fontSize:14, fontWeight:600, color:'var(--text-2)' }}>O'quvchilar yo'q</div>
-            <div style={{ fontSize:12.5, marginTop:5 }}>Mening guruhlarim → Taklif link orqali qo'shing</div>
+            <div style={{ fontSize:12.5, marginTop:5 }}>Guruh sahifasidan o'quvchi qo'shing</div>
           </div>
         ) : (
           <motion.div key="g" variants={listContainer} initial="hidden" animate="show"

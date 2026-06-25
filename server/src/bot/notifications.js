@@ -34,51 +34,24 @@ async function sendTeacherMessage(chatId, { kind = 'message', text, from }) {
   return sendTo(chatId, `${heading}\n\n${escapeMd(text)}`);
 }
 
-/**
- * Teacher tomonidan o'quvchiga shaxsiy xabar yoki maqtov.
- *
- * @param {string} chatId — student.telegramId
- * @param {{ kind:'message'|'praise', text:string, from:string }} payload
- */
-async function sendStudentMessage(chatId, { kind = 'message', text, from }) {
-  const heading = kind === 'praise'
-    ? `🌟 *Maqtov — ${escapeMd(from)} dan*`
-    : `💬 *Xabar — ${escapeMd(from)} dan*`;
-  return sendTo(chatId, `${heading}\n\n${escapeMd(text)}`);
-}
-
-const ROLE_LABEL = { admin:'Admin', teacher:"O'qituvchi", student:"O'quvchi" };
+const ROLE_LABEL = { admin:'Admin', teacher:"O'qituvchi" };
 
 /**
- * Yangi foydalanuvchi pending bo'lganda — tasdiqlovchi(lar)ga xabar.
+ * Yangi foydalanuvchi (admin/teacher) pending bo'lganda — adminlarga xabar.
  *
- * @param {Object} user — pending User document (populate'd: pendingGroupRef)
+ * @param {Object} user — pending User document
  */
 async function notifyPending(user) {
   const User = require('../models/User');
-  const Group = require('../models/Group');
 
   const role = ROLE_LABEL[user.role] || user.role;
   const usernameLine = user.telegramUsername ? `@${user.telegramUsername}` : `ID ${user.telegramId}`;
-
-  let groupLine = '';
-  let teacherTgId = null;
-  if (user.role === 'student' && user.pendingGroupRef) {
-    const group = await Group.findById(user.pendingGroupRef).populate('teacher', 'name');
-    if (group) {
-      groupLine = `\nGuruh: *${group.name}* (${group.code})`;
-      if (group.teacher) {
-        const teacherUser = await User.findOne({ teacherRef: group.teacher._id, status:'active' }).select('telegramId').lean();
-        teacherTgId = teacherUser?.telegramId;
-      }
-    }
-  }
 
   const text =
     `🔔 *Yangi tasdiqlash so'rovi*\n\n` +
     `Ism: *${user.name}*\n` +
     `Telegram: ${usernameLine}\n` +
-    `Roli: ${role}` + groupLine +
+    `Roli: ${role}` +
     `\n\nMini App'da "Kutayotganlar" sahifasidan tasdiqlang.`;
 
   // Adminlarga
@@ -86,11 +59,6 @@ async function notifyPending(user) {
   for (const admin of admins) {
     if (String(admin.telegramId) === String(user.telegramId)) continue; // o'ziga yubormaslik
     await sendTo(admin.telegramId, text);
-  }
-
-  // Group teacher'iga (agar boshqa shaxs bo'lsa)
-  if (teacherTgId && !admins.some(a => String(a.telegramId) === String(teacherTgId))) {
-    await sendTo(teacherTgId, text);
   }
 }
 
@@ -120,124 +88,9 @@ async function notifyRejected(user) {
   await sendTo(user.telegramId, text);
 }
 
-/**
- * Yangi vazifa berilganida — guruhdagi o'quvchilarga.
- */
-async function notifyHomeworkAssigned(homework, group, students) {
-  if (!homework || !students?.length) return;
-  const dueLabel = homework.dueLabel ||
-    (homework.dueDate ? new Date(homework.dueDate).toLocaleDateString('uz-UZ') : '');
-  const text =
-    `📝 *Yangi vazifa*\n\n` +
-    `*${escapeMd(homework.title)}*\n` +
-    (group ? `Guruh: ${escapeMd(group.name)}\n` : '') +
-    (dueLabel ? `Muddati: ${dueLabel}\n` : '') +
-    `\nVazifa berildi. Tayyor bo'lgach o'qituvchingizga topshiring.`;
-  for (const s of students) {
-    if (s.telegramId && s.status === 'active') await sendTo(s.telegramId, text);
-  }
-}
-
-/**
- * Student vazifasi tekshirildi — ball, izoh va olmos.
- */
-async function notifyHomeworkReviewed({ studentTgId, studentName, homeworkTitle, groupName, status, score, feedback, gemDelta, totalGems }) {
-  if (!studentTgId) return;
-  const statusLabel = status === 'reviewed' ? '✅ Belgilandi'
-                    : status === 'returned' ? '🔄 Qaytarildi'
-                    : status;
-
-  // Olmos qatori
-  let gemLine = '';
-  if (gemDelta && gemDelta > 0) {
-    gemLine = `\n💎 *+${gemDelta} olmos*` + (Number.isFinite(totalGems) ? ` _(jami: ${totalGems})_` : '');
-  } else if (gemDelta && gemDelta < 0) {
-    gemLine = `\n💎 ${gemDelta} olmos` + (Number.isFinite(totalGems) ? ` _(jami: ${totalGems})_` : '');
-  }
-
-  const text =
-    `${statusLabel}\n\n` +
-    `Vazifa: *${escapeMd(homeworkTitle || '—')}*\n` +
-    (groupName ? `Guruh: ${escapeMd(groupName)}\n` : '') +
-    (Number.isFinite(score) ? `Ball: *${score}/100*\n` : '') +
-    gemLine +
-    (feedback ? `\n\nIzoh: ${escapeMd(feedback)}` : '');
-  await sendTo(studentTgId, text);
-}
-
-/**
- * Reyting o'zgardi — student leaderboard'da o'rin oldi yoki o'zgardi.
- */
-async function notifyLeaderboardChange({ studentTgId, studentName, oldRank, newRank, totalStudents }) {
-  if (!studentTgId || !newRank) return;
-  let headline;
-  if (!oldRank) {
-    headline = `🎉 *Reytingga kirdingiz!*`;
-  } else if (newRank < oldRank) {
-    const delta = oldRank - newRank;
-    headline = `📈 *Reytingda ${delta} pog'ona ko'tarildingiz!*`;
-  } else if (newRank > oldRank) {
-    const delta = newRank - oldRank;
-    headline = `📉 Reytingda ${delta} pog'ona pasaydingiz`;
-  } else {
-    return; // o'zgarmagan
-  }
-  const text =
-    `${headline}\n\n` +
-    `Joriy o'rin: *${newRank}` +
-    (totalStudents ? ` / ${totalStudents}` : '') + `*\n` +
-    (oldRank ? `Avvalgi: ${oldRank}\n` : '');
-  await sendTo(studentTgId, text);
-}
-
-/**
- * Bot orqali kelgan pending student haqida teacher'ga xabar.
- */
-async function notifyStudentPending(teacherTgId, { studentName, groupName, groupCode, telegramUsername }) {
-  if (!teacherTgId) return;
-  const text =
-    `🔔 *Yangi o'quvchi tasdiq kutmoqda*\n\n` +
-    `Ism: *${escapeMd(studentName)}*\n` +
-    `Guruh: ${escapeMd(groupName)} (${escapeMd(groupCode)})\n` +
-    (telegramUsername ? `Telegram: @${escapeMd(telegramUsername)}\n` : '') +
-    `\nMini App'da "Yangi o'quvchilar" sahifasidan tasdiqlang.`;
-  await sendTo(teacherTgId, text);
-}
-
-/**
- * Pending student tasdiqlandi — botga xabar.
- */
-async function notifyStudentApproved(student) {
-  if (!student?.telegramId) return;
-  const groupName = student.group?.name || '';
-  const text =
-    `✅ *Tasdiqlandingiz!*\n\n` +
-    (groupName ? `Guruh: *${escapeMd(groupName)}*\n` : '') +
-    `\nBundan keyin vazifa va baholaringiz haqida shu botga avtomatik xabar keladi.`;
-  await sendTo(student.telegramId, text);
-}
-
-/**
- * Pending student rad etildi.
- */
-async function notifyStudentRejected(student) {
-  if (!student?.telegramId) return;
-  const text =
-    `❌ *Ro'yxatga olinishingiz rad etildi*\n\n` +
-    `Iltimos, o'qituvchingiz bilan bog'laning.`;
-  await sendTo(student.telegramId, text);
-}
-
 module.exports = {
   notifyPending,
   notifyApproved,
   notifyRejected,
-  notifyHomeworkAssigned,
-  notifyHomeworkReviewed,
-  notifyLeaderboardChange,
-  notifyStudentPending,
-  notifyStudentApproved,
-  notifyStudentRejected,
   sendTeacherMessage,
-  sendStudentMessage,
 };

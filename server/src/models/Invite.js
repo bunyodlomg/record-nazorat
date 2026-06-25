@@ -3,26 +3,20 @@ const crypto   = require('crypto');
 
 const inviteSchema = new mongoose.Schema({
   token:     { type:String, required:true, unique:true, index:true },
-  role:      { type:String, enum:['admin','teacher','student'], required:true },
+  role:      { type:String, enum:['admin','teacher'], required:true },
   label:     { type:String, default:null, trim:true },
   createdBy: { type:mongoose.Schema.Types.ObjectId, ref:'User', required:true },
-
-  // Student invite uchun: qaysi guruhga qo'shiladi
-  group:     { type:mongoose.Schema.Types.ObjectId, ref:'Group', default:null, index:true },
 
   // single-use yoki ko'p marta — default single-use
   maxUses:   { type:Number, default:1, min:1 },
   uses:      [{ type:mongoose.Schema.Types.ObjectId, ref:'User' }],
-  // Student rolli invite uchun — bot orqali kelgan o'quvchilar
-  studentUses: [{ type:mongoose.Schema.Types.ObjectId, ref:'Student' }],
 
   expiresAt: { type:Date, default:null },
   revokedAt: { type:Date, default:null },
 }, { timestamps:true });
 
 inviteSchema.virtual('isUsed').get(function() {
-  const used = (this.uses?.length || 0) + (this.studentUses?.length || 0);
-  return used >= this.maxUses;
+  return (this.uses?.length || 0) >= this.maxUses;
 });
 inviteSchema.virtual('isExpired').get(function() {
   return this.expiresAt && this.expiresAt < new Date();

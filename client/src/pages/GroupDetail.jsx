@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Icon, Avatar, TgUsername } from '../components/ui.jsx';
+import { Icon, Avatar } from '../components/ui.jsx';
 import { Spinner, ErrorBox } from '../components/Feedback.jsx';
-import { Modal } from '../components/Modal.jsx';
+import { Modal, Field, Input, Textarea } from '../components/Modal.jsx';
 import { useFetch } from '../hooks/useFetch.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import api from '../services/api.js';
@@ -64,7 +64,7 @@ function StudentRow({ s, onOpen }) {
           {s.name}
         </div>
         <div style={{ fontSize:11, color:'var(--text-3)', marginTop:2 }}>
-          {s.telegramUsername ? <TgUsername username={s.telegramUsername}/> : (s.joinedViaBot ? 'Bot orqali' : "Qo'lda qo'shilgan")}
+          {s.phone || "Qo'lda qo'shilgan"}
         </div>
       </div>
       <div style={{ textAlign:'right', flexShrink:0 }}>
@@ -133,9 +133,6 @@ function PendingStudentCard({ s, onApprove, onReject, busy }) {
         <div style={{ fontSize:13, fontWeight:700, lineHeight:1.2, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
           {s.name}
         </div>
-        {s.telegramUsername && (
-          <div style={{ fontSize:11, color:'var(--text-2)', marginTop:2 }}><TgUsername username={s.telegramUsername}/></div>
-        )}
       </div>
       <button className="btn btn-primary btn-sm" disabled={busy} onClick={() => onApprove(s._id)}
         style={{ fontSize:11.5, padding:'6px 11px' }}>
@@ -350,12 +347,69 @@ function SubmissionMatrix({ groupId }) {
   );
 }
 
+/* ── Qo'lda o'quvchi qo'shish ── */
+function AddStudentModal({ open, group, onClose, onDone }) {
+  const [form, setForm] = useState({ name:'', phone:'', notes:'' });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const upd = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const submit = async () => {
+    if (!form.name.trim()) return;
+    setBusy(true); setError('');
+    try {
+      await api.students.create({
+        name: form.name.trim(),
+        group: group._id,
+        phone: form.phone.trim() || undefined,
+        notes: form.notes.trim() || undefined,
+      });
+      sfx.success();
+      setForm({ name:'', phone:'', notes:'' });
+      onDone?.();
+      onClose();
+    } catch (e) {
+      setError(e.message || 'Xatolik');
+    } finally { setBusy(false); }
+  };
+
+  if (!group) return null;
+  return (
+    <Modal open={open} onClose={onClose}
+      title="O'quvchi qo'shish"
+      subtitle={`"${group.name}" guruhiga yangi o'quvchi`}
+      width={440}
+      footer={<>
+        <button className="btn btn-ghost" onClick={onClose} disabled={busy}>Bekor</button>
+        <button className="btn btn-primary" onClick={submit} disabled={busy || !form.name.trim()}>
+          {busy ? 'Qo\'shilmoqda...' : 'Qo\'shish'}
+        </button>
+      </>}>
+      {error && (
+        <div style={{ marginBottom:12, padding:'10px 12px', background:'var(--rose-bg)', border:'1px solid var(--rose)', borderRadius:8, color:'var(--rose)', fontSize:12.5 }}>
+          {error}
+        </div>
+      )}
+      <Field label="Ism familya">
+        <Input value={form.name} onChange={e=>upd('name', e.target.value)} placeholder="Ali Valiyev" autoFocus/>
+      </Field>
+      <Field label="Telefon (ixtiyoriy)">
+        <Input value={form.phone} onChange={e=>upd('phone', e.target.value)} placeholder="+998 90 ..."/>
+      </Field>
+      <Field label="Eslatma (ixtiyoriy)">
+        <Textarea value={form.notes} onChange={e=>upd('notes', e.target.value)} maxLength={500}/>
+      </Field>
+    </Modal>
+  );
+}
+
 export default function GroupDetailPage({ groupId, onBack, onOpenStudent, onOpenHomework, onOpenTeacher }) {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   const [tab, setTab] = useState('students');
   const [busyPending, setBusyPending] = useState(null);
-  const [copied, setCopied] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
   const { data: g, loading, error, refetch } = useFetch(() => api.groups.get(groupId), [groupId]);
 
@@ -370,21 +424,6 @@ export default function GroupDetailPage({ groupId, onBack, onOpenStudent, onOpen
     try { await api.students.reject(id); sfx.success(); refetch(); }
     catch (e) { alert(e.message); }
     finally { setBusyPending(null); }
-  };
-
-  const ensureLink = async () => {
-    try {
-      const r = await api.groups.inviteLink(groupId);
-      sfx.success();
-      refetch();
-      return r?.data?.link || null;
-    } catch (e) { alert(e.message); return null; }
-  };
-
-  const copyLink = async (link) => {
-    if (!link) return;
-    try { await navigator.clipboard.writeText(link); setCopied(true); sfx.success(); setTimeout(() => setCopied(false), 1500); }
-    catch { alert('Nusxalab bo\'lmadi'); }
   };
 
   const students  = g?.studentList || [];
@@ -495,40 +534,19 @@ export default function GroupDetailPage({ groupId, onBack, onOpenStudent, onOpen
         )}
       </div>
 
-      {/* Invite link card — faqat admin uchun */}
-      {isAdmin && (
-        <motion.div className="card"
-          initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.1 }}
-          style={{ padding:14, marginBottom:12 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
-            <div style={{ width:30, height:30, borderRadius:8, background:'var(--accent-bg)', color:'var(--accent-l)', display:'grid', placeItems:'center', flexShrink:0 }}>
-              <Icon name="send" size={14}/>
-            </div>
-            <div style={{ flex:1 }}>
-              <div style={{ fontSize:13, fontWeight:700 }}>Bot orqali ulanish</div>
-              <div style={{ fontSize:11.5, color:'var(--text-3)', marginTop:1 }}>O'quvchilar shu link orqali guruhga qo'shilishi mumkin</div>
-            </div>
-          </div>
-          {g.inviteLink ? (
-            <div style={{ display:'flex', gap:6, alignItems:'center' }}>
-              <code style={{
-                flex:1, padding:'9px 11px', background:'var(--bg-subtle)', border:'1px dashed var(--border)',
-                borderRadius:8, fontSize:11.5, fontFamily:'var(--mono)', wordBreak:'break-all',
-                color:'var(--text-1)',
-              }}>{g.inviteLink}</code>
-              <button className="btn btn-primary btn-sm" onClick={() => copyLink(g.inviteLink)}
-                style={{ flexShrink:0 }}>
-                {copied ? '✓' : 'Nusxalash'}
-              </button>
-            </div>
-          ) : (
-            <button className="btn btn-primary" onClick={ensureLink}
-              style={{ width:'100%', justifyContent:'center' }}>
-              <Icon name="plus" size={13}/> Link yaratish
-            </button>
-          )}
-        </motion.div>
-      )}
+      {/* O'quvchi qo'shish — admin yoki guruh o'qituvchisi qo'lda qo'shadi */}
+      <div style={{ marginBottom:12 }}>
+        <button onClick={() => setAddOpen(true)}
+          style={{
+            width:'100%', padding:'12px 14px', borderRadius:12,
+            background:'var(--primary-bg)', color:'var(--primary-l)',
+            border:'1px solid rgba(99,102,241,0.30)',
+            fontSize:13.5, fontWeight:600, cursor:'pointer',
+            display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+          }}>
+          <Icon name="plus" size={14}/> O'quvchi qo'shish
+        </button>
+      </div>
 
       {/* Pending students alert */}
       {pending.length > 0 && (
@@ -577,7 +595,7 @@ export default function GroupDetailPage({ groupId, onBack, onOpenStudent, onOpen
           <div style={{ padding:'40px 20px', textAlign:'center', color:'var(--text-3)' }}>
             <div style={{ fontSize:36, marginBottom:8 }}>👥</div>
             <div style={{ fontSize:14, fontWeight:600, color:'var(--text-2)' }}>Hozircha o'quvchi yo'q</div>
-            <div style={{ fontSize:12.5, marginTop:5 }}>Yuqoridagi link orqali yoki qo'lda qo'shing.</div>
+            <div style={{ fontSize:12.5, marginTop:5 }}>Yuqoridagi "O'quvchi qo'shish" tugmasi orqali qo'shing.</div>
           </div>
         ) : (
           <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
@@ -619,6 +637,13 @@ export default function GroupDetailPage({ groupId, onBack, onOpenStudent, onOpen
         open={closeOpen}
         group={g}
         onClose={() => setCloseOpen(false)}
+        onDone={refetch}
+      />
+
+      <AddStudentModal
+        open={addOpen}
+        group={g}
+        onClose={() => setAddOpen(false)}
         onDone={refetch}
       />
     </motion.div>

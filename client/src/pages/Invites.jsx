@@ -1,15 +1,14 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon, Avatar } from '../components/ui.jsx';
 import { Spinner, ErrorBox, listContainer, listItem } from '../components/Feedback.jsx';
 import { Modal, Field, Input, Select } from '../components/Modal.jsx';
 import { useFetch } from '../hooks/useFetch.js';
-import { useAuth } from '../context/AuthContext.jsx';
 import api from '../services/api.js';
 import { haptic } from '../hooks/useTelegram.js';
 import SwipeToDelete from '../components/SwipeToDelete.jsx';
 
-const ROLE_LABEL = { admin:'Admin', teacher:"O'qituvchi", student:"O'quvchi" };
+const ROLE_LABEL = { admin:'Admin', teacher:"O'qituvchi" };
 const STATUS_LABEL = { pending:'Kutilmoqda', active:'Tasdiqlangan', rejected:'Rad etilgan' };
 const STATUS_COLOR = {
   pending:  ['var(--amber-bg)',   'var(--amber)'],
@@ -30,17 +29,15 @@ function statusOf(inv) {
   return                   { label:'Faol',          color:'var(--emerald)',bg:'var(--primary-bg)' };
 }
 
-function CreateInviteModal({ open, onClose, onCreated, isTeacher, groups }) {
-  const [role, setRole] = useState(isTeacher ? 'student' : 'teacher');
-  const [groupId, setGroupId] = useState('');
+function CreateInviteModal({ open, onClose, onCreated }) {
+  const [role, setRole] = useState('teacher');
   const [maxUses, setMaxUses] = useState(20);
   const [expiresInHours, setExpires] = useState(1); // 1 soat default
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState('');
 
   const resetForm = () => {
-    setRole(isTeacher ? 'student' : 'teacher');
-    setGroupId('');
+    setRole('teacher');
     setMaxUses(20);
     setExpires(1); setError('');
   };
@@ -53,10 +50,6 @@ function CreateInviteModal({ open, onClose, onCreated, isTeacher, groups }) {
         maxUses: Number(maxUses) || 1,
         expiresInHours: expiresInHours ? Number(expiresInHours) : undefined,
       };
-      if (role === 'student') {
-        if (!groupId) { setError("Guruh tanlang"); setSaving(false); return; }
-        payload.group = groupId;
-      }
       const res = await api.invites.create(payload);
       onCreated?.(res.data);
       onClose();
@@ -69,11 +62,11 @@ function CreateInviteModal({ open, onClose, onCreated, isTeacher, groups }) {
   return (
     <Modal open={open} onClose={() => { onClose(); resetForm(); }}
       title="Yangi taklif link"
-      subtitle="Bot orqali ulanish uchun havola"
+      subtitle="Admin yoki o'qituvchi hisobini tizimga kiritish uchun havola"
       width={460}
       footer={<>
         <button className="btn btn-ghost" onClick={() => { onClose(); resetForm(); }} disabled={saving}>Bekor</button>
-        <button className="btn btn-primary" onClick={submit} disabled={saving || (role === 'student' && !groupId)}>
+        <button className="btn btn-primary" onClick={submit} disabled={saving}>
           {saving ? 'Yaratilmoqda...' : 'Link yaratish'}
         </button>
       </>}
@@ -84,26 +77,12 @@ function CreateInviteModal({ open, onClose, onCreated, isTeacher, groups }) {
         </div>
       )}
 
-      {!isTeacher && (
-        <Field label="Kim uchun">
-          <Select value={role} onChange={e => { setRole(e.target.value); setGroupId(''); }}>
-            <option value="teacher">O'qituvchi</option>
-            <option value="admin">Admin</option>
-            <option value="student">O'quvchi (guruhga)</option>
-          </Select>
-        </Field>
-      )}
-
-      {role === 'student' && (
-        <Field label="Qaysi guruhga" hint="O'quvchi link orqali bu guruhga so'rov yuboradi">
-          <Select value={groupId} onChange={e => setGroupId(e.target.value)}>
-            <option value="">— Guruhni tanlang —</option>
-            {groups.map(g => (
-              <option key={g._id} value={g._id}>{g.name} ({g.code})</option>
-            ))}
-          </Select>
-        </Field>
-      )}
+      <Field label="Kim uchun">
+        <Select value={role} onChange={e => setRole(e.target.value)}>
+          <option value="teacher">O'qituvchi</option>
+          <option value="admin">Admin</option>
+        </Select>
+      </Field>
 
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
         <Field label="Necha marta ishlaydi" hint="1 — bir martalik">
@@ -147,20 +126,12 @@ function InviteRow({ inv, onRevoke, onCopy }) {
   const [expanded, setExpanded] = useState(false);
   const st = statusOf(inv);
   const userUses    = inv.uses || [];
-  const studentUses = inv.studentUses || [];
-  const usesCount   = userUses.length + studentUses.length;
+  const usesCount   = userUses.length;
   const hasUses     = usesCount > 0;
 
-  const isStudent = inv.role === 'student';
-  const iconName  = inv.role === 'admin'   ? 'shield'
-                  : inv.role === 'student' ? 'user'
-                  : 'teachers';
-  const iconBg    = inv.role === 'admin'   ? 'var(--violet-bg)'
-                  : inv.role === 'student' ? 'var(--accent-bg)'
-                  : 'var(--primary-bg)';
-  const iconFg    = inv.role === 'admin'   ? 'var(--violet)'
-                  : inv.role === 'student' ? 'var(--accent-l)'
-                  : 'var(--primary)';
+  const iconName  = inv.role === 'admin' ? 'shield' : 'teachers';
+  const iconBg    = inv.role === 'admin' ? 'var(--violet-bg)' : 'var(--primary-bg)';
+  const iconFg    = inv.role === 'admin' ? 'var(--violet)'    : 'var(--primary)';
 
   return (
     <motion.div variants={listItem} className="card"
@@ -176,12 +147,11 @@ function InviteRow({ inv, onRevoke, onCopy }) {
           </div>
           <div style={{ minWidth:0 }}>
             <div style={{ fontSize:13.5, fontWeight:700, display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' }}>
-              {inv.label || (isStudent && inv.group?.name) || ROLE_LABEL[inv.role]}
+              {inv.label || ROLE_LABEL[inv.role]}
               <span className="chip" style={{ background:st.bg, color:st.color, fontSize:10.5 }}>{st.label}</span>
             </div>
             <div style={{ fontSize:11.5, color:'var(--text-3)', marginTop:2 }}>
               {ROLE_LABEL[inv.role]}
-              {isStudent && inv.group && <> · <span style={{ fontFamily:'var(--mono)' }}>{inv.group.code}</span></>}
               {' · '}
               <span style={{ fontWeight:600, color:'var(--text-2)' }}>{usesCount}/{inv.maxUses}</span> ishlatilgan
               {inv.expiresAt && <> · {formatDate(inv.expiresAt)} gacha</>}
@@ -227,7 +197,6 @@ function InviteRow({ inv, onRevoke, onCopy }) {
                 style={{ overflow:'hidden' }}>
                 <div style={{ display:'flex', flexDirection:'column', gap:6, paddingTop:6 }}>
                   {userUses.map(u => <UseChip key={u._id} user={u}/>)}
-                  {studentUses.map(u => <UseChip key={u._id} user={u}/>)}
                 </div>
               </motion.div>
             )}
@@ -250,17 +219,10 @@ function InviteRow({ inv, onRevoke, onCopy }) {
 }
 
 export default function InvitesPage({ embedded = false }) {
-  const { user } = useAuth();
-  const isTeacher = user?.role === 'teacher';
   const [modalOpen, setModalOpen] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
   const { data, loading, error, refetch } = useFetch(() => api.invites.list(), []);
-  const { data: groupsData } = useFetch(() => api.groups.list({ limit: 100 }), []);
   const invites = data ?? [];
-  const groups = useMemo(() => {
-    const list = Array.isArray(groupsData) ? groupsData : (groupsData?.data ?? []);
-    return list;
-  }, [groupsData]);
 
   const copy = async (link) => {
     if (!link) return;
@@ -283,10 +245,8 @@ export default function InvitesPage({ embedded = false }) {
     catch (e) { alert(e.message); throw e; }
   };
 
-  const title = isTeacher ? "Takliflar" : 'Invite linklar';
-  const subtitle = isTeacher
-    ? "Bot orqali o'quvchilarni guruhga taklif qilish uchun havolalar"
-    : 'Bot orqali kirish uchun';
+  const title = 'Invite linklar';
+  const subtitle = "Admin va o'qituvchi hisoblarini tizimga kiritish uchun";
 
   const Wrapper = embedded ? motion.div : motion.div;
   const wrapperProps = embedded
@@ -302,9 +262,7 @@ export default function InvitesPage({ embedded = false }) {
             <div className="page-sub">{invites.length} ta link · {subtitle}</div>
           </div>
           <div className="page-acts">
-            <button className="btn btn-primary" onClick={() => setModalOpen(true)}
-              disabled={isTeacher && groups.length === 0}
-              title={isTeacher && groups.length === 0 ? "Avval guruh yarating" : ''}>
+            <button className="btn btn-primary" onClick={() => setModalOpen(true)}>
               <Icon name="plus" size={13}/> Yangi link
             </button>
           </div>
@@ -315,8 +273,7 @@ export default function InvitesPage({ embedded = false }) {
           <div style={{ fontSize:12.5, color:'var(--text-3)' }}>
             {invites.length} ta link · {subtitle}
           </div>
-          <button className="btn btn-primary" onClick={() => setModalOpen(true)}
-            disabled={isTeacher && groups.length === 0} style={{ fontSize:12.5 }}>
+          <button className="btn btn-primary" onClick={() => setModalOpen(true)} style={{ fontSize:12.5 }}>
             <Icon name="plus" size={13}/> Yangi link
           </button>
         </div>
@@ -339,9 +296,7 @@ export default function InvitesPage({ embedded = false }) {
             <div style={{ fontSize:40, marginBottom:8 }}>🔗</div>
             <div style={{ fontSize:14, fontWeight:600, color:'var(--text-2)' }}>Hech qanday taklif yo'q</div>
             <div style={{ fontSize:12.5, marginTop:5 }}>
-              {isTeacher && groups.length === 0
-                ? "Avval guruh yarating, keyin taklif link beriladi."
-                : '"Yangi link" tugmasini bosing.'}
+              "Yangi link" tugmasini bosing.
             </div>
           </div>
         ) : (
@@ -360,8 +315,6 @@ export default function InvitesPage({ embedded = false }) {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onCreated={() => refetch()}
-        isTeacher={isTeacher}
-        groups={groups}
       />
     </Wrapper>
   );
