@@ -11,3 +11,9 @@ export const IS_IOS =
 if (typeof document !== 'undefined' && IS_IOS) {
   document.documentElement.classList.add('is-ios');
 }
+
+// Touch qurilma (mobil). Bunda tap `mouseenter` ni ham tetiklaydi — hover ovozi
+// ortiqcha (click bilan 2 marta chalinadi), shuning uchun touch'da hover ovozi o'chiriladi.
+export const IS_TOUCH =
+  typeof window !== 'undefined' &&
+  (('ontouchstart' in window) || ((navigator.maxTouchPoints || 0) > 0));

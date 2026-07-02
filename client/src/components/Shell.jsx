@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { IS_IOS } from '../utils/device.js';
+import { IS_IOS, IS_TOUCH } from '../utils/device.js';
 import { Icon, Avatar } from './ui.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { sfx } from '../hooks/useSound.js';
@@ -351,7 +351,7 @@ export function Dock({ items, active, onChange }) {
             <motion.button
               key={item.id}
               className={`dock-btn ${isActive ? 'active' : ''}`}
-              onMouseEnter={() => !isActive && (sfx.hover(), haptic.selection())}
+              onMouseEnter={IS_TOUCH ? undefined : () => !isActive && (sfx.hover(), haptic.selection())}
               onClick={() => { sfx.click(); haptic.impact('medium'); onChange(item.id); }}
               whileHover={IS_IOS ? undefined : { y: -3 }}
               whileTap={{ scale: 0.92 }}
