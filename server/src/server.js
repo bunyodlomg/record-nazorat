@@ -28,7 +28,15 @@ app.use(cors({
   credentials: true,
   methods: ['GET','POST','PATCH','PUT','DELETE','OPTIONS'],
 }));
-app.use(rateLimit({ windowMs:15*60*1000, max:300, standardHeaders:true, legacyHeaders:false }));
+// Ilova ko'p polling qiladi (notifications/dashboard/homework har 10-12s), shuning
+// uchun limit yuqori. Auth va health'ni cheklamaymiz (429 kirishni bloklamasin).
+app.use(rateLimit({
+  windowMs: 15*60*1000,
+  max: Number(process.env.RATE_LIMIT_MAX || 5000),
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.path === '/health' || req.path.startsWith('/api/auth'),
+}));
 app.use(express.json({ limit:'10mb' }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
