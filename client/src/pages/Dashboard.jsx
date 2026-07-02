@@ -146,7 +146,7 @@ export default function DashboardPage({ onOpenTeacher, onOpenStudent, onNav }) {
 
       <motion.div className="kpi-grid" variants={listContainer} initial="hidden" animate="show">
         <KpiCard label="Jami o'quvchilar" value={kpis.totalStudents}  icon="user"     iconBg="var(--primary-bg)" iconColor="var(--primary)"/>
-        <KpiCard label="O'qituvchilar"     value={kpis.totalTeachers}  icon="teachers" iconBg="var(--accent-bg)"  iconColor="var(--accent)"/>
+        <KpiCard label="O'qituvchilar"     value={kpis.activeTeachers} icon="teachers" iconBg="var(--accent-bg)"  iconColor="var(--accent)"/>
         <KpiCard label="O'rtacha davomat"  value={kpis.avgAttendance} suffix="%" icon="activity" iconBg="var(--amber-bg)" iconColor="var(--amber)"/>
         <KpiCard label="Aktiv guruhlar"    value={kpis.totalGroups}    icon="grid"     iconBg="rgba(16,185,129,0.13)" iconColor="var(--emerald)"/>
       </motion.div>

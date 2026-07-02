@@ -13,7 +13,12 @@ router.use(protect, requireActive);
 
 // GET /api/dashboard  — barcha KPI'lar bir so'rovda
 router.get('/', asyncHandler(async (req, res) => {
-  const [tStats, gTotal, sTotal, hwAgg, topTeachers, submittedByTeacher] = await Promise.all([
+  // Guruhlar sahifasi bilan izchil bo'lishi uchun: faqat AKTIV guruhlar va ulardagi
+  // aktiv o'quvchilar sanaladi (yopilgan guruh o'quvchilari umumiy songa kirmaydi).
+  const activeGroups   = await Group.find({ isActive: true }).select('_id').lean();
+  const activeGroupIds = activeGroups.map(g => g._id);
+
+  const [tStats, sTotal, hwAgg, topTeachers, submittedByTeacher] = await Promise.all([
     Teacher.aggregate([{ $group:{
       _id:null,
       total:         { $sum:1 },
@@ -22,8 +27,7 @@ router.get('/', asyncHandler(async (req, res) => {
       avgScore:      { $avg:'$score' },
       avgAttendance: { $avg:'$attendance' },
     }}]),
-    Group.countDocuments({ isActive: true }),
-    Student.countDocuments({ status: 'active' }),
+    Student.countDocuments({ status: 'active', group: { $in: activeGroupIds } }),
     Homework.aggregate([{ $group:{ _id:'$col', count:{ $sum:1 } } }]),
     Teacher.find({ status:'active' }).sort('-score').limit(3).select('name subject score hue').lean(),
     // "Tekshirilmagan" = teacher hali tasdiqlamagan (pending/submitted/returned)
@@ -170,7 +174,7 @@ router.get('/', asyncHandler(async (req, res) => {
       totalUnchecked,
       avgScore:         Math.round(ts.avgScore      ?? 0),
       avgAttendance:    Math.round(ts.avgAttendance ?? 0),
-      totalGroups:      gTotal ?? 0,
+      totalGroups:      activeGroupIds.length,
       totalStudents:    sTotal ?? 0,
       hwPending:        hwM.pending  ?? 0,
       hwChecking:       hwM.checking ?? 0,
