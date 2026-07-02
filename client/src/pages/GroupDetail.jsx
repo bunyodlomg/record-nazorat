@@ -81,11 +81,14 @@ function StudentRow({ s, onOpen }) {
   );
 }
 
+const LATE_GRACE_MS = 34 * 60 * 60 * 1000; // muddatdan keyin "kechikkan" chiqishiga imkoniyat oynasi
+
 function HomeworkItem({ hw, onOpen }) {
-  const isDone     = hw.col === 'done';
-  const isOverdue  = !isDone && hw.dueDate && new Date(hw.dueDate) < new Date();
   const submissions = hw.submissions || 0;
   const total       = hw.total || 0;
+  const isDone      = total > 0 && submissions >= total; // hammasi belgilangan
+  const isOverdue   = !isDone && hw.dueDate &&
+    (new Date(hw.dueDate).getTime() + LATE_GRACE_MS) < Date.now();
   const pct = total > 0 ? Math.round((submissions / total) * 100) : 0;
 
   return (

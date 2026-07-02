@@ -47,20 +47,25 @@ router.get('/events', asyncHandler(async (req, res) => {
       try { teacherFilter = new mongoose.Types.ObjectId(req.query.teacherId); } catch {}
     }
 
-    // 1) Homework yaratilganlar (kun-by-kun, per-teacher) — "berildi"
+    // 1) Kun oralig'ida MUDDATI kelgan vazifalar (per-teacher, dueDate bo'yicha)
     const hwFilter = { dueDate: { $gte: rangeStart, $lte: rangeEnd } };
     if (teacherFilter) hwFilter.teacher = teacherFilter;
-    const homeworks = await Homework.find(hwFilter).select('teacher dueDate total submissions').lean();
+    const homeworks = await Homework.find(hwFilter).select('teacher dueDate').lean();
+    const hwIds = homeworks.map(h => h._id);
 
-    // 2) Submission reviewedAt / submittedAt kun bo'yicha
-    const subFilter = {
-      $or: [
-        { reviewedAt:  { $gte: rangeStart, $lte: rangeEnd } },
-        { submittedAt: { $gte: rangeStart, $lte: rangeEnd } },
-      ],
-    };
-    if (teacherFilter) subFilter.teacher = teacherFilter;
-    const subs = await Submission.find(subFilter).select('teacher status reviewedAt submittedAt').lean();
+    // 2) SHU vazifalarning submission'lari — status bo'yicha (dueDate o'lchamiga bog'lab).
+    //    Muhim: "belgilandi" ni submission.reviewedAt kuni bo'yicha emas, vazifa dueDate'i
+    //    bo'yicha sanaymiz — aks holda belgilandi > berildi bo'lib >100% chiqadi.
+    const subAgg = hwIds.length ? await Submission.aggregate([
+      { $match: { homework: { $in: hwIds } } },
+      { $group: { _id: { homework:'$homework', status:'$status' }, count:{ $sum:1 } } },
+    ]) : [];
+    const hwTotal = {}, hwReviewed = {};
+    for (const row of subAgg) {
+      const hid = String(row._id.homework);
+      hwTotal[hid] = (hwTotal[hid] || 0) + row.count;
+      if (row._id.status === 'reviewed') hwReviewed[hid] = (hwReviewed[hid] || 0) + row.count;
+    }
 
     // 3) Teacher info
     const teachers = await Teacher.find({}).select('name hue').lean();
@@ -69,33 +74,21 @@ router.get('/events', asyncHandler(async (req, res) => {
       teachers.map(t => [String(t._id), { ...t, photoUrl: photoMap[String(t._id)] || null }])
     );
 
-    // Aggregate: stats[date][teacherId] = { assigned, reviewed, pending }
+    // Aggregate: stats[date][teacherId] = { assigned, reviewed }
     const stats = {};
     const bump = (key, tid, field, val = 1) => {
       stats[key] ||= {};
-      stats[key][tid] ||= { assigned:0, reviewed:0, pending:0 };
+      stats[key][tid] ||= { assigned:0, reviewed:0 };
       stats[key][tid][field] += val;
     };
 
     for (const hw of homeworks) {
       const k = fmtKey(new Date(hw.dueDate));
-      bump(k, String(hw.teacher), 'assigned', hw.total || 0);
+      const tid = String(hw.teacher);
+      const hid = String(hw._id);
+      bump(k, tid, 'assigned', hwTotal[hid] || 0);
+      bump(k, tid, 'reviewed', hwReviewed[hid] || 0);
     }
-    for (const s of subs) {
-      const tid = String(s.teacher);
-      if (s.reviewedAt && s.reviewedAt >= rangeStart && s.reviewedAt <= rangeEnd) {
-        const k = fmtKey(new Date(s.reviewedAt));
-        if (s.status === 'reviewed' || s.status === 'returned') bump(k, tid, 'reviewed');
-      }
-      if (s.submittedAt && s.submittedAt >= rangeStart && s.submittedAt <= rangeEnd && s.status === 'submitted') {
-        const k = fmtKey(new Date(s.submittedAt));
-        bump(k, tid, 'pending');
-      }
-    }
-
-    // Plus — agar dueDate o'tib ketgan + tekshirilmagan submission'lar ham "kech qoldi" sifatida hisoblansin
-    // Buni "pending" hisobiga qo'shsak adashish kelib chiqadi — alohida 'overdue' qilamiz
-    // Hozircha soddalashtirib pending ichida qoldiramiz.
 
     // byDate'ga teacher-day eventlar qo'shamiz
     for (const [date, perTeacher] of Object.entries(stats)) {
@@ -112,7 +105,7 @@ router.get('/events', asyncHandler(async (req, res) => {
           photoUrl: t.photoUrl || null,
           assigned: v.assigned || 0,
           reviewed: v.reviewed || 0,
-          pending:  v.pending  || 0,
+          pending:  remaining,
           remaining,
           tone: remaining > 0 ? 'amber' : 'green',
         });
