@@ -10,7 +10,7 @@ export default function StudentsPage({ embedded = false, onOpenStudent, groupId 
   const [filterGroup, setFilterGroup] = useState(groupId);
 
   const { data, loading, error, refetch } = useFetch(
-    () => api.students.list({ ...(filterGroup ? { groupId: filterGroup } : {}), limit: 200 }),
+    () => api.students.list({ ...(filterGroup ? { groupId: filterGroup } : {}), limit: 5000 }),
     [filterGroup]
   );
   const { data: groupListData } = useFetch(() => api.groups.list({ limit:100 }), []);
