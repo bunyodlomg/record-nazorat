@@ -334,6 +334,10 @@ export function Header({ theme, onToggleTheme, page }) {
 }
 
 /* ── DOCK NAVIGATION ── */
+// Hover faqat sichqoncha bor qurilmalarda (desktop). Mobil touch'da tap
+// mouseenter + click ni birga tetiklab ovozni 2 marta chaladi.
+const CAN_HOVER = typeof window !== 'undefined' && window.matchMedia?.('(hover: hover)').matches;
+
 export function Dock({ items, active, onChange }) {
   return (
     <div className="dock-wrap">
@@ -350,9 +354,9 @@ export function Dock({ items, active, onChange }) {
             <motion.button
               key={item.id}
               className={`dock-btn ${isActive ? 'active' : ''}`}
-              onMouseEnter={() => !isActive && (sfx.hover(), haptic.selection())}
+              onMouseEnter={CAN_HOVER ? () => !isActive && (sfx.hover(), haptic.selection()) : undefined}
               onClick={() => { sfx.click(); haptic.impact('medium'); onChange(item.id); }}
-              whileHover={{ y: -3 }}
+              whileHover={CAN_HOVER ? { y: -3 } : undefined}
               whileTap={{ scale: 0.92 }}
               transition={{ type:'spring', stiffness:400, damping:20 }}
             >

@@ -279,7 +279,9 @@ a { color:inherit; text-decoration:none; }
   transition:all 200ms var(--ease);
   flex-shrink:0;
 }
-.dock-btn:hover { color:var(--text); background:var(--bg-hover); }
+@media (hover: hover) {
+  .dock-btn:hover { color:var(--text); background:var(--bg-hover); }
+}
 .dock-btn.active {
   background:linear-gradient(135deg, var(--primary), var(--primary-d));
   color:#fff;
@@ -303,8 +305,10 @@ a { color:inherit; text-decoration:none; }
   transition:opacity 160ms, transform 160ms;
   box-shadow:var(--shadow-md);
 }
-.dock-btn:hover .dock-btn-tooltip {
-  opacity:1; transform:translateX(-50%) translateY(-2px);
+@media (hover: hover) {
+  .dock-btn:hover .dock-btn-tooltip {
+    opacity:1; transform:translateX(-50%) translateY(-2px);
+  }
 }
 
 .dock-divider {
