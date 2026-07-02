@@ -80,8 +80,6 @@ router.patch('/:id/approve',
         email:      user.email || `tg-${user.telegramId}@local`,
         subject:    req.body.subject || 'General',
         status:     'active',
-        score:      80,
-        attendance: 100,
         hue:        160 + Math.floor(Math.random() * 80),
       });
       user.teacherRef = teacher._id;

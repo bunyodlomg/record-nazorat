@@ -18,24 +18,40 @@ router.get('/', asyncHandler(async (req, res) => {
   const activeGroups   = await Group.find({ isActive: true }).select('_id').lean();
   const activeGroupIds = activeGroups.map(g => g._id);
 
-  const [tStats, sTotal, hwAgg, topTeachers, submittedByTeacher] = await Promise.all([
+  const [tStats, sTotal, hwAgg, activeTeacherDocs, submittedByTeacher, subByTeacher] = await Promise.all([
     Teacher.aggregate([{ $group:{
       _id:null,
-      total:         { $sum:1 },
-      active:        { $sum:{ $cond:[{ $eq:['$status','active']   },1,0] } },
-      inactive:      { $sum:{ $cond:[{ $eq:['$status','inactive'] },1,0] } },
-      avgScore:      { $avg:'$score' },
-      avgAttendance: { $avg:'$attendance' },
+      total:    { $sum:1 },
+      active:   { $sum:{ $cond:[{ $eq:['$status','active']   },1,0] } },
+      inactive: { $sum:{ $cond:[{ $eq:['$status','inactive'] },1,0] } },
     }}]),
     Student.countDocuments({ status: 'active', group: { $in: activeGroupIds } }),
     Homework.aggregate([{ $group:{ _id:'$col', count:{ $sum:1 } } }]),
-    Teacher.find({ status:'active' }).sort('-score').limit(3).select('name subject score hue').lean(),
+    Teacher.find({ status:'active' }).select('name subject hue').lean(),
     // "Tekshirilmagan" = teacher hali tasdiqlamagan (pending/submitted/returned)
     Submission.aggregate([
       { $match: { status: { $ne: 'reviewed' } } },
       { $group: { _id: '$teacher', count: { $sum: 1 } } },
     ]),
+    // Har teacher uchun jami + tekshirilgan topshiriqlar — HAQIQIY bajarish foizi uchun
+    Submission.aggregate([
+      { $group: { _id: '$teacher',
+        total:    { $sum: 1 },
+        reviewed: { $sum: { $cond: [{ $eq: ['$status','reviewed'] }, 1, 0] } },
+      } },
+    ]),
   ]);
+
+  // Haqiqiy bajarish foizi = tekshirilgan / jami topshiriq (per teacher)
+  const compMap = {};
+  for (const r of subByTeacher) {
+    compMap[String(r._id)] = r.total > 0 ? Math.round((r.reviewed / r.total) * 100) : 0;
+  }
+  const teachersWithComp = activeTeacherDocs.map(t => ({ ...t, score: compMap[String(t._id)] ?? 0 }));
+  const topTeachers = [...teachersWithComp].sort((a, b) => b.score - a.score).slice(0, 3);
+  const avgCompletion = teachersWithComp.length
+    ? Math.round(teachersWithComp.reduce((s, t) => s + t.score, 0) / teachersWithComp.length)
+    : 0;
 
   const totalUnchecked = submittedByTeacher.reduce((s, x) => s + x.count, 0);
   const PROBLEM_THRESHOLD = 1; // hatto 1 ta tekshirilmagan ham ko'rinsin
@@ -172,8 +188,8 @@ router.get('/', asyncHandler(async (req, res) => {
       activeTeachers:   ts.active       ?? 0,
       inactiveTeachers: ts.inactive     ?? 0,
       totalUnchecked,
-      avgScore:         Math.round(ts.avgScore      ?? 0),
-      avgAttendance:    Math.round(ts.avgAttendance ?? 0),
+      avgCompletion,                 // o'rtacha tekshiruv foizi (haqiqiy)
+      avgAttendance:    avgCompletion, // eski kalit — moslik uchun
       totalGroups:      activeGroupIds.length,
       totalStudents:    sTotal ?? 0,
       hwPending:        hwM.pending  ?? 0,
