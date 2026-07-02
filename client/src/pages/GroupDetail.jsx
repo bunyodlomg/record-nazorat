@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Icon, Avatar } from '../components/ui.jsx';
 import { Spinner, ErrorBox } from '../components/Feedback.jsx';
@@ -244,7 +244,7 @@ const IMG_COLORS = {
   none:     '#ffffff',
 };
 
-function downloadMatrixImage({ students, cols, groupName }) {
+function buildMatrixCanvas({ students, cols }) {
   const numW = 58, nameW = 340, dateW = 128, rowH = 50, headH = 64;
   const width  = numW + nameW + dateW * cols.length;
   const height = headH + rowH * students.length;
@@ -309,6 +309,12 @@ function downloadMatrixImage({ students, cols, groupName }) {
   }
   ctx.beginPath(); ctx.moveTo(0, 0.5); ctx.lineTo(width, 0.5); ctx.stroke();
 
+  return canvas;
+}
+
+// Canvas'ni saqlash/ulashish — desktop'da yuklab olish, mobil'da share (yoki rasmni
+// modal'da bosib turib saqlash). Telegram webview anchor download'ni ishlatmaydi.
+function saveCanvas(canvas, groupName) {
   const filename = `${(groupName || 'guruh').replace(/[^\w-]+/g, '_')}_statistika.png`;
   canvas.toBlob(async (blob) => {
     if (!blob) return;
@@ -326,6 +332,8 @@ function downloadMatrixImage({ students, cols, groupName }) {
 
 function SubmissionMatrix({ groupId, groupName }) {
   const { data, loading, error, refetch } = useFetch(() => api.groups.submissionMatrix(groupId), [groupId]);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const canvasRef = useRef(null);
 
   if (loading) return <div style={{ padding:'30px 0' }}><Spinner/></div>;
   if (error)   return <ErrorBox message={error} onRetry={refetch}/>;
@@ -371,11 +379,35 @@ function SubmissionMatrix({ groupId, groupName }) {
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, flexWrap:'wrap', marginBottom:4 }}>
         <MatrixLegend/>
         <button className="btn btn-primary" style={{ flexShrink:0 }}
-          onClick={() => downloadMatrixImage({ students, cols, groupName })}>
+          onClick={() => {
+            const canvas = buildMatrixCanvas({ students, cols });
+            canvasRef.current = canvas;
+            setPreviewUrl(canvas.toDataURL('image/png'));
+          }}>
           <Icon name="download" size={14} style={{ marginRight:6, verticalAlign:-2 }}/>
           📷 Rasm yuklab olish
         </button>
       </div>
+
+      {previewUrl && (
+        <Modal open onClose={() => setPreviewUrl(null)}
+          title="Statistika rasmi"
+          subtitle={groupName}
+          width={680}
+          footer={<>
+            <button className="btn btn-ghost" onClick={() => setPreviewUrl(null)}>Yopish</button>
+            <button className="btn btn-primary" onClick={() => canvasRef.current && saveCanvas(canvasRef.current, groupName)}>
+              <Icon name="download" size={14} style={{ marginRight:6, verticalAlign:-2 }}/> Yuklab olish
+            </button>
+          </>}>
+          <div style={{ fontSize:12.5, color:'var(--text-2)', marginBottom:10, textAlign:'center' }}>
+            📱 Telefonda: rasmni <b>bosib turing</b> → "Rasmni saqlash".<br/>
+            💻 Kompyuterda: pastdagi <b>Yuklab olish</b> tugmasi.
+          </div>
+          <img src={previewUrl} alt="statistika"
+            style={{ display:'block', maxWidth:'100%', borderRadius:8, border:'1px solid var(--border)', margin:'0 auto' }}/>
+        </Modal>
+      )}
       <div className="card" style={{ padding:0, overflowX:'auto' }}>
         <table style={{ borderCollapse:'collapse', width:'100%', fontSize:12 }}>
           <thead>
