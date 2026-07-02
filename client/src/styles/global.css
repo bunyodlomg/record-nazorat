@@ -130,7 +130,7 @@ a { color:inherit; text-decoration:none; }
 ::-webkit-scrollbar { width:5px; height:5px; }
 ::-webkit-scrollbar-track { background:transparent; }
 ::-webkit-scrollbar-thumb { background:var(--border-md); border-radius:99px; }
-::-webkit-scrollbar-thumb:hover { background:var(--border-str); }
+:where(html.can-hover) ::-webkit-scrollbar-thumb:hover { background:var(--border-str); }
 
 /* ── ATMOSPHERIC BACKGROUND — chuqur aurora ── */
 .app-bg {
@@ -195,7 +195,7 @@ a { color:inherit; text-decoration:none; }
   display:grid; place-items:center; position:relative; transition:all 150ms;
   flex-shrink:0;
 }
-.h-action:hover { background:var(--bg-subtle); color:var(--text); }
+:where(html.can-hover) .h-action:hover { background:var(--bg-subtle); color:var(--text); }
 .h-notif-dot {
   position:absolute; top:7px; right:7px;
   width:6px; height:6px; border-radius:50%;
@@ -225,7 +225,7 @@ a { color:inherit; text-decoration:none; }
   background:var(--bg-subtle); border:1px solid var(--border);
   border-radius:var(--r-full); transition:all 160ms; cursor:pointer;
 }
-.h-user:hover { background:var(--bg-hover); border-color:var(--border-md); }
+:where(html.can-hover) .h-user:hover { background:var(--bg-hover); border-color:var(--border-md); }
 .h-user-meta { display:flex; flex-direction:column; line-height:1.15; }
 .h-user-name { font-size:13px; font-weight:600; color:var(--text); }
 .h-user-role { font-size:10.5px; color:var(--text-3); font-weight:500; letter-spacing:0.04em; text-transform:uppercase; }
@@ -279,10 +279,7 @@ a { color:inherit; text-decoration:none; }
   transition:all 200ms var(--ease);
   flex-shrink:0;
 }
-.dock-btn:hover { color:var(--text); background:var(--bg-hover); }
-/* iOS'da hover 1-tapni "yutmasin" — hover effekti o'chiriladi, o'rniga :active */
-html.is-ios .dock-btn:not(.active):hover { background:transparent; color:var(--text-2); }
-html.is-ios .dock-btn:active { transform:scale(0.92); }
+:where(html.can-hover) .dock-btn:hover { color:var(--text); background:var(--bg-hover); }
 .dock-btn.active {
   background:linear-gradient(135deg, var(--primary), var(--primary-d));
   color:#fff;
@@ -306,7 +303,7 @@ html.is-ios .dock-btn:active { transform:scale(0.92); }
   transition:opacity 160ms, transform 160ms;
   box-shadow:var(--shadow-md);
 }
-.dock-btn:hover .dock-btn-tooltip {
+:where(html.can-hover) .dock-btn:hover .dock-btn-tooltip {
   opacity:1; transform:translateX(-50%) translateY(-2px);
 }
 
@@ -341,7 +338,7 @@ html.is-ios .dock-btn:active { transform:scale(0.92); }
   background:rgba(255,255,255,0.1);
   opacity:0; transition:opacity 150ms;
 }
-.btn:hover::after { opacity:1; }
+:where(html.can-hover) .btn:hover::after { opacity:1; }
 .btn:active { transform:scale(0.97); }
 .btn-primary {
   background:linear-gradient(135deg,var(--primary-l) 0%,var(--primary) 50%,var(--primary-d) 100%);
@@ -351,7 +348,7 @@ html.is-ios .dock-btn:active { transform:scale(0.92); }
     0 0 0 1px rgba(99,102,241,0.22),
     inset 0 1px 0 rgba(255,255,255,0.20);
 }
-.btn-primary:hover {
+:where(html.can-hover) .btn-primary:hover {
   box-shadow:
     0 8px 24px rgba(79,70,229,0.45),
     0 0 22px rgba(99,102,241,0.18),
@@ -360,9 +357,9 @@ html.is-ios .dock-btn:active { transform:scale(0.92); }
   transform:translateY(-1px);
 }
 .btn-secondary { background:var(--bg-subtle); color:var(--text); border:1px solid var(--border-md); backdrop-filter:blur(8px); }
-.btn-secondary:hover { background:var(--bg-hover); border-color:var(--border-str); }
+:where(html.can-hover) .btn-secondary:hover { background:var(--bg-hover); border-color:var(--border-str); }
 .btn-ghost { background:transparent; color:var(--text-2); }
-.btn-ghost:hover { background:var(--bg-subtle); color:var(--text); }
+:where(html.can-hover) .btn-ghost:hover { background:var(--bg-subtle); color:var(--text); }
 .btn-danger { background:linear-gradient(135deg,#fb7185,#e11d48); color:#fff; box-shadow:0 4px 14px rgba(244,63,94,0.35); }
 .btn-icon { width:38px; padding:0; justify-content:center; }
 .btn-sm { height:32px; padding:0 12px; font-size:13px; }
@@ -384,7 +381,7 @@ html.is-ios .dock-btn:active { transform:scale(0.92); }
   pointer-events:none; border-radius:inherit;
 }
 .card-hov { transition:all 280ms var(--ease); cursor:pointer; }
-.card-hov:hover {
+:where(html.can-hover) .card-hov:hover {
   box-shadow:var(--shadow-lg), 0 0 0 1px rgba(99,102,241,0.22), 0 0 28px rgba(99,102,241,0.10);
   border-color:rgba(99,102,241,0.32);
   transform:translateY(-3px);
@@ -501,12 +498,12 @@ html.is-ios .dock-btn:active { transform:scale(0.92); }
   background:linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 40%);
   pointer-events:none; border-radius:inherit;
 }
-.kpi:hover {
+:where(html.can-hover) .kpi:hover {
   box-shadow:var(--shadow-lg), 0 0 0 1px rgba(99,102,241,0.22), 0 0 24px rgba(99,102,241,0.10);
   border-color:rgba(99,102,241,0.28);
   transform:translateY(-2px);
 }
-.kpi:hover::before { opacity:1; }
+:where(html.can-hover) .kpi:hover::before { opacity:1; }
 .kpi-row   { display:flex; align-items:center; justify-content:space-between; margin-bottom:11px; }
 .kpi-label { font-size:12.5px; color:var(--text-2); font-weight:500; }
 .kpi-icon  { width:34px; height:34px; border-radius:10px; display:grid; place-items:center; flex-shrink:0; }
@@ -565,7 +562,7 @@ html.is-ios .dock-btn:active { transform:scale(0.92); }
   transition:background 150ms var(--ease);
 }
 .rank-row:last-child { border-bottom:none; }
-.rank-row:hover { background:var(--bg-subtle); }
+:where(html.can-hover) .rank-row:hover { background:var(--bg-subtle); }
 .rank-badge {
   width:26px; height:26px; border-radius:9px; flex-shrink:0;
   display:grid; place-items:center;
@@ -775,7 +772,7 @@ html.is-ios .dock-btn:active { transform:scale(0.92); }
   white-space:nowrap; flex-shrink:0;
   display:inline-flex; align-items:center; gap:5px;
 }
-.tab:hover { color:var(--text); background:var(--bg-hover); }
+:where(html.can-hover) .tab:hover { color:var(--text); background:var(--bg-hover); }
 .tab:active { transform:none; }
 .tab.active {
   color:var(--primary-l); font-weight:600;
@@ -817,7 +814,7 @@ html.is-ios .dock-btn:active { transform:scale(0.92); }
   font-variant-numeric:tabular-nums;
   transition:all 150ms var(--ease);
 }
-.pg-btn:hover:not(:disabled):not(.active) {
+:where(html.can-hover) .pg-btn:hover:not(:disabled):not(.active) {
   background:var(--bg-hover); color:var(--text); border-color:var(--border-md);
 }
 .pg-btn:disabled { opacity:0.4; cursor:not-allowed; }
@@ -845,7 +842,7 @@ html.is-ios .dock-btn:active { transform:scale(0.92); }
 .tg-row:last-child {
   border-bottom: none !important;
 }
-.tg-row:hover {
+:where(html.can-hover) .tg-row:hover {
   background: var(--bg-subtle);
 }
 @media (max-width:560px) {
@@ -869,7 +866,7 @@ html.is-ios .dock-btn:active { transform:scale(0.92); }
 .tbl td { padding:14px 16px; border-bottom:1px solid var(--border); font-size:14px; color:var(--text); }
 .tbl tr:last-child td { border-bottom:none; }
 .tbl tbody tr { transition:background 120ms; }
-.tbl tbody tr:hover td { background:var(--bg-subtle); }
+:where(html.can-hover) .tbl tbody tr:hover td { background:var(--bg-subtle); }
 
 /* ── SEARCH WRAP ── */
 .sw {
@@ -899,7 +896,7 @@ html.is-ios .dock-btn:active { transform:scale(0.92); }
   cursor:grab; box-shadow:var(--shadow-xs); transition:all 200ms var(--ease);
   user-select:none;
 }
-.k-card:hover { border-color:var(--border-md); box-shadow:var(--shadow-md); transform:translateY(-2px); }
+:where(html.can-hover) .k-card:hover { border-color:var(--border-md); box-shadow:var(--shadow-md); transform:translateY(-2px); }
 .k-card:active { cursor:grabbing; transform:scale(0.98); }
 
 /* ── CALENDAR ── */
@@ -916,7 +913,7 @@ html.is-ios .dock-btn:active { transform:scale(0.92); }
   display:flex; flex-direction:column; gap:3px; cursor:pointer; transition:background 140ms;
   overflow:hidden;
 }
-.cal-cell:hover { background:var(--bg-subtle); }
+:where(html.can-hover) .cal-cell:hover { background:var(--bg-subtle); }
 .cal-cell:nth-child(7n) { border-right:none; }
 .cal-day { font-size:13px; font-weight:500; margin-bottom:2px; color:var(--text); }
 .cal-cell.muted { opacity:0.35; }
@@ -958,7 +955,7 @@ html.is-ios .dock-btn:active { transform:scale(0.92); }
   border-left:1px solid var(--border);
   transition:background 160ms;
 }
-.week-day-hd:hover { background:var(--bg-hover); }
+:where(html.can-hover) .week-day-hd:hover { background:var(--bg-hover); }
 .week-day-hd.today { background:var(--primary-bg); }
 
 .week-body {
@@ -992,11 +989,11 @@ html.is-ios .dock-btn:active { transform:scale(0.92); }
   border-bottom:1px dashed var(--border);
   transition:background 140ms;
 }
-.week-cell:hover { background:var(--bg-hover); }
+:where(html.can-hover) .week-cell:hover { background:var(--bg-hover); }
 .week-event {
   transition: transform 160ms var(--ease), box-shadow 160ms;
 }
-.week-event:hover {
+:where(html.can-hover) .week-event:hover {
   transform: translateY(-1px) scale(1.02);
   box-shadow: var(--shadow-md);
   z-index:4 !important;
@@ -1186,9 +1183,9 @@ html.is-ios .dock-btn:active { transform:scale(0.92); }
   width:100%; background:transparent;
   transition:all 140ms; cursor:pointer;
 }
-.um-item:hover { background:var(--bg-hover); color:var(--text); }
+:where(html.can-hover) .um-item:hover { background:var(--bg-hover); color:var(--text); }
 .um-item.danger { color:var(--rose); }
-.um-item.danger:hover { background:var(--rose-bg); }
+:where(html.can-hover) .um-item.danger:hover { background:var(--rose-bg); }
 .um-divider { height:1px; background:var(--border); margin:5px 0; }
 .um-head {
   padding:13px 13px 11px;
@@ -1368,7 +1365,7 @@ thead .ag-name-col {
   z-index:4; font-size:11px; text-transform:uppercase;
   letter-spacing:0.05em; color:var(--text-3); font-weight:700;
 }
-.ag-table tbody tr:hover .ag-name-col { background:var(--bg-subtle); }
+:where(html.can-hover) .ag-table tbody tr:hover .ag-name-col { background:var(--bg-subtle); }
 .ag-student { display:flex; align-items:center; gap:9px; padding:9px 0; min-width:0; }
 .ag-student-name {
   font-size:13px; font-weight:600; color:var(--text);
@@ -1385,7 +1382,7 @@ thead .ag-name-col {
   font-variant-numeric:tabular-nums; font-size:13px;
 }
 .ag-table tbody tr { border-bottom:1px solid var(--border); }
-.ag-table tbody tr:hover td { background:var(--bg-subtle); }
+:where(html.can-hover) .ag-table tbody tr:hover td { background:var(--bg-subtle); }
 
 /* Katakcha + neon nuqta */
 .ag-cell { display:grid; place-items:center; height:40px; }

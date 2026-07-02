@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { IS_IOS } from '../../utils/device.js';
+import { CAN_HOVER } from '../../utils/device.js';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { Icon, useCountUp, ChartTooltip } from '../../components/ui.jsx';
 import { Spinner, ErrorBox, listContainer, listItem } from '../../components/Feedback.jsx';
@@ -28,7 +28,7 @@ function StatTile({ label, value, icon, tone = 'primary' }) {
   return (
     <motion.div
       variants={listItem}
-      whileHover={IS_IOS ? undefined : { y:-2 }}
+      whileHover={!CAN_HOVER ? undefined : { y:-2 }}
       transition={{ type:'spring', stiffness:300 }}
       className="card"
       style={{ padding:'12px 13px', display:'flex', alignItems:'center', gap:11, overflow:'hidden' }}>
