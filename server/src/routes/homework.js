@@ -128,6 +128,11 @@ router.get('/:id/submissions', param('id').isMongoId(), ok, asyncHandler(async (
   const due = hw.dueDate ? new Date(hw.dueDate) : null;
   const now = new Date();
 
+  // "Kech" belgisi muddatdan keyin darhol chiqmasin — 34 soatlik imkoniyat oynasi
+  // beriladi (deadline ertalab bo'lgani uchun o'quvchi keyingi kuni ham topshirishi mumkin).
+  const LATE_GRACE_MS = 34 * 60 * 60 * 1000;
+  const lateAfter = due ? new Date(due.getTime() + LATE_GRACE_MS) : null;
+
   const subs = await Submission.find({ homework: req.params.id })
     .populate('student', 'name hue photoUrl')
     .lean();
@@ -137,12 +142,12 @@ router.get('/:id/submissions', param('id').isMongoId(), ok, asyncHandler(async (
   // har bir o'quvchi xato "kech" ko'rsatardi.
   const withLate = subs.map(s => {
     let isLate = false;
-    if (due) {
+    if (lateAfter) {
       if (s.submittedAt) {
-        // Topshirgan: deadlinedan keyin topshirilgan bo'lsagina "kech"
-        if (new Date(s.submittedAt) > due) isLate = true;
-      } else if (s.status === 'pending' && now > due) {
-        // Hali umuman topshirmagan va muddat o'tib ketgan
+        // Topshirgan: grace oynasidan keyin topshirilgan bo'lsagina "kech"
+        if (new Date(s.submittedAt) > lateAfter) isLate = true;
+      } else if (s.status === 'pending' && now > lateAfter) {
+        // Hali umuman topshirmagan va grace oynasi o'tib ketgan
         isLate = true;
       }
     }

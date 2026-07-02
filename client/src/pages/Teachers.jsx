@@ -403,7 +403,7 @@ function TeachersListView({ onOpenTeacher }) {
   const [deleting, setDeleting] = useState(null);
 
   const params = useMemo(() => {
-    const p = { limit:50 };
+    const p = { limit:1000 };
     if (filter !== 'all' && filter !== 'problem') p.status = filter;
     if (search) p.search = search;
     return p;
@@ -426,7 +426,7 @@ function TeachersListView({ onOpenTeacher }) {
 
   // Sahifalash — filter/qidiruv/ko'rinish o'zgarsa 1-sahifaga qaytadi
   const { page, setPage, totalPages, pageItems, total, pageSize } =
-    usePaged(filtered, view === 'grid' ? 12 : 10, [filter, search, view, filtered.length]);
+    usePaged(filtered, 100, [filter, search, view, filtered.length]);
 
   // Avto-refresh — online holatlari real-time yangilanishi uchun
   useEffect(() => {

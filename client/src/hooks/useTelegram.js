@@ -30,7 +30,10 @@ export function initTelegram() {
     tg.expand();
     document.body.classList.add('tg-app');
     if (typeof tg.disableVerticalSwipes === 'function') tg.disableVerticalSwipes();
-    if (typeof tg.requestFullscreen     === 'function') tg.requestFullscreen?.();
+    // Fullscreen faqat telefonda (android/ios). Desktop/web'da fullscreen kerak emas —
+    // aks holda oyna keraksiz cho'zilib ketadi.
+    const isMobile = ['android', 'ios'].includes(tg.platform);
+    if (isMobile && typeof tg.requestFullscreen === 'function') tg.requestFullscreen?.();
     applyTheme();
     tg.onEvent('themeChanged', applyTheme);
     tg.onEvent('viewportChanged', applyViewportVar);

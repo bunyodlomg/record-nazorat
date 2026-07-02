@@ -235,7 +235,96 @@ function MatrixLegend() {
   );
 }
 
-function SubmissionMatrix({ groupId }) {
+/* ── Statistikani rangli jadval PNG'ga chizib yuklab olish ── */
+const IMG_COLORS = {
+  done:     '#12d112', // yashil — topshirgan
+  partial:  '#ffe000', // sariq — qisman
+  missed:   '#ff2a2a', // qizil — topshirmagan
+  upcoming: '#ffffff',
+  none:     '#ffffff',
+};
+
+function downloadMatrixImage({ students, cols, groupName }) {
+  const numW = 58, nameW = 340, dateW = 128, rowH = 50, headH = 64;
+  const width  = numW + nameW + dateW * cols.length;
+  const height = headH + rowH * students.length;
+  const scale  = 2;
+
+  const canvas = document.createElement('canvas');
+  canvas.width  = width  * scale;
+  canvas.height = height * scale;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(scale, scale);
+  ctx.textBaseline = 'middle';
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, width, height);
+
+  // Header
+  ctx.fillStyle = '#e9edf0'; ctx.fillRect(0, 0, numW, headH);
+  ctx.fillStyle = '#1fdcef'; ctx.fillRect(numW, 0, nameW, headH);
+  ctx.fillStyle = '#08343a'; ctx.textAlign = 'center';
+  ctx.font = '700 23px Inter, Arial, sans-serif';
+  ctx.fillText('Full names', numW + nameW / 2, headH / 2 + 1);
+  cols.forEach((c, i) => {
+    const x = numW + nameW + i * dateW;
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(x, 0, dateW, headH);
+    ctx.fillStyle = '#111'; ctx.font = '600 19px Inter, Arial, sans-serif';
+    const label = `${String(c.dom).padStart(2, '0')}.${String(c.month).padStart(2, '0')}`;
+    ctx.fillText(label, x + dateW / 2, headH / 2 + 1);
+  });
+
+  // Rows
+  students.forEach((s, ri) => {
+    const y = headH + ri * rowH;
+    ctx.fillStyle = '#f4f6f7'; ctx.fillRect(0, y, numW, rowH);
+    ctx.fillStyle = '#8a9199'; ctx.font = '500 17px Inter, Arial, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(String(ri + 1), numW / 2, y + rowH / 2 + 1);
+
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(numW, y, nameW, rowH);
+    ctx.fillStyle = '#111'; ctx.font = '600 21px Inter, Arial, sans-serif'; ctx.textAlign = 'left';
+    let nm = s.name || '';
+    if (ctx.measureText(nm).width > nameW - 26) {
+      while (nm.length > 1 && ctx.measureText(nm + '…').width > nameW - 26) nm = nm.slice(0, -1);
+      nm += '…';
+    }
+    ctx.fillText(nm, numW + 14, y + rowH / 2 + 1);
+
+    cols.forEach((c, ci) => {
+      const x = numW + nameW + ci * dateW;
+      const st = c.cells?.[s._id]?.status || 'none';
+      ctx.fillStyle = IMG_COLORS[st] || '#ffffff';
+      ctx.fillRect(x, y, dateW, rowH);
+    });
+  });
+
+  // Grid chiziqlari
+  ctx.strokeStyle = '#aeb6bd'; ctx.lineWidth = 1;
+  const xs = [0, numW, numW + nameW];
+  for (let i = 1; i <= cols.length; i++) xs.push(numW + nameW + i * dateW);
+  xs.forEach(x => { ctx.beginPath(); ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, height); ctx.stroke(); });
+  for (let r = 0; r <= students.length; r++) {
+    const y = headH + r * rowH;
+    ctx.beginPath(); ctx.moveTo(0, y + 0.5); ctx.lineTo(width, y + 0.5); ctx.stroke();
+  }
+  ctx.beginPath(); ctx.moveTo(0, 0.5); ctx.lineTo(width, 0.5); ctx.stroke();
+
+  const filename = `${(groupName || 'guruh').replace(/[^\w-]+/g, '_')}_statistika.png`;
+  canvas.toBlob(async (blob) => {
+    if (!blob) return;
+    const file = new File([blob], filename, { type: 'image/png' });
+    if (navigator.canShare?.({ files: [file] })) {
+      try { await navigator.share({ files: [file] }); return; } catch { /* fallback */ }
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }, 'image/png');
+}
+
+function SubmissionMatrix({ groupId, groupName }) {
   const { data, loading, error, refetch } = useFetch(() => api.groups.submissionMatrix(groupId), [groupId]);
 
   if (loading) return <div style={{ padding:'30px 0' }}><Spinner/></div>;
@@ -279,7 +368,14 @@ function SubmissionMatrix({ groupId }) {
 
   return (
     <div>
-      <MatrixLegend/>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, flexWrap:'wrap' }}>
+        <MatrixLegend/>
+        <button className="btn btn-ghost" style={{ flexShrink:0 }}
+          onClick={() => downloadMatrixImage({ students, cols, groupName })}>
+          <Icon name="download" size={13} style={{ marginRight:6, verticalAlign:-2 }}/>
+          Rasm yuklab olish
+        </button>
+      </div>
       <div className="card" style={{ padding:0, overflowX:'auto' }}>
         <table style={{ borderCollapse:'collapse', width:'100%', fontSize:12 }}>
           <thead>
@@ -615,7 +711,7 @@ export default function GroupDetailPage({ groupId, onBack, onOpenStudent, onOpen
           </div>
         )
       ) : tab === 'stats' ? (
-        <SubmissionMatrix groupId={groupId}/>
+        <SubmissionMatrix groupId={groupId} groupName={g.name}/>
       ) : (
         pending.length === 0 ? (
           <div style={{ padding:'40px 20px', textAlign:'center', color:'var(--text-3)' }}>
