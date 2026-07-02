@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { CAN_HOVER } from '../../utils/device.js';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { Icon, useCountUp, ChartTooltip } from '../../components/ui.jsx';
 import { Spinner, ErrorBox, listContainer, listItem } from '../../components/Feedback.jsx';
@@ -28,7 +27,7 @@ function StatTile({ label, value, icon, tone = 'primary' }) {
   return (
     <motion.div
       variants={listItem}
-      whileHover={CAN_HOVER ? { y:-2 } : undefined}
+      whileHover={{ y:-2 }}
       transition={{ type:'spring', stiffness:300 }}
       className="card"
       style={{ padding:'12px 13px', display:'flex', alignItems:'center', gap:11, overflow:'hidden' }}>
@@ -170,7 +169,7 @@ export default function MyDashboard({ onNav }) {
               width:'100%', textAlign:'left', cursor:'pointer', border:'none', color:'inherit',
               transition:'background 140ms',
             }}
-            onMouseEnter={CAN_HOVER ? e => e.currentTarget.style.background='var(--bg-subtle)' : undefined}
+            onMouseEnter={e => e.currentTarget.style.background='var(--bg-subtle)'}
             onMouseLeave={e => e.currentTarget.style.background='transparent'}>
             <div style={{ width:28, height:28, borderRadius:8, background:a.bg, color:a.color, display:'grid', placeItems:'center', flexShrink:0 }}>
               <Icon name={a.icon} size={13}/>

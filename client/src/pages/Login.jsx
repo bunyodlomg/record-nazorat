@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CAN_HOVER } from '../utils/device.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { Icon } from '../components/ui.jsx';
 
@@ -115,7 +114,7 @@ export default function LoginPage() {
             style={{ width:'100%', justifyContent:'center' }}
             disabled={loading}
             initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.3 }}
-            whileHover={CAN_HOVER ? { scale: loading ? 1 : 1.02 } : undefined}
+            whileHover={{ scale: loading ? 1 : 1.02 }}
             whileTap={{ scale: loading ? 1 : 0.97 }}
           >
             {loading

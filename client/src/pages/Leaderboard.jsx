@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CAN_HOVER } from '../utils/device.js';
 import { Icon, Avatar, useCountUp } from '../components/ui.jsx';
 import { Spinner, ErrorBox, listContainer, listItem } from '../components/Feedback.jsx';
 import PageHero from '../components/PageHero.jsx';
@@ -37,7 +36,7 @@ function PodiumCard({ entry, place, height, subtitleKey = 'subject', metricKey =
       onClick={() => onClick?.(entry)}
       style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:11, minWidth:0, cursor: onClick ? 'pointer' : 'default' }}>
       <motion.div
-        whileHover={CAN_HOVER ? { scale:1.08, rotate:5 } : undefined}
+        whileHover={{ scale:1.08, rotate:5 }}
         style={{ width:48, height:48, borderRadius:'50%', background:m.bg, display:'grid', placeItems:'center',
           fontSize:24, boxShadow:`0 4px 16px ${m.border}50`, border:`2px solid ${m.border}` }}>
         {m.icon}
@@ -86,7 +85,7 @@ function LeaderRow({ entry, idx, subtitleKey, metricKey = 'score', metricIcon = 
         background:'transparent', textAlign:'left', cursor: onClick ? 'pointer' : 'default',
         width:'100%',
       }}
-      onMouseEnter={CAN_HOVER ? e => onClick && (e.currentTarget.style.background = 'var(--bg-subtle)') : undefined}
+      onMouseEnter={e => onClick && (e.currentTarget.style.background = 'var(--bg-subtle)')}
       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
     >
       <div style={{ fontFamily:'var(--display)', fontSize:14, fontWeight:700, color:'var(--text-3)' }}>#{idx+4}</div>
