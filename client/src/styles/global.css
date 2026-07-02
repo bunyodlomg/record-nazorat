@@ -280,6 +280,9 @@ a { color:inherit; text-decoration:none; }
   flex-shrink:0;
 }
 .dock-btn:hover { color:var(--text); background:var(--bg-hover); }
+/* iOS'da hover 1-tapni "yutmasin" — hover effekti o'chiriladi, o'rniga :active */
+html.is-ios .dock-btn:not(.active):hover { background:transparent; color:var(--text-2); }
+html.is-ios .dock-btn:active { transform:scale(0.92); }
 .dock-btn.active {
   background:linear-gradient(135deg, var(--primary), var(--primary-d));
   color:#fff;

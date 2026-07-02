@@ -354,7 +354,7 @@ export function Dock({ items, active, onChange }) {
               onMouseEnter={IS_TOUCH ? undefined : () => !isActive && (sfx.hover(), haptic.selection())}
               onClick={() => { sfx.click(); haptic.impact('medium'); onChange(item.id); }}
               whileHover={IS_IOS ? undefined : { y: -3 }}
-              whileTap={{ scale: 0.92 }}
+              whileTap={IS_IOS ? undefined : { scale: 0.92 }}
               transition={{ type:'spring', stiffness:400, damping:20 }}
             >
               <Icon name={item.icon} size={20}/>
