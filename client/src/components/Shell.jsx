@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { IS_IOS } from '../utils/device.js';
 import { Icon, Avatar } from './ui.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { sfx } from '../hooks/useSound.js';
@@ -254,7 +255,7 @@ export function Header({ theme, onToggleTheme, page }) {
       <div className="h-brand">
         <motion.div
           className="h-logo"
-          whileHover={{ rotate: [0, -8, 8, -4, 0], transition: { duration: 0.5 } }}
+          whileHover={IS_IOS ? undefined : { rotate: [0, -8, 8, -4, 0], transition: { duration: 0.5 } }}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
             <path d="M22 10v6"/><path d="M2 10l10-5 10 5-10 5-10-5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>
@@ -352,7 +353,7 @@ export function Dock({ items, active, onChange }) {
               className={`dock-btn ${isActive ? 'active' : ''}`}
               onMouseEnter={() => !isActive && (sfx.hover(), haptic.selection())}
               onClick={() => { sfx.click(); haptic.impact('medium'); onChange(item.id); }}
-              whileHover={{ y: -3 }}
+              whileHover={IS_IOS ? undefined : { y: -3 }}
               whileTap={{ scale: 0.92 }}
               transition={{ type:'spring', stiffness:400, damping:20 }}
             >

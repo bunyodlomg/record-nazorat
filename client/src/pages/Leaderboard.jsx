@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { IS_IOS } from '../utils/device.js';
 import { Icon, Avatar, useCountUp } from '../components/ui.jsx';
 import { Spinner, ErrorBox, listContainer, listItem } from '../components/Feedback.jsx';
 import PageHero from '../components/PageHero.jsx';
@@ -36,7 +37,7 @@ function PodiumCard({ entry, place, height, subtitleKey = 'subject', metricKey =
       onClick={() => onClick?.(entry)}
       style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:11, minWidth:0, cursor: onClick ? 'pointer' : 'default' }}>
       <motion.div
-        whileHover={{ scale:1.08, rotate:5 }}
+        whileHover={IS_IOS ? undefined : { scale:1.08, rotate:5 }}
         style={{ width:48, height:48, borderRadius:'50%', background:m.bg, display:'grid', placeItems:'center',
           fontSize:24, boxShadow:`0 4px 16px ${m.border}50`, border:`2px solid ${m.border}` }}>
         {m.icon}

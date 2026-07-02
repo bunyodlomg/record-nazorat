@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { IS_IOS } from '../utils/device.js';
 import { Icon, Avatar } from '../components/ui.jsx';
 import { Spinner, ErrorBox } from '../components/Feedback.jsx';
 import { Modal, Select } from '../components/Modal.jsx';
@@ -415,7 +416,7 @@ function MonthView({ cursor, today, eventsByDate, onPick, isAdmin }) {
           <motion.div key={`${cursor.y}-${cursor.m}-${i}`} className={`cal-cell ${c.muted?'muted':''} ${c.today?'today':''}`}
             initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }}
             transition={{ delay: 0.04 + Math.floor(i/7)*0.018 + (i%7)*0.004, duration:0.28, ease:[0.22,1,0.36,1] }}
-            whileHover={!c.muted ? { scale:1.02, zIndex:2 } : {}}
+            whileHover={IS_IOS ? undefined : (!c.muted ? { scale:1.02, zIndex:2 } : {})}
             onClick={() => {
               if (c.muted || !c.events?.length) return;
               const dow = (new Date(cursor.y, cursor.m, c.day).getDay() + 6) % 7;

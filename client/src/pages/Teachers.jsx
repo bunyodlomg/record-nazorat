@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { IS_IOS } from '../utils/device.js';
 import { Icon, Avatar, StatusDot, TgUsername } from '../components/ui.jsx';
 import { Spinner, ErrorBox, listContainer, listItem, usePaged, Pagination } from '../components/Feedback.jsx';
 import { Modal, Field, Input, Select } from '../components/Modal.jsx';
@@ -268,7 +269,7 @@ function TeacherChatRow({ t, onClick, onEdit, onDelete }) {
   return (
     <motion.div
       variants={listItem}
-      whileHover={{ background:'var(--bg-subtle)' }}
+      whileHover={IS_IOS ? undefined : { background:'var(--bg-subtle)' }}
       onClick={onClick}
       className="tg-row"
       style={{
@@ -342,7 +343,7 @@ function TeacherCard({ t, onClick, onEdit, onDelete }) {
     <motion.div
       variants={listItem}
       className="card card-hov"
-      whileHover={{ y:-3 }}
+      whileHover={IS_IOS ? undefined : { y:-3 }}
       transition={{ type:'spring', stiffness:300 }}
       style={{ padding:17, position:'relative', display:'flex', flexDirection:'column', gap:13 }}
     >

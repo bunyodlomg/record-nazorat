@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { IS_IOS } from '../utils/device.js';
 import { Icon } from './ui.jsx';
 import { listItem } from './Feedback.jsx';
 
@@ -42,7 +43,7 @@ export default function GroupCard({ g, onOpenGroup, onOpenTeacher, onEdit, onRem
 
   return (
     <motion.div className="gcard card card-hov" variants={listItem}
-      whileHover={{ y:-3 }}
+      whileHover={IS_IOS ? undefined : { y:-3 }}
       onClick={() => onOpenGroup?.(g._id)}
       style={{ cursor: onOpenGroup ? 'pointer' : 'default' }}>
 
