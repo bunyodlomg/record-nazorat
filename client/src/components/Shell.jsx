@@ -352,7 +352,7 @@ export function Dock({ items, active, onChange }) {
               key={item.id}
               className={`dock-btn ${isActive ? 'active' : ''}`}
               onMouseEnter={CAN_HOVER ? () => !isActive && (sfx.hover(), haptic.selection()) : undefined}
-              onClick={() => { sfx.click(); haptic.impact('medium'); onChange(item.id); }}
+              onClick={() => { onChange(item.id); try { sfx.click(); haptic.impact('medium'); } catch {} }}
               whileHover={CAN_HOVER ? { y: -3 } : undefined}
               whileTap={{ scale: 0.92 }}
               transition={{ type:'spring', stiffness:400, damping:20 }}
