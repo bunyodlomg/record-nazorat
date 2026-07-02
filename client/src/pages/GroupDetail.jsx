@@ -368,12 +368,12 @@ function SubmissionMatrix({ groupId, groupName }) {
 
   return (
     <div>
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, flexWrap:'wrap' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, flexWrap:'wrap', marginBottom:4 }}>
         <MatrixLegend/>
-        <button className="btn btn-ghost" style={{ flexShrink:0 }}
+        <button className="btn btn-primary" style={{ flexShrink:0 }}
           onClick={() => downloadMatrixImage({ students, cols, groupName })}>
-          <Icon name="download" size={13} style={{ marginRight:6, verticalAlign:-2 }}/>
-          Rasm yuklab olish
+          <Icon name="download" size={14} style={{ marginRight:6, verticalAlign:-2 }}/>
+          📷 Rasm yuklab olish
         </button>
       </div>
       <div className="card" style={{ padding:0, overflowX:'auto' }}>

@@ -4,6 +4,7 @@ import { Icon, Avatar } from './ui.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { sfx } from '../hooks/useSound.js';
 import { haptic, isTelegram } from '../hooks/useTelegram.js';
+import { CAN_HOVER } from '../utils/device.js';
 import api from '../services/api.js';
 
 /* ── NOTIFICATIONS PANEL ── */
@@ -334,10 +335,6 @@ export function Header({ theme, onToggleTheme, page }) {
 }
 
 /* ── DOCK NAVIGATION ── */
-// Hover faqat sichqoncha bor qurilmalarda (desktop). Mobil touch'da tap
-// mouseenter + click ni birga tetiklab ovozni 2 marta chaladi.
-const CAN_HOVER = typeof window !== 'undefined' && window.matchMedia?.('(hover: hover)').matches;
-
 export function Dock({ items, active, onChange }) {
   return (
     <div className="dock-wrap">
