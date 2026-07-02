@@ -312,21 +312,18 @@ function buildMatrixCanvas({ students, cols }) {
   return canvas;
 }
 
-// Canvas'ni saqlash/ulashish — desktop'da yuklab olish, mobil'da share (yoki rasmni
-// modal'da bosib turib saqlash). Telegram webview anchor download'ni ishlatmaydi.
-function saveCanvas(canvas, groupName) {
+// Canvas'ni PNG qilib yuklab olish — telefon va desktop'da bir xil (blob + anchor).
+function saveCanvas(canvas, groupName, onDone) {
   const filename = `${(groupName || 'guruh').replace(/[^\w-]+/g, '_')}_statistika.png`;
-  canvas.toBlob(async (blob) => {
-    if (!blob) return;
-    const file = new File([blob], filename, { type: 'image/png' });
-    if (navigator.canShare?.({ files: [file] })) {
-      try { await navigator.share({ files: [file] }); return; } catch { /* fallback */ }
+  canvas.toBlob((blob) => {
+    if (blob) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    onDone?.();
   }, 'image/png');
 }
 
@@ -396,13 +393,13 @@ function SubmissionMatrix({ groupId, groupName }) {
           width={680}
           footer={<>
             <button className="btn btn-ghost" onClick={() => setPreviewUrl(null)}>Yopish</button>
-            <button className="btn btn-primary" onClick={() => canvasRef.current && saveCanvas(canvasRef.current, groupName)}>
+            <button className="btn btn-primary"
+              onClick={() => canvasRef.current && saveCanvas(canvasRef.current, groupName, () => setPreviewUrl(null))}>
               <Icon name="download" size={14} style={{ marginRight:6, verticalAlign:-2 }}/> Yuklab olish
             </button>
           </>}>
           <div style={{ fontSize:12.5, color:'var(--text-2)', marginBottom:10, textAlign:'center' }}>
-            📱 Telefonda: rasmni <b>bosib turing</b> → "Rasmni saqlash".<br/>
-            💻 Kompyuterda: pastdagi <b>Yuklab olish</b> tugmasi.
+            Pastdagi <b>Yuklab olish</b> tugmasini bosing.
           </div>
           <img src={previewUrl} alt="statistika"
             style={{ display:'block', maxWidth:'100%', borderRadius:8, border:'1px solid var(--border)', margin:'0 auto' }}/>

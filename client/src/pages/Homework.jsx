@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { CAN_HOVER } from '../utils/device.js';
 import { Icon, Avatar } from '../components/ui.jsx';
 import { Spinner, ErrorBox, listContainer, listItem } from '../components/Feedback.jsx';
 import PageHero from '../components/PageHero.jsx';
@@ -27,7 +28,7 @@ export function TeacherRow({ t, tab, onOpenTeacher }) {
   return (
     <motion.button
       variants={listItem}
-      whileHover={{ y:-2 }}
+      whileHover={CAN_HOVER ? { y:-2 } : undefined}
       whileTap={{ scale:0.99 }}
       onClick={() => onOpenTeacher(t._id)}
       className="card card-hov"

@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Icon } from './ui.jsx';
 import { listItem } from './Feedback.jsx';
+import { CAN_HOVER } from '../utils/device.js';
 
 const GROUP_GRADS = [
   'linear-gradient(165deg,#60a5fa,#4f46e5)', // G1 — blue→indigo
@@ -42,7 +43,7 @@ export default function GroupCard({ g, onOpenGroup, onOpenTeacher, onEdit, onRem
 
   return (
     <motion.div className="gcard card card-hov" variants={listItem}
-      whileHover={{ y:-3 }}
+      whileHover={CAN_HOVER ? { y:-3 } : undefined}
       onClick={() => onOpenGroup?.(g._id)}
       style={{ cursor: onOpenGroup ? 'pointer' : 'default' }}>
 

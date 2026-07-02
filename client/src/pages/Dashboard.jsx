@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { CAN_HOVER } from '../utils/device.js';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area } from 'recharts';
 import { Icon, Avatar, useCountUp, ChartTooltip } from '../components/ui.jsx';
 import { Spinner, ErrorBox, listContainer, listItem } from '../components/Feedback.jsx';
@@ -13,7 +14,7 @@ function KpiCard({ label, value = 0, suffix = '', icon, iconBg, iconColor }) {
   return (
     <motion.div className="kpi"
       variants={listItem}
-      whileHover={{ y:-4 }}
+      whileHover={CAN_HOVER ? { y:-4 } : undefined}
       transition={{ type:'spring', stiffness:300 }}
     >
       <div className="kpi-ico2" style={{ background:iconBg, color:iconColor }}>

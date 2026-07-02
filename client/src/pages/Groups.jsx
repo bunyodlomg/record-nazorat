@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { CAN_HOVER } from '../utils/device.js';
 import { Icon, Avatar } from '../components/ui.jsx';
 import { Spinner, ErrorBox, listContainer, listItem } from '../components/Feedback.jsx';
 import { Modal, Field, Input, Select, UserPicker } from '../components/Modal.jsx';
@@ -159,7 +160,7 @@ function TeacherGroupSection({ teacher, groups, onOpenTeacher, onOpenGroup, onEd
             cursor: noTeacher ? 'default' : 'pointer',
             transition:'all 160ms',
           }}
-          onMouseEnter={e => { if (!noTeacher) { e.currentTarget.style.background='var(--bg-hover)'; e.currentTarget.style.borderColor='rgba(45,212,191,0.30)'; } }}
+          onMouseEnter={CAN_HOVER ? e => { if (!noTeacher) { e.currentTarget.style.background='var(--bg-hover)'; e.currentTarget.style.borderColor='rgba(45,212,191,0.30)'; } } : undefined}
           onMouseLeave={e => { if (!noTeacher) { e.currentTarget.style.background='var(--bg-subtle)'; e.currentTarget.style.borderColor='var(--border)'; } }}>
           {noTeacher
             ? <div style={{ width:32, height:32, borderRadius:'50%', background:'var(--bg-subtle)', display:'grid', placeItems:'center', color:'var(--text-3)' }}><Icon name="alert" size={14}/></div>

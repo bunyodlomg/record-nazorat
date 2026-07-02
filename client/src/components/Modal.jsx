@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useMemo, forwardRef, Children, isValidElement } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { CAN_HOVER } from '../utils/device.js';
 import { Icon, Avatar } from './ui.jsx';
 import { sfx } from '../hooks/useSound.js';
 
@@ -65,7 +66,7 @@ export function Modal({ open, onClose, title, subtitle, children, width = 480, f
                   display:'grid', placeItems:'center', color:'var(--text-2)',
                   transition:'all 160ms',
                 }}
-                onMouseEnter={e => { e.currentTarget.style.background='var(--bg-hover)'; e.currentTarget.style.color='var(--text)'; }}
+                onMouseEnter={CAN_HOVER ? e => { e.currentTarget.style.background='var(--bg-hover)'; e.currentTarget.style.color='var(--text)'; } : undefined}
                 onMouseLeave={e => { e.currentTarget.style.background='var(--bg-subtle)'; e.currentTarget.style.color='var(--text-2)'; }}>
                 <Icon name="close" size={14}/>
               </button>
@@ -251,7 +252,7 @@ export function Select({ children, value, onChange, style, disabled, placeholder
                       cursor: o.disabled ? 'not-allowed' : 'pointer',
                       transition:'background 120ms, color 120ms',
                     }}
-                    onMouseEnter={e => { if (!isActive && !o.disabled) e.currentTarget.style.background='var(--bg-hover)'; }}
+                    onMouseEnter={CAN_HOVER ? e => { if (!isActive && !o.disabled) e.currentTarget.style.background='var(--bg-hover)'; } : undefined}
                     onMouseLeave={e => { if (!isActive) e.currentTarget.style.background='transparent'; }}>
                     <span style={{ flex:1, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{o.label}</span>
                     {isActive && <Icon name="check" size={14}/>}
@@ -357,7 +358,7 @@ export function TimePicker({ value = '', onChange, disabled, placeholder = "Vaqt
                         fontVariantNumeric:'tabular-nums',
                         textAlign:'center', transition:'background 120ms, color 120ms',
                       }}
-                      onMouseEnter={e => { if (!active) e.currentTarget.style.background='var(--bg-hover)'; }}
+                      onMouseEnter={CAN_HOVER ? e => { if (!active) e.currentTarget.style.background='var(--bg-hover)'; } : undefined}
                       onMouseLeave={e => { if (!active) e.currentTarget.style.background='transparent'; }}>
                       {hr}
                     </button>
@@ -382,7 +383,7 @@ export function TimePicker({ value = '', onChange, disabled, placeholder = "Vaqt
                         fontVariantNumeric:'tabular-nums',
                         textAlign:'center', transition:'background 120ms, color 120ms',
                       }}
-                      onMouseEnter={e => { if (!active) e.currentTarget.style.background='var(--bg-hover)'; }}
+                      onMouseEnter={CAN_HOVER ? e => { if (!active) e.currentTarget.style.background='var(--bg-hover)'; } : undefined}
                       onMouseLeave={e => { if (!active) e.currentTarget.style.background='transparent'; }}>
                       {mn}
                     </button>
@@ -558,7 +559,7 @@ export function UserPicker({ value, options = [], placeholder = 'Tanlang...', on
                       color:'var(--text)', textAlign:'left',
                       transition:'background 120ms',
                     }}
-                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.background='var(--bg-hover)'; }}
+                    onMouseEnter={CAN_HOVER ? e => { if (!isActive) e.currentTarget.style.background='var(--bg-hover)'; } : undefined}
                     onMouseLeave={e => { if (!isActive) e.currentTarget.style.background='transparent'; }}>
                     <Avatar name={o.name} hue={o.hue ?? 200} size="sm" photoUrl={o.photoUrl}/>
                     <div style={{ flex:1, minWidth:0 }}>
