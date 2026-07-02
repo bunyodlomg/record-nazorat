@@ -3,7 +3,7 @@ import { AnimatePresence } from 'framer-motion';
 import { useAuth } from './context/AuthContext.jsx';
 import { Header, Dock } from './components/Shell.jsx';
 import LoadingScreen from './components/LoadingScreen.jsx';
-import { PendingScreen, RejectedScreen, NoInviteScreen } from './components/StatusScreens.jsx';
+import { PendingScreen, RejectedScreen, NoInviteScreen, AuthErrorScreen } from './components/StatusScreens.jsx';
 import { isTelegram, useBackButton } from './hooks/useTelegram.js';
 import LoginPage from './pages/Login.jsx';
 
@@ -170,6 +170,12 @@ export default function App() {
 
   if (status === 'no-invite') {
     return <NoInviteScreen onLogout={isTelegram ? null : logout} error={error}/>;
+  }
+
+  // Telegram ichida — login/parol formasi KO'RSATILMAYDI. Auth xato yoki initData
+  // kelmasa xatolik + qayta urinish ekrani. Email/parol faqat brauzerda (admin).
+  if (isTelegram && (status === 'error' || status === 'guest' || !user)) {
+    return <AuthErrorScreen onRetry={refresh} error={error}/>;
   }
 
   if (status === 'guest' || !user) {

@@ -81,6 +81,32 @@ export function RejectedScreen({ onLogout }) {
   );
 }
 
+export function AuthErrorScreen({ onRetry, error }) {
+  return (
+    <CenterCard
+      icon="alert"
+      title="Kirishda xatolik"
+      message="Telegram orqali avtomatik kirishda muammo yuz berdi. Qayta urinib ko'ring yoki ilovani bot menyusidagi tugma orqali qayta oching."
+      accent="var(--rose)"
+      accentBg="var(--rose-bg)">
+      {error && (
+        <div style={{
+          padding:'8px 12px', background:'var(--bg-subtle)', borderRadius:8,
+          fontSize:11, color:'var(--text-3)', fontFamily:'var(--mono)',
+          width:'100%', textAlign:'center', wordBreak:'break-word',
+        }}>
+          {error}
+        </div>
+      )}
+      {onRetry && (
+        <button className="btn btn-primary" style={{ marginTop:8, width:'100%' }} onClick={onRetry}>
+          Qayta urinish
+        </button>
+      )}
+    </CenterCard>
+  );
+}
+
 export function NoInviteScreen({ onLogout, error }) {
   const isInvalidLink = error && /yaroqsiz|muddati|topilmadi/i.test(error);
   return (
