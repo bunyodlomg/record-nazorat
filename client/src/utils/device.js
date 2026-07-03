@@ -14,8 +14,18 @@ export const IS_TOUCH =
 
 export const CAN_HOVER = !IS_TOUCH;
 
+// iOS (iPhone/iPad + iPadOS'ning "MacIntel" niqobi + Telegram platform belgisi).
+// iOS WebKit'ning click-sintez heuristikalari uchun alohida yo'l kerak (fastTap).
+export const IS_IOS =
+  typeof window !== 'undefined' && (
+    /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && (navigator.maxTouchPoints || 0) > 1) ||
+    window.Telegram?.WebApp?.platform === 'ios'
+  );
+
 // CSS hover qoidalari `:where(html.can-hover) ...:hover` bilan yozilgan — faqat shu
 // klass bo'lganda (desktop) hover ishlaydi.
 if (typeof document !== 'undefined') {
   document.documentElement.classList.toggle('can-hover', CAN_HOVER);
+  document.documentElement.classList.toggle('is-ios', IS_IOS);
 }

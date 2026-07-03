@@ -59,8 +59,12 @@ function applySafeArea() {
   // Eski versiyalarda fullscreen rejimda Telegram tugmalari taxminan 80px joy oladi.
   const fromApi = (sa.top || 0) + (cs.top || 0);
   const top = fromApi || (tg.isFullscreen ? 88 : 0);
+  // iOS fullscreen'da API bottom 0 qaytarsa ham home-indicator (~34px) zonasi bor —
+  // dock shu zonada qolsa 1-tap system gesture himoyasiga yutiladi.
+  const rawBottom = (sa.bottom || 0) + (cs.bottom || 0);
+  const bottom = rawBottom || (tg.isFullscreen && tg.platform === 'ios' ? 34 : 0);
   document.documentElement.style.setProperty('--tg-safe-top',    `${top}px`);
-  document.documentElement.style.setProperty('--tg-safe-bottom', `${(sa.bottom || 0) + (cs.bottom || 0)}px`);
+  document.documentElement.style.setProperty('--tg-safe-bottom', `${bottom}px`);
 }
 
 function applyTheme() {
