@@ -86,8 +86,8 @@ function LeaderRow({ entry, idx, subtitleKey, metricKey = 'score', metricIcon = 
         background:'transparent', textAlign:'left', cursor: onClick ? 'pointer' : 'default',
         width:'100%',
       }}
-      onMouseEnter={e => onClick && (e.currentTarget.style.background = 'var(--bg-subtle)')}
-      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+      onMouseEnter={!CAN_HOVER ? undefined : e => onClick && (e.currentTarget.style.background = 'var(--bg-subtle)')}
+      onMouseLeave={!CAN_HOVER ? undefined : e => e.currentTarget.style.background = 'transparent'}
     >
       <div style={{ fontFamily:'var(--display)', fontSize:14, fontWeight:700, color:'var(--text-3)' }}>#{idx+4}</div>
       <div style={{ display:'flex', alignItems:'center', gap:10, minWidth:0 }}>

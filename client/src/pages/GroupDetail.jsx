@@ -315,25 +315,36 @@ function buildMatrixCanvas({ students, cols }) {
   return canvas;
 }
 
-// Canvas'ni PNG qilib yuklab olish — telefon va desktop'da bir xil (blob + anchor).
-function saveCanvas(canvas, groupName, onDone) {
-  const filename = `${(groupName || 'guruh').replace(/[^\w-]+/g, '_')}_statistika.png`;
-  canvas.toBlob((blob) => {
-    if (blob) {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = filename;
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    }
-    onDone?.();
-  }, 'image/png');
-}
-
 function SubmissionMatrix({ groupId, groupName }) {
   const { data, loading, error, refetch } = useFetch(() => api.groups.submissionMatrix(groupId), [groupId]);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [sending, setSending]     = useState(false);
+  const [sendError, setSendError] = useState(null);
   const canvasRef = useRef(null);
+
+  const closePreview = () => { setPreviewUrl(null); setSendError(null); };
+
+  // Rasmni bot orqali bosgan foydalanuvchining o'z Telegram chatiga yuboradi
+  // (guruh ma'lumotlari caption sifatida server tomonda qo'shiladi).
+  const sendToTelegram = async (cols) => {
+    if (!canvasRef.current || sending) return;
+    setSending(true); setSendError(null);
+    try {
+      const fmt = c => `${String(c.dom).padStart(2, '0')}.${String(c.month).padStart(2, '0')}`;
+      const first = cols[0], last = cols[cols.length - 1];
+      await api.groups.sendMatrixImage(groupId, {
+        image: canvasRef.current.toDataURL('image/png'),
+        period: first ? `${fmt(first)} — ${fmt(last)}` : undefined,
+      });
+      sfx.success();
+      closePreview();
+    } catch (err) {
+      sfx.error();
+      setSendError(err?.response?.data?.message || err?.message || "Yuborib bo'lmadi");
+    } finally {
+      setSending(false);
+    }
+  };
 
   if (loading) return <div style={{ padding:'30px 0' }}><Spinner/></div>;
   if (error)   return <ErrorBox message={error} onRetry={refetch}/>;
@@ -384,26 +395,32 @@ function SubmissionMatrix({ groupId, groupName }) {
             canvasRef.current = canvas;
             setPreviewUrl(canvas.toDataURL('image/png'));
           }}>
-          <Icon name="download" size={14} style={{ marginRight:6, verticalAlign:-2 }}/>
-          📷 Rasm yuklab olish
+          <Icon name="send" size={14} style={{ marginRight:6, verticalAlign:-2 }}/>
+          📷 Rasm yuborish
         </button>
       </div>
 
       {previewUrl && (
-        <Modal open onClose={() => setPreviewUrl(null)}
+        <Modal open onClose={closePreview}
           title="Statistika rasmi"
           subtitle={groupName}
           width={680}
           footer={<>
-            <button className="btn btn-ghost" onClick={() => setPreviewUrl(null)}>Yopish</button>
-            <button className="btn btn-primary"
-              onClick={() => canvasRef.current && saveCanvas(canvasRef.current, groupName, () => setPreviewUrl(null))}>
-              <Icon name="download" size={14} style={{ marginRight:6, verticalAlign:-2 }}/> Yuklab olish
+            <button className="btn btn-ghost" onClick={closePreview} disabled={sending}>Yopish</button>
+            <button className="btn btn-primary" disabled={sending}
+              onClick={() => sendToTelegram(cols)}>
+              <Icon name="send" size={14} style={{ marginRight:6, verticalAlign:-2 }}/>
+              {sending ? 'Yuborilmoqda…' : '📤 Telegramga yuborish'}
             </button>
           </>}>
           <div style={{ fontSize:12.5, color:'var(--text-2)', marginBottom:10, textAlign:'center' }}>
-            Pastdagi <b>Yuklab olish</b> tugmasini bosing.
+            Pastdagi <b>Telegramga yuborish</b> tugmasini bosing — rasm guruh ma'lumotlari bilan botdan sizga keladi.
           </div>
+          {sendError && (
+            <div style={{ fontSize:12.5, color:'var(--rose)', marginBottom:10, textAlign:'center' }}>
+              {sendError}
+            </div>
+          )}
           <img src={previewUrl} alt="statistika"
             style={{ display:'block', maxWidth:'100%', borderRadius:8, border:'1px solid var(--border)', margin:'0 auto' }}/>
         </Modal>

@@ -83,6 +83,7 @@ const api = {
     update: (id,data) => http.patch(`/groups/${id}`, data),
     delete: id        => http.delete(`/groups/${id}`),
     submissionMatrix: id => http.get(`/groups/${id}/submission-matrix`),
+    sendMatrixImage: (id, data) => http.post(`/groups/${id}/matrix-image`, data),
   },
   notifications: {
     list: (params = {}) => http.get('/notifications', { params }),

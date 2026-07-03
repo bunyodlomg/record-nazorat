@@ -170,8 +170,8 @@ export default function MyDashboard({ onNav }) {
               width:'100%', textAlign:'left', cursor:'pointer', border:'none', color:'inherit',
               transition:'background 140ms',
             }}
-            onMouseEnter={e => e.currentTarget.style.background='var(--bg-subtle)'}
-            onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+            onMouseEnter={!CAN_HOVER ? undefined : e => e.currentTarget.style.background='var(--bg-subtle)'}
+            onMouseLeave={!CAN_HOVER ? undefined : e => e.currentTarget.style.background='transparent'}>
             <div style={{ width:28, height:28, borderRadius:8, background:a.bg, color:a.color, display:'grid', placeItems:'center', flexShrink:0 }}>
               <Icon name={a.icon} size={13}/>
             </div>

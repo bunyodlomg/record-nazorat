@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { tg } from '../hooks/useTelegram.js';
+import { CAN_HOVER } from '../utils/device.js';
 
 /* ── Animate UI ikonkalari (animate-ui.com/docs/icons) ──
    Lucide + Motion. Mavjud bo'lganlari shu yerdan ishlatiladi; qolganlari
@@ -231,7 +232,7 @@ export function Icon({ name, size = 18, color, style, animate = true }) {
         <Anim
           size={size}
           strokeWidth={1.75}
-          animateOnHover={animate}
+          animateOnHover={CAN_HOVER ? animate : false}
           style={color ? { color } : undefined}
         />
       </span>

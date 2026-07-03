@@ -22,6 +22,22 @@ const sendTo = async (chatId, text, extra = {}) => {
 const escapeMd = (s = '') => String(s).replace(/([_*`\[\]])/g, '\\$1');
 
 /**
+ * Rasm (Buffer) yuborish — statistika jadvali kabi generatsiya qilingan fayllar uchun.
+ * Muvaffaqiyatsizlikda false qaytaradi, throw qilmaydi.
+ */
+const sendPhotoTo = async (chatId, buffer, caption = '') => {
+  const bot = safeBot();
+  if (!bot || !chatId) return false;
+  try {
+    await bot.telegram.sendPhoto(chatId, { source: buffer }, { caption });
+    return true;
+  } catch (err) {
+    console.warn(`Bot photo send fail (${chatId}):`, err.message);
+    return false;
+  }
+};
+
+/**
  * Admin tomonidan o'qituvchiga shaxsiy xabar yoki maqtov.
  *
  * @param {string} chatId — teacher.user.telegramId
@@ -93,4 +109,5 @@ module.exports = {
   notifyApproved,
   notifyRejected,
   sendTeacherMessage,
+  sendPhotoTo,
 };

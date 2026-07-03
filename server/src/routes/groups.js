@@ -4,6 +4,8 @@ const Group      = require('../models/Group');
 const Student    = require('../models/Student');
 const Homework   = require('../models/Homework');
 const Submission = require('../models/Submission');
+const User       = require('../models/User');
+const { sendPhotoTo } = require('../bot/notifications');
 const { protect, requireRole, requireActive } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { ensureLessonHomeworkForGroup } = require('../utils/ensureLessonHomework');
@@ -304,6 +306,59 @@ router.get('/:id/submission-matrix', param('id').isMongoId(), ok, asyncHandler(a
     summary,
   }});
 }));
+
+// POST /api/groups/:id/matrix-image
+// Statistika jadvali rasmini (client Canvas'da chizadi) bot orqali so'ragan
+// foydalanuvchining O'Z Telegram chatiga guruh ma'lumotlari bilan yuboradi.
+const DAY_LABELS = { mon:'Du', tue:'Se', wed:'Cho', thu:'Pay', fri:'Ju', sat:'Sha', sun:'Yak' };
+
+router.post('/:id/matrix-image',
+  param('id').isMongoId(),
+  body('image').isString().notEmpty().withMessage('Rasm majburiy'),
+  body('period').optional().isString().isLength({ max:120 }),
+  ok,
+  asyncHandler(async (req, res) => {
+    const g = await Group.findById(req.params.id)
+      .select('name code teacher scheduleDays').populate('teacher', 'name').lean();
+    if (!g) return res.status(404).json({ success:false, message:'Guruh topilmadi' });
+
+    // Ruxsat: admin har doim, teacher — faqat o'zining guruhi
+    if (req.user.role === 'teacher' && (!req.user.teacherRef || String(g.teacher?._id) !== String(req.user.teacherRef))) {
+      return res.status(403).json({ success:false, message:"Ruxsat yo'q" });
+    }
+
+    const me = await User.findById(req.user.id).select('telegramId').lean();
+    if (!me?.telegramId) {
+      return res.status(400).json({ success:false, message:"Telegram hisobingiz bog'lanmagan. Mini App'ni Telegram bot orqali oching." });
+    }
+
+    const m = String(req.body.image).match(/^data:image\/png;base64,([A-Za-z0-9+/=]+)$/);
+    if (!m) return res.status(422).json({ success:false, message:"Rasm formati noto'g'ri" });
+    const buffer = Buffer.from(m[1], 'base64');
+    if (buffer.length > 8 * 1024 * 1024) {
+      return res.status(413).json({ success:false, message:'Rasm juda katta' });
+    }
+
+    const studentCount = await Student.countDocuments({ group:g._id, status:'active' });
+    const days = (g.scheduleDays || []).map(d => DAY_LABELS[d]).filter(Boolean).join(' · ');
+    const sentAt = new Date().toLocaleString('uz-UZ', { timeZone:'Asia/Tashkent', day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+
+    const caption =
+      `📊 ${g.name} — vazifa statistikasi\n` +
+      (g.code ? `🏷 Kod: ${g.code}\n` : '') +
+      `👨‍🏫 O'qituvchi: ${g.teacher?.name || "Biriktirilmagan"}\n` +
+      `👥 O'quvchilar: ${studentCount} ta\n` +
+      (days ? `🗓 Dars kunlari: ${days}\n` : '') +
+      (req.body.period ? `📅 Davr: ${req.body.period}\n` : '') +
+      `⏰ ${sentAt}`;
+
+    const sent = await sendPhotoTo(me.telegramId, buffer, caption);
+    if (!sent) {
+      return res.status(502).json({ success:false, message:"Telegram'ga yuborib bo'lmadi. Botga /start yuborganingizni tekshiring." });
+    }
+    res.json({ success:true, message:'Telegramga yuborildi', data:{} });
+  })
+);
 
 // UPDATE
 router.patch('/:id', param('id').isMongoId(), ok, asyncHandler(async (req,res) => {

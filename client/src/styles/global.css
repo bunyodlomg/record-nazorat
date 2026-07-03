@@ -1215,6 +1215,15 @@ body.tg-app textarea {
   -webkit-user-select:text;
 }
 
+/* touch-action inherit bo'lmaydi — interaktiv elementlarning o'zida bo'lishi shart.
+   iOS'da double-tap-zoom kutish tapni "yutib" yuborishining oldini oladi. */
+button, a, select, label,
+[role="button"], [role="tab"],
+.card-hov, .gcard, .dock-btn {
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+
 /* Telegram'da ham app-bg ko'rsatamiz — yoqimliroq fon uchun */
 body.tg-app { background: var(--bg); }
 

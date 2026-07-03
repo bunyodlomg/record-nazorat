@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useMemo, forwardRef, Children, isValidElem
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon, Avatar } from './ui.jsx';
 import { sfx } from '../hooks/useSound.js';
+import { CAN_HOVER } from '../utils/device.js';
 
 export function Modal({ open, onClose, title, subtitle, children, width = 480, footer }) {
   useEffect(() => {
@@ -65,8 +66,8 @@ export function Modal({ open, onClose, title, subtitle, children, width = 480, f
                   display:'grid', placeItems:'center', color:'var(--text-2)',
                   transition:'all 160ms',
                 }}
-                onMouseEnter={e => { e.currentTarget.style.background='var(--bg-hover)'; e.currentTarget.style.color='var(--text)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background='var(--bg-subtle)'; e.currentTarget.style.color='var(--text-2)'; }}>
+                onMouseEnter={!CAN_HOVER ? undefined : e => { e.currentTarget.style.background='var(--bg-hover)'; e.currentTarget.style.color='var(--text)'; }}
+                onMouseLeave={!CAN_HOVER ? undefined : e => { e.currentTarget.style.background='var(--bg-subtle)'; e.currentTarget.style.color='var(--text-2)'; }}>
                 <Icon name="close" size={14}/>
               </button>
             </div>
@@ -251,8 +252,8 @@ export function Select({ children, value, onChange, style, disabled, placeholder
                       cursor: o.disabled ? 'not-allowed' : 'pointer',
                       transition:'background 120ms, color 120ms',
                     }}
-                    onMouseEnter={e => { if (!isActive && !o.disabled) e.currentTarget.style.background='var(--bg-hover)'; }}
-                    onMouseLeave={e => { if (!isActive) e.currentTarget.style.background='transparent'; }}>
+                    onMouseEnter={!CAN_HOVER ? undefined : e => { if (!isActive && !o.disabled) e.currentTarget.style.background='var(--bg-hover)'; }}
+                    onMouseLeave={!CAN_HOVER ? undefined : e => { if (!isActive) e.currentTarget.style.background='transparent'; }}>
                     <span style={{ flex:1, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{o.label}</span>
                     {isActive && <Icon name="check" size={14}/>}
                   </button>
@@ -357,8 +358,8 @@ export function TimePicker({ value = '', onChange, disabled, placeholder = "Vaqt
                         fontVariantNumeric:'tabular-nums',
                         textAlign:'center', transition:'background 120ms, color 120ms',
                       }}
-                      onMouseEnter={e => { if (!active) e.currentTarget.style.background='var(--bg-hover)'; }}
-                      onMouseLeave={e => { if (!active) e.currentTarget.style.background='transparent'; }}>
+                      onMouseEnter={!CAN_HOVER ? undefined : e => { if (!active) e.currentTarget.style.background='var(--bg-hover)'; }}
+                      onMouseLeave={!CAN_HOVER ? undefined : e => { if (!active) e.currentTarget.style.background='transparent'; }}>
                       {hr}
                     </button>
                   );
@@ -382,8 +383,8 @@ export function TimePicker({ value = '', onChange, disabled, placeholder = "Vaqt
                         fontVariantNumeric:'tabular-nums',
                         textAlign:'center', transition:'background 120ms, color 120ms',
                       }}
-                      onMouseEnter={e => { if (!active) e.currentTarget.style.background='var(--bg-hover)'; }}
-                      onMouseLeave={e => { if (!active) e.currentTarget.style.background='transparent'; }}>
+                      onMouseEnter={!CAN_HOVER ? undefined : e => { if (!active) e.currentTarget.style.background='var(--bg-hover)'; }}
+                      onMouseLeave={!CAN_HOVER ? undefined : e => { if (!active) e.currentTarget.style.background='transparent'; }}>
                       {mn}
                     </button>
                   );
@@ -558,8 +559,8 @@ export function UserPicker({ value, options = [], placeholder = 'Tanlang...', on
                       color:'var(--text)', textAlign:'left',
                       transition:'background 120ms',
                     }}
-                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.background='var(--bg-hover)'; }}
-                    onMouseLeave={e => { if (!isActive) e.currentTarget.style.background='transparent'; }}>
+                    onMouseEnter={!CAN_HOVER ? undefined : e => { if (!isActive) e.currentTarget.style.background='var(--bg-hover)'; }}
+                    onMouseLeave={!CAN_HOVER ? undefined : e => { if (!isActive) e.currentTarget.style.background='transparent'; }}>
                     <Avatar name={o.name} hue={o.hue ?? 200} size="sm" photoUrl={o.photoUrl}/>
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontSize:13, fontWeight:500, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{o.name}</div>
