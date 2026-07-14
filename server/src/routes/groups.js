@@ -209,7 +209,7 @@ const dayKeyTash = (date) => new Date(new Date(date).getTime() + TZ_MIN * 60000)
 // har bir o'quvchining topshirgan/topshirmagan holati.
 // Qatorlar (tbody) = sanalar, ustunlar = o'quvchilar. Admin + guruh teacher'i ko'ra oladi.
 router.get('/:id/submission-matrix', param('id').isMongoId(), ok, asyncHandler(async (req, res) => {
-  const g = await Group.findById(req.params.id).select('teacher startDate createdAt name').lean();
+  const g = await Group.findById(req.params.id).select('teacher startDate createdAt name offDays').lean();
   if (!g) return res.status(404).json({ success:false, message:'Guruh topilmadi' });
 
   // Ruxsat: admin har doim, teacher — faqat o'zining guruhi
@@ -301,6 +301,7 @@ router.get('/:id/submission-matrix', param('id').isMongoId(), ok, asyncHandler(a
 
   res.json({ success:true, data: {
     startDate: start,
+    offDays: (g.offDays || []).map(d => dayKeyTash(d)).sort(),
     students: students.map(s => ({ _id: s._id, name: s.name, hue: s.hue, photoUrl: s.photoUrl || null })),
     rows,
     summary,
@@ -357,6 +358,56 @@ router.post('/:id/matrix-image',
       return res.status(502).json({ success:false, message:"Telegram'ga yuborib bo'lmadi. Botga /start yuborganingizni tekshiring." });
     }
     res.json({ success:true, message:'Telegramga yuborildi', data:{} });
+  })
+);
+
+// PATCH /api/groups/:id/off-day — sanani dam olish / mock kuni qilish yoki bekor qilish
+// off:true  → sana offDays'ga qo'shiladi, o'sha kunning AVTO-dars vazifasi (+submission) o'chiriladi
+// off:false → sana offDays'dan olib tashlanadi, avto-dars vazifasi qayta yaratiladi
+// Real (qo'lda berilgan / speaking) vazifalarga tegilmaydi — ular o'z sanasida qoladi.
+router.patch('/:id/off-day',
+  [
+    param('id').isMongoId(),
+    body('date').matches(/^\d{4}-\d{2}-\d{2}$/).withMessage('Sana YYYY-MM-DD formatida bo\'lishi kerak'),
+    body('off').isBoolean().withMessage('off qiymati boolean bo\'lishi kerak'),
+  ],
+  ok, asyncHandler(async (req, res) => {
+    const group = await Group.findById(req.params.id);
+    if (!group) return res.status(404).json({ success:false, message:'Guruh topilmadi' });
+    if (!canEditGroup(req, group)) return res.status(403).json({ success:false, message:'Ruxsat yo\'q' });
+
+    // Sana komponentlaridan server-local yarim tun (ensureLessonHomework bilan bir xil konvensiya)
+    const [y, mo, dd] = req.body.date.split('-').map(Number);
+    const day  = new Date(y, mo - 1, dd, 0, 0, 0, 0);
+    const next = new Date(day.getTime() + 86400000);
+    const off  = req.body.off === true || req.body.off === 'true';
+
+    const offDays = (group.offDays || []).filter(d => {
+      const t = new Date(d); t.setHours(0, 0, 0, 0);
+      return t.getTime() !== day.getTime();
+    });
+
+    if (off) {
+      offDays.push(day);
+      // O'sha kunning avtomatik dars vazifasini (+submissions) o'chiramiz
+      const hws = await Homework.find({
+        group: group._id, autoLesson: true,
+        dueDate: { $gte: day, $lt: next },
+      }).select('_id').lean();
+      const hwIds = hws.map(h => h._id);
+      if (hwIds.length) {
+        await Submission.deleteMany({ homework: { $in: hwIds } });
+        await Homework.deleteMany({ _id: { $in: hwIds } });
+      }
+    }
+
+    group.offDays = offDays.sort((a, b) => a - b);
+    await group.save();
+
+    // Bekor qilinganda — o'sha dars kuni uchun avto-vazifani qayta yaratamiz
+    if (!off) await ensureLessonHomeworkForGroup(group._id).catch(() => {});
+
+    res.json({ success:true, message: off ? 'Dam olish kuni belgilandi' : 'Bekor qilindi', data:{ offDays: group.offDays } });
   })
 );
 

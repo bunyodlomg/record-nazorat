@@ -12,6 +12,11 @@ const groupSchema = new mongoose.Schema({
   startDate:  { type:Date, default:Date.now },
   isActive:   { type:Boolean, default:true, index:true },
 
+  // Dam olish / mock kunlari — jadvaldagi dars kuni bo'lsa ham shu sanalarda
+  // avtomatik dars vazifasi yaratilmaydi va "topshirmagan" deb hisoblanmaydi.
+  // Har sana kunning boshi (00:00, server-local) ko'rinishida saqlanadi.
+  offDays:    { type:[Date], default:[] },
+
   // Haftalik speaking vazifalar soni — har dushanba auto-yaratiladi (dueDate=yakshanba)
   speakingPerWeek: { type:Number, default:2, min:0, max:7 },
 }, { timestamps:true, toJSON:{ virtuals:true }, toObject:{ virtuals:true } });

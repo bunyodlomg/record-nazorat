@@ -315,14 +315,36 @@ function buildMatrixCanvas({ students, cols }) {
   return canvas;
 }
 
+const offDayLabel = (key) => {
+  const [, mo, dd] = key.split('-').map(Number);
+  return `${dd}-${MONTHS_SHORT[(mo || 1) - 1]}`;
+};
+
 function SubmissionMatrix({ groupId, groupName }) {
   const { data, loading, error, refetch } = useFetch(() => api.groups.submissionMatrix(groupId), [groupId]);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [sending, setSending]     = useState(false);
   const [sendError, setSendError] = useState(null);
+  const [offBusy, setOffBusy]     = useState(null); // toggle bo'layotgan sana kaliti
   const canvasRef = useRef(null);
 
   const closePreview = () => { setPreviewUrl(null); setSendError(null); };
+
+  // Sanani dam olish / mock kuni qilish yoki bekor qilish
+  const toggleOffDay = async (dateKey, off) => {
+    if (offBusy) return;
+    setOffBusy(dateKey);
+    try {
+      await api.groups.setOffDay(groupId, dateKey, off);
+      sfx.success();
+      await refetch();
+    } catch (err) {
+      sfx.error();
+      alert(err?.response?.data?.message || err?.message || "Amalni bajarib bo'lmadi");
+    } finally {
+      setOffBusy(null);
+    }
+  };
 
   // Rasmni bot orqali bosgan foydalanuvchining o'z Telegram chatiga yuboradi
   // (guruh ma'lumotlari caption sifatida server tomonda qo'shiladi).
@@ -354,6 +376,7 @@ function SubmissionMatrix({ groupId, groupName }) {
   // Jadvalda sanalar ustun bo'lib, chapdan o'ngga eski→yangi tartibda chiqadi.
   const cols     = data?.rows     || [];
   const summary  = data?.summary  || {};
+  const offDays  = data?.offDays  || [];
 
   if (students.length === 0) {
     return (
@@ -363,7 +386,7 @@ function SubmissionMatrix({ groupId, groupName }) {
       </div>
     );
   }
-  if (cols.length === 0) {
+  if (cols.length === 0 && offDays.length === 0) {
     return (
       <div style={{ padding:'40px 20px', textAlign:'center', color:'var(--text-3)' }}>
         <div style={{ fontSize:36, marginBottom:8 }}>📊</div>
@@ -399,6 +422,33 @@ function SubmissionMatrix({ groupId, groupName }) {
           📷 Rasm yuborish
         </button>
       </div>
+
+      <div style={{ fontSize:11.5, color:'var(--text-3)', marginBottom:8 }}>
+        💡 Mock yoki dam olish kuni bo'lgan sanani <b>ustundagi 🌙 tugma</b> orqali belgilang — o'sha kun "topshirmagan" hisoblanmaydi.
+      </div>
+
+      {offDays.length > 0 && (
+        <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:12 }}>
+          <span style={{ fontSize:11.5, fontWeight:700, color:'var(--text-2)' }}>Dam olish / mock kunlari:</span>
+          {offDays.map(key => (
+            <span key={key} style={{
+              display:'inline-flex', alignItems:'center', gap:6,
+              padding:'4px 6px 4px 10px', borderRadius:20,
+              background:'var(--bg-subtle)', border:'1px solid var(--border)',
+              fontSize:12, fontWeight:600, color:'var(--text-1)',
+            }}>
+              🌙 {offDayLabel(key)}
+              <button onClick={() => toggleOffDay(key, false)} disabled={offBusy === key}
+                title="Bekor qilish"
+                style={{
+                  display:'grid', placeItems:'center', width:18, height:18, borderRadius:'50%',
+                  border:'none', cursor: offBusy === key ? 'wait' : 'pointer',
+                  background:'var(--rose-bg)', color:'var(--rose)', fontSize:12, lineHeight:1,
+                }}>×</button>
+            </span>
+          ))}
+        </div>
+      )}
 
       {previewUrl && (
         <Modal open onClose={closePreview}
@@ -439,6 +489,14 @@ function SubmissionMatrix({ groupId, groupName }) {
                     {c.dom} {MONTHS_SHORT[(c.month ?? 1) - 1]}
                   </div>
                   <div style={{ fontSize:9.5, color:'var(--text-3)' }}>{c.dow}</div>
+                  <button onClick={() => toggleOffDay(c.key, true)} disabled={offBusy === c.key}
+                    title="Dam olish / mock kuni qilish"
+                    style={{
+                      marginTop:3, display:'inline-grid', placeItems:'center',
+                      width:18, height:18, borderRadius:5, border:'1px solid var(--border)',
+                      background:'transparent', cursor: offBusy === c.key ? 'wait' : 'pointer',
+                      fontSize:10, lineHeight:1, opacity:0.55,
+                    }}>🌙</button>
                 </th>
               ))}
               <th style={{ ...cellBase, padding:'7px 6px', minWidth:54, fontSize:10.5, color:'var(--text-3)', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.04em' }}>
