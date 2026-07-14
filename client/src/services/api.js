@@ -84,6 +84,7 @@ const api = {
     delete: id        => http.delete(`/groups/${id}`),
     submissionMatrix: id => http.get(`/groups/${id}/submission-matrix`),
     sendMatrixImage: (id, data) => http.post(`/groups/${id}/matrix-image`, data),
+    setOffDay: (id, date, off) => http.patch(`/groups/${id}/off-day`, { date, off }),
   },
   notifications: {
     list: (params = {}) => http.get('/notifications', { params }),

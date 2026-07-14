@@ -34,9 +34,16 @@ async function ensureForGroup(group) {
 
   if (start > today) return 0;
 
+  // Dam olish / mock kunlari — bu sanalarda dars vazifasi yaratilmaydi
+  const offSet = new Set(
+    (Array.isArray(group.offDays) ? group.offDays : []).map(d => startOfDay(d).getTime())
+  );
+
   const lessonDates = [];
   for (let d = new Date(start); d <= today; d.setDate(d.getDate() + 1)) {
-    if (dayIndices.includes(d.getDay())) lessonDates.push(new Date(d));
+    if (dayIndices.includes(d.getDay()) && !offSet.has(startOfDay(d).getTime())) {
+      lessonDates.push(new Date(d));
+    }
   }
   if (!lessonDates.length) return 0;
 

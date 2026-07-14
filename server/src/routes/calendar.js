@@ -130,6 +130,11 @@ router.get('/events', asyncHandler(async (req, res) => {
     const days = g.scheduleDays.map(d => DAY_MAP[d]).filter(d => d !== undefined);
     if (!days.length) continue;
 
+    // Dam olish / mock kunlari — bu sanalarda dars ko'rsatilmaydi
+    const offSet = new Set((g.offDays || []).map(d => {
+      const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime();
+    }));
+
     // Guruh boshlanish sanasi — bundan oldingi kunlarda dars bo'lmaydi.
     // startDate (boshlanish) yoki createdAt (yaratilgan) — qaysi biri bo'lsa.
     const groupStart = new Date(g.startDate || g.createdAt || rangeStart);
@@ -139,7 +144,8 @@ router.get('/events', asyncHandler(async (req, res) => {
     const cur = new Date(Math.max(rangeStart.getTime(), groupStart.getTime()));
     cur.setHours(0, 0, 0, 0);
     while (cur <= rangeEnd) {
-      if (days.includes(cur.getDay())) {
+      const curKey = new Date(cur); curKey.setHours(0, 0, 0, 0);
+      if (days.includes(cur.getDay()) && !offSet.has(curKey.getTime())) {
         push(fmtKey(cur), {
           type:     'lesson',
           title:    g.name,
