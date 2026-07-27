@@ -5,6 +5,7 @@ import { Icon, Avatar, useCountUp } from '../components/ui.jsx';
 import { Spinner, ErrorBox, listContainer, listItem } from '../components/Feedback.jsx';
 import PageHero from '../components/PageHero.jsx';
 import { useFetch } from '../hooks/useFetch.js';
+import { useStickyState } from '../hooks/useStickyState.js';
 import api from '../services/api.js';
 
 const MEDALS = {
@@ -177,8 +178,8 @@ function FullList({ items, title, sub, subtitleKey, metricKey = 'score', metricL
 }
 
 export default function LeaderboardPage({ onOpenTeacher, onOpenStudent }) {
-  const [tab, setTab] = useState('students');
-  const [groupId, setGroupId] = useState(null);
+  const [tab, setTab] = useStickyState('leaderboard:tab', 'students');
+  const [groupId, setGroupId] = useStickyState('leaderboard:groupId', null);
 
   const { data: teachersData, loading: tLoad, error: tErr, refetch: tRefetch } =
     useFetch(() => api.leaderboard.teachers({ limit:100 }), [tab === 'teachers']);

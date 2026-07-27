@@ -4,6 +4,7 @@ import { Icon } from '../components/ui.jsx';
 import { Spinner, ErrorBox } from '../components/Feedback.jsx';
 import { StudentRow } from '../components/SubmissionsModal.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useStickyState } from '../hooks/useStickyState.js';
 import { sfx } from '../hooks/useSound.js';
 import api from '../services/api.js';
 
@@ -39,7 +40,7 @@ export default function HomeworkDetailPage({ homeworkId, onBack }) {
   const [subs, setSubs]         = useState([]);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState('');
-  const [tab, setTab]           = useState('pending');
+  const [tab, setTab]           = useStickyState(`hw:${homeworkId}:tab`, 'pending');
   const [search, setSearch]     = useState('');
   const [busy, setBusy]         = useState(false);
 

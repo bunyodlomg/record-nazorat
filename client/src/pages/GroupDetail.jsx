@@ -4,6 +4,7 @@ import { Icon, Avatar } from '../components/ui.jsx';
 import { Spinner, ErrorBox } from '../components/Feedback.jsx';
 import { Modal, Field, Input, Textarea } from '../components/Modal.jsx';
 import { useFetch } from '../hooks/useFetch.js';
+import { useStickyState } from '../hooks/useStickyState.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import api from '../services/api.js';
 import { sfx } from '../hooks/useSound.js';
@@ -610,7 +611,7 @@ function AddStudentModal({ open, group, onClose, onDone }) {
 export default function GroupDetailPage({ groupId, onBack, onOpenStudent, onOpenHomework, onOpenTeacher }) {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
-  const [tab, setTab] = useState('students');
+  const [tab, setTab] = useStickyState(`group:${groupId}:tab`, 'students');
   const [busyPending, setBusyPending] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);

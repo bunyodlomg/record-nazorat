@@ -6,6 +6,7 @@ import { Modal, Field, Input } from '../../components/Modal.jsx';
 import PageHero from '../../components/PageHero.jsx';
 import GroupCard from '../../components/GroupCard.jsx';
 import { useFetch } from '../../hooks/useFetch.js';
+import { useStickyState } from '../../hooks/useStickyState.js';
 import api from '../../services/api.js';
 import { sfx } from '../../hooks/useSound.js';
 import StudentsPage from '../Students.jsx';
@@ -186,8 +187,8 @@ function PendingStudentsPanel({ onChange }) {
 }
 
 export default function MyClasses({ onOpenStudent, onOpenGroup }) {
-  const [tab, setTab] = useState('groups');
-  const [showClosed, setShowClosed] = useState(false);
+  const [tab, setTab] = useStickyState('my-classes:tab', 'groups');
+  const [showClosed, setShowClosed] = useStickyState('my-classes:showClosed', false);
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const { data, loading, error, refetch } = useFetch(

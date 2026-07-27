@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../services/api.js';
 import { tg, isTelegram } from '../hooks/useTelegram.js';
+import { clearStickyState } from '../hooks/useStickyState.js';
 
 const AuthContext = createContext(null);
 
@@ -80,6 +81,7 @@ export function AuthProvider({ children }) {
   };
 
   const logout = () => {
+    clearStickyState();
     localStorage.removeItem('ep_token');
     setUser(null);
     setStatus(isTelegram ? 'no-invite' : 'guest');

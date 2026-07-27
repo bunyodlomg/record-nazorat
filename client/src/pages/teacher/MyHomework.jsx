@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Icon } from '../../components/ui.jsx';
 import { Spinner, ErrorBox } from '../../components/Feedback.jsx';
 import PageHero from '../../components/PageHero.jsx';
 import { useFetch } from '../../hooks/useFetch.js';
+import { useStickyState } from '../../hooks/useStickyState.js';
 import api from '../../services/api.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 
@@ -167,10 +168,10 @@ function HomeworkCard({ it, tab, onOpen }) {
 export default function MyHomework({ onOpenHomework }) {
   const { user } = useAuth();
   const teacherId = user?.teacherRef?._id || user?.teacherRef;
-  const [kind, setKind] = useState('lesson');
-  const [tab, setTab] = useState('pending');
+  const [kind, setKind] = useStickyState('my-homework:kind', 'lesson');
+  const [tab, setTab] = useStickyState('my-homework:tab', 'pending');
   // "Belgilangan" tab uchun sana filter
-  const [pickedDate, setPickedDate] = useState(todayKey());
+  const [pickedDate, setPickedDate] = useStickyState('my-homework:pickedDate', todayKey());
 
   const { data, loading, error, refetch } = useFetch(
     () => teacherId ? api.homework.list({ teacherId, limit:200 }) : Promise.resolve({ data:[] }),
