@@ -401,12 +401,19 @@ function SubmissionMatrix({ groupId, groupName }) {
     width:40, minWidth:40, textAlign:'center', padding:'5px 0',
     borderBottom:'1px solid var(--border)', borderRight:'1px solid var(--border)',
   };
+  // Yopishib turadigan kataklar foni opaque bo'lishi shart — aks holda scroll
+  // paytida ostidagi qatorlar ko'rinib ketadi (--bg-card yarim shaffof).
+  const stickyBg = 'var(--bg-card-s)';
   // Qator boshi — o'quvchi ism-familyasi (chapda yopishib turadi)
   const nameCellStyle = {
-    position:'sticky', left:0, zIndex:1, background:'var(--bg-card)',
+    position:'sticky', left:0, zIndex:2, background:stickyBg,
     padding:'6px 12px', whiteSpace:'nowrap', minWidth:160, maxWidth:200,
     borderBottom:'1px solid var(--border)', borderRight:'1px solid var(--border)',
     textAlign:'left',
+  };
+  // Sana sarlavhasi — tepada yopishib turadi
+  const headCellStyle = {
+    position:'sticky', top:0, zIndex:3, background:stickyBg,
   };
 
   return (
@@ -476,16 +483,17 @@ function SubmissionMatrix({ groupId, groupName }) {
             style={{ display:'block', maxWidth:'100%', borderRadius:8, border:'1px solid var(--border)', margin:'0 auto' }}/>
         </Modal>
       )}
-      <div className="card" style={{ padding:0, overflowX:'auto' }}>
+      <div className="card gd-matrix" style={{ padding:0 }}>
         <table style={{ borderCollapse:'collapse', width:'100%', fontSize:12 }}>
           <thead>
             <tr>
-              <th style={{ ...nameCellStyle, zIndex:3, top:0, fontSize:11, color:'var(--text-3)', fontWeight:700 }}>
+              {/* Burchak katakchasi — ham chapda, ham tepada qotadi */}
+              <th style={{ ...nameCellStyle, ...headCellStyle, left:0, zIndex:5, fontSize:11, color:'var(--text-3)', fontWeight:700 }}>
                 O'quvchi
               </th>
               {cols.map(c => (
                 <th key={c.key} title={`${c.dom} ${MONTHS_SHORT[(c.month ?? 1) - 1]} · ${c.dow}`}
-                  style={{ ...cellBase, padding:'7px 0 6px', verticalAlign:'bottom' }}>
+                  style={{ ...cellBase, ...headCellStyle, padding:'7px 0 6px', verticalAlign:'bottom' }}>
                   <div style={{ fontSize:11.5, fontWeight:700, color:'var(--text-1)' }}>
                     {c.dom} {MONTHS_SHORT[(c.month ?? 1) - 1]}
                   </div>
@@ -500,7 +508,7 @@ function SubmissionMatrix({ groupId, groupName }) {
                     }}>🌙</button>
                 </th>
               ))}
-              <th style={{ ...cellBase, padding:'7px 6px', minWidth:54, fontSize:10.5, color:'var(--text-3)', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.04em' }}>
+              <th style={{ ...cellBase, ...headCellStyle, padding:'7px 6px', minWidth:54, fontSize:10.5, color:'var(--text-3)', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.04em' }}>
                 Foiz
               </th>
             </tr>

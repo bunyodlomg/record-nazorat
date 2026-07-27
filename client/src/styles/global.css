@@ -57,6 +57,10 @@
   --pink-bg:     rgba(244,114,182,0.11);
 
   --header-h:    58px;
+  /* Header'ning HAQIQIY balandligi (safe-area bilan). Telegram fullscreen'da
+     bu --header-h dan ~56px katta bo'ladi — viewport hisob-kitoblari shunga
+     tayanishi shart, aks holda kontent ekran tashqarisiga chiqib ketadi. */
+  --header-total: var(--header-h);
   --dock-h:      66px;
   /* Dock pastdan qancha ko'tarilgan. `.page` pastki padding'i ham shu qiymatga
      tayanadi — aks holda oxirgi element dock ostida qolib ketadi. */
@@ -169,7 +173,7 @@ a { color:inherit; text-decoration:none; }
 
 /* ── HEADER ── */
 .header {
-  height:var(--header-h);
+  height:var(--header-total);
   display:flex; align-items:center; gap:10px;
   padding:0 22px;
   background:var(--surface);
@@ -1293,15 +1297,17 @@ body.tg-app { background: var(--bg); }
 /* Safe-area padding for iOS notch / Telegram.
    Dock offseti faqat shu bitta o'zgaruvchida — `.page` padding'i undan hisoblanadi. */
 @supports (padding: max(0px)) {
-  :root { --dock-bottom: max(10px, env(safe-area-inset-bottom)); }
-  .header { padding-top: env(safe-area-inset-top); height: calc(var(--header-h) + env(safe-area-inset-top)); }
+  :root {
+    --dock-bottom:  max(10px, env(safe-area-inset-bottom));
+    --header-total: calc(var(--header-h) + env(safe-area-inset-top));
+  }
+  .header { padding-top: env(safe-area-inset-top); }
 }
 
 /* Telegram WebApp — bot tugmalari (yopish/theme/...) header'ni to'smasligi uchun
    har doim minimal 56px ehtiyot zaxira (eski client'larda safeArea API yo'q). */
 body.tg-app .header {
   padding-top: max(56px, env(safe-area-inset-top), var(--tg-safe-top, 0px));
-  height: calc(var(--header-h) + max(56px, env(safe-area-inset-top), var(--tg-safe-top, 0px)));
   align-items: flex-end;
   padding-bottom: 8px;
 }
@@ -1309,7 +1315,8 @@ body.tg-app .header {
    --tg-safe-bottom (home indicator) 34px bo'lishi mumkin. Dock ham, page padding'i
    ham shu bitta qiymatdan hisoblanadi — aks holda dock oxirgi qatorni to'sib qoladi. */
 body.tg-app {
-  --dock-bottom: max(14px, env(safe-area-inset-bottom), var(--tg-safe-bottom, 0px));
+  --dock-bottom:  max(14px, env(safe-area-inset-bottom), var(--tg-safe-bottom, 0px));
+  --header-total: calc(var(--header-h) + max(56px, env(safe-area-inset-top), var(--tg-safe-top, 0px)));
 }
 /* Login va boshqa header'siz screen'larda ham yuqoridagi tugmalar to'smasligi uchun */
 body.tg-app .login-bg,
@@ -1516,6 +1523,25 @@ button.ag-cell.ag-busy { opacity:0.45; cursor:progress; }
 .ag-ctl::-webkit-scrollbar { display:none; }
 .ag-ctl > * { flex-shrink:0; }
 
+
+/* ══════════════════════════════════════════
+   GURUH → STATISTIKA matritsasi (SubmissionMatrix)
+   Jadval o'z scroll konteyneri bo'ladi — shunda ismlar ustuni (sticky left)
+   va sanalar qatori (sticky top) o'z joyida qotib turadi. Sahifaning qolgan
+   qismi odatdagidek scroll bo'laveradi.
+   ══════════════════════════════════════════ */
+.gd-matrix {
+  overflow:auto;
+  /* `.page` ning ko'rinadigan balandligidan pastki padding'ini (dock uchun joy)
+     ayiramiz — shunda sahifa oxirigacha scroll qilinganda jadval to'liq
+     ko'rinadi va sana qatori header ostiga kirib ketmaydi. */
+  max-height: calc(
+    var(--tg-viewport, 100dvh) - var(--header-total)
+    - var(--dock-h) - var(--dock-bottom) - 26px - 10px
+  );
+  overscroll-behavior-x:contain;
+  -webkit-overflow-scrolling:touch;
+}
 
 /* Animate UI ikonka o'rovi — inline joylashuv va to'g'ri tekislash */
 .ic-wrap { display:inline-flex; align-items:center; justify-content:center; line-height:0; }
