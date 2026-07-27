@@ -40,6 +40,7 @@ export function initTelegram() {
     tg.onEvent?.('safeAreaChanged',        applySafeArea);
     tg.onEvent?.('contentSafeAreaChanged', applySafeArea);
     tg.onEvent?.('fullscreenChanged',      applySafeArea);
+    window.addEventListener('resize', applyViewportVar);
     applyViewportVar();
     applySafeArea();
   } catch (e) { console.warn('TG init:', e); }
@@ -47,7 +48,11 @@ export function initTelegram() {
 
 function applyViewportVar() {
   if (!tg) return;
-  const h = tg.viewportStableHeight || tg.viewportHeight || window.innerHeight;
+  const reported = tg.viewportStableHeight || tg.viewportHeight || 0;
+  // Telegram ba'zan eskirgan (kattaroq) qiymat qaytaradi — bunda .shell ekrandan
+  // uzunroq bo'lib, pastki kontent ko'rinmay qoladi. Haqiqiy oynadan katta
+  // bo'lmasligini kafolatlaymiz.
+  const h = reported ? Math.min(reported, window.innerHeight || reported) : window.innerHeight;
   document.documentElement.style.setProperty('--tg-viewport', `${h}px`);
 }
 
