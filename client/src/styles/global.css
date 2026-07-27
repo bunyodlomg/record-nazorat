@@ -58,6 +58,9 @@
 
   --header-h:    58px;
   --dock-h:      66px;
+  /* Dock pastdan qancha ko'tarilgan. `.page` pastki padding'i ham shu qiymatga
+     tayanadi — aks holda oxirgi element dock ostida qolib ketadi. */
+  --dock-bottom: 18px;
 
   --r-xs: 8px;
   --r:    12px;
@@ -234,7 +237,7 @@ a { color:inherit; text-decoration:none; }
 .page {
   flex:1;
   overflow-x:hidden; overflow-y:auto;
-  padding:26px 28px calc(var(--dock-h) + 42px);
+  padding:26px 28px calc(var(--dock-h) + var(--dock-bottom) + 26px);
   position:relative;
   min-width:0;
 }
@@ -244,7 +247,7 @@ a { color:inherit; text-decoration:none; }
 /* ── DOCK NAVIGATION ── */
 .dock-wrap {
   position:fixed;
-  bottom:18px; left:50%;
+  bottom:var(--dock-bottom); left:50%;
   transform:translateX(-50%);
   z-index:40;
 }
@@ -1049,7 +1052,7 @@ a { color:inherit; text-decoration:none; }
 
 /* ── TOAST ── */
 .toast {
-  position:fixed; bottom:calc(var(--dock-h) + 30px); left:50%; transform:translateX(-50%);
+  position:fixed; bottom:calc(var(--dock-h) + var(--dock-bottom) + 14px); left:50%; transform:translateX(-50%);
   background:var(--text); color:var(--bg);
   padding:10px 18px; border-radius:var(--r-lg);
   font-size:13px; z-index:300; box-shadow:var(--shadow-xl);
@@ -1232,6 +1235,7 @@ body.tg-app { background: var(--bg); }
   :root {
     --header-h: 52px;
     --dock-h: 60px;
+    --dock-bottom: 10px;
   }
   .header { padding:0 12px; gap:6px; }
   .h-brand-name { font-size:13.5px; }
@@ -1241,7 +1245,7 @@ body.tg-app { background: var(--bg); }
   .h-user { padding:4px; }
   .h-action { width:32px; height:32px; }
 
-  .page { padding:14px 14px calc(var(--dock-h) + 28px); }
+  .page { padding:14px 14px calc(var(--dock-h) + var(--dock-bottom) + 26px); }
   .page-hd {
     flex-direction:column !important;
     align-items:stretch !important;
@@ -1250,7 +1254,7 @@ body.tg-app { background: var(--bg); }
   .page-acts { flex-wrap:wrap; gap:6px !important; }
   .page-title { font-size:22px !important; }
 
-  .dock-wrap { bottom:10px; left:50%; right:auto; transform:translateX(-50%); }
+  .dock-wrap { left:50%; right:auto; transform:translateX(-50%); }
   .dock { justify-content:center; width:auto; padding:6px; max-width:calc(100vw - 20px); }
   .dock-btn {
     width:44px; height:44px; min-width:44px; min-height:44px;
@@ -1281,16 +1285,16 @@ body.tg-app { background: var(--bg); }
 .scroll-x::-webkit-scrollbar { height:4px; }
 
 @media (max-width: 480px) {
-  .page { padding:12px 10px calc(var(--dock-h) + 24px); }
+  .page { padding:12px 10px calc(var(--dock-h) + var(--dock-bottom) + 26px); }
   .kpi-grid { grid-template-columns:1fr 1fr !important; gap:8px !important; }
   .chart-grid { grid-template-columns:1fr !important; gap:8px !important; }
 }
 
-/* Safe-area padding for iOS notch / Telegram */
+/* Safe-area padding for iOS notch / Telegram.
+   Dock offseti faqat shu bitta o'zgaruvchida — `.page` padding'i undan hisoblanadi. */
 @supports (padding: max(0px)) {
+  :root { --dock-bottom: max(10px, env(safe-area-inset-bottom)); }
   .header { padding-top: env(safe-area-inset-top); height: calc(var(--header-h) + env(safe-area-inset-top)); }
-  .dock-wrap { bottom: max(10px, env(safe-area-inset-bottom)); }
-  .page { padding-bottom: calc(var(--dock-h) + 28px + env(safe-area-inset-bottom)); }
 }
 
 /* Telegram WebApp — bot tugmalari (yopish/theme/...) header'ni to'smasligi uchun
@@ -1301,8 +1305,11 @@ body.tg-app .header {
   align-items: flex-end;
   padding-bottom: 8px;
 }
-body.tg-app .dock-wrap {
-  bottom: max(14px, env(safe-area-inset-bottom), var(--tg-safe-bottom, 0px));
+/* Telegram fullscreen'da env(safe-area-inset-bottom) ko'pincha 0 qaytaradi, lekin
+   --tg-safe-bottom (home indicator) 34px bo'lishi mumkin. Dock ham, page padding'i
+   ham shu bitta qiymatdan hisoblanadi — aks holda dock oxirgi qatorni to'sib qoladi. */
+body.tg-app {
+  --dock-bottom: max(14px, env(safe-area-inset-bottom), var(--tg-safe-bottom, 0px));
 }
 /* Login va boshqa header'siz screen'larda ham yuqoridagi tugmalar to'smasligi uchun */
 body.tg-app .login-bg,
@@ -1321,9 +1328,14 @@ body.tg-app .status-screen {
 }
 .ag-legend > span { display:inline-flex; align-items:center; gap:6px; }
 
-/* Gorizontal scroll konteyneri */
+/* Scroll konteyneri — Excel "freeze panes" uslubi.
+   Ikkala o'q ham shu yerda scroll bo'ladi, shunda sticky sarlavha (sanalar) va
+   sticky ustun (ismlar) o'z joyida qotib turadi. Balandlik viewport bilan
+   cheklangan: jadval kalta bo'lsa ichki scroll umuman paydo bo'lmaydi. */
 .ag-scroll {
-  width:100%; overflow-x:auto; overflow-y:hidden;
+  width:100%; overflow:auto;
+  max-height: calc(var(--tg-viewport, 100dvh) - var(--header-h) - var(--dock-h) - var(--dock-bottom) - 46px);
+  overscroll-behavior-x:contain;
   -webkit-overflow-scrolling:touch;
 }
 .ag-table {
@@ -1335,12 +1347,13 @@ body.tg-app .status-screen {
   padding:0; text-align:center; vertical-align:middle;
 }
 
-/* Kun sarlavhasi */
+/* Kun sarlavhasi — tepada qotib turadi */
 .ag-table thead th {
   position:sticky; top:0; z-index:2;
   background:var(--bg-card-s, var(--bg-2));
   padding:9px 0 8px; min-width:34px;
   border-bottom:1px solid var(--border);
+  box-shadow:0 1px 0 var(--border);
 }
 .ag-table.ag-compact thead th { min-width:24px; }
 .ag-day { font-weight:600; }
@@ -1355,8 +1368,12 @@ body.tg-app .status-screen {
 .ag-table.ag-compact .ag-dow { font-size:8px; }
 .ag-table.ag-compact .ag-dom { font-size:10px; }
 .ag-day.ag-weekend .ag-dom { color:var(--text-3); }
+/* Bugungi ustun sarlavhasi — tint yarim shaffof, shuning uchun ostiga
+   qatlam qilib opaque fon qo'yamiz (aks holda scroll paytida qatorlar ko'rinadi) */
 .ag-day.ag-today {
-  background:var(--primary-bg, rgba(20,184,166,0.10));
+  background:
+    linear-gradient(var(--primary-bg), var(--primary-bg)),
+    var(--bg-card-s, var(--bg-2));
 }
 .ag-day.ag-today .ag-dom { color:var(--primary-l, #2dd4bf); }
 .ag-table tbody td.ag-today { background:var(--primary-bg, rgba(20,184,166,0.06)); }
@@ -1370,11 +1387,17 @@ body.tg-app .status-screen {
   border-right:1px solid var(--border);
   padding:0 12px !important;
 }
-thead .ag-name-col {
-  z-index:4; font-size:11px; text-transform:uppercase;
+/* Burchak katakchasi — ham chapda, ham tepada qotadi, shuning uchun eng ustida.
+   Selektor `.ag-table thead th` dan kuchliroq bo'lishi shart (z-index shu yerda hal bo'ladi) */
+.ag-table thead .ag-name-col {
+  z-index:5; font-size:11px; text-transform:uppercase;
   letter-spacing:0.05em; color:var(--text-3); font-weight:700;
 }
-:where(html.can-hover) .ag-table tbody tr:hover .ag-name-col { background:var(--bg-subtle); }
+:where(html.can-hover) .ag-table tbody tr:hover .ag-name-col {
+  background:
+    linear-gradient(var(--bg-subtle), var(--bg-subtle)),
+    var(--bg-card-s, var(--bg-2));
+}
 .ag-student { display:flex; align-items:center; gap:9px; padding:9px 0; min-width:0; }
 .ag-student-name {
   font-size:13px; font-weight:600; color:var(--text);

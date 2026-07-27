@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CAN_HOVER } from '../utils/device.js';
 import { Icon, Avatar } from '../components/ui.jsx';
 import { Spinner, ErrorBox, listContainer, listItem } from '../components/Feedback.jsx';
 import PageHero from '../components/PageHero.jsx';
 import { useFetch } from '../hooks/useFetch.js';
+import { useStickyState } from '../hooks/useStickyState.js';
 import api from '../services/api.js';
 
 const TABS = [
@@ -97,7 +98,7 @@ export function TeacherRow({ t, tab, onOpenTeacher }) {
 }
 
 export default function HomeworkPage({ onOpenHomework, onOpenTeacher }) {
-  const [tab, setTab] = useState('pending');
+  const [tab, setTab] = useStickyState('homework-page:tab', 'pending');
 
   const { data, loading, error, refetch } = useFetch(() => api.teachers.list({ limit:200 }));
 

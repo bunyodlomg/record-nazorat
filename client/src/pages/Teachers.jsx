@@ -6,6 +6,7 @@ import { Spinner, ErrorBox, listContainer, listItem, usePaged, Pagination } from
 import { Modal, Field, Input, Select } from '../components/Modal.jsx';
 import PageHero from '../components/PageHero.jsx';
 import { useFetch } from '../hooks/useFetch.js';
+import { useStickyState } from '../hooks/useStickyState.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import api from '../services/api.js';
 import InvitesPage     from './Invites.jsx';
@@ -648,7 +649,7 @@ function AdminsListView() {
 }
 
 export default function TeachersPage({ onOpenTeacher, onOpenStudent }) {
-  const [tab, setTab] = useState('teachers');
+  const [tab, setTab] = useStickyState('teachers-page:tab', 'teachers');
   const { data: pendingData, refetch: refetchPending } = useFetch(() => api.users.list({ status:'pending' }), []);
   const { data: adminsData } = useFetch(() => api.users.list({ role:'admin', status:'active' }), []);
   const pendingCount = (pendingData ?? []).length;
