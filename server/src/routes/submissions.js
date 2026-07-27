@@ -93,13 +93,15 @@ router.get('/grid', asyncHandler(async (req, res) => {
 
   // Vazifa → uning guruh|kun kaliti (submissionni to'g'ri kunga bog'lash uchun)
   const hwMeta = Object.fromEntries(homeworks.map(h => [String(h._id), { group: String(h.group), key: dayKey(h.dueDate) }]));
-  // student|day → { total, done }   (done = submitted yoki reviewed)
+  // student|day → { done, ids }   (done = submitted yoki reviewed)
+  // ids — jadvaldan turib belgilash uchun (PATCH /api/submissions/bulk)
   const cellAgg = {};
   for (const sub of submissions) {
     const meta = hwMeta[String(sub.homework)];
     if (!meta) continue;
     const ck = `${sub.student}|${meta.key}`;
-    (cellAgg[ck] ||= { done: 0 });
+    (cellAgg[ck] ||= { done: 0, ids: [] });
+    cellAgg[ck].ids.push(String(sub._id));
     if (sub.status === 'submitted' || sub.status === 'reviewed') cellAgg[ck].done += 1;
   }
 
@@ -110,13 +112,14 @@ router.get('/grid', asyncHandler(async (req, res) => {
     const cells = days.map(d => {
       const total = hwByGroupDay[`${s.group?._id || s.group}|${d.key}`] || 0;
       if (total === 0) return { status: 'none' };
-      const ok = cellAgg[`${s._id}|${d.key}`]?.done || 0;
+      const agg = cellAgg[`${s._id}|${d.key}`];
+      const ok = agg?.done || 0;
       let status;
       if (ok >= total)      { status = 'done';    done++; }
       else if (ok > 0)      { status = 'partial'; partial++; }
       else if (d.key > todayKey) status = 'upcoming';
       else                  { status = 'missed';  missed++; }
-      return { status, done: ok, total };
+      return { status, done: ok, total, ids: agg?.ids || [] };
     });
     const graded = done + partial + missed;
     return {
@@ -149,6 +152,54 @@ router.get('/', asyncHandler(async (req, res) => {
     .lean();
   res.json({ success:true, data });
 }));
+
+// BULK PATCH  /api/submissions/bulk  — bir nechta submissionni birvarakayiga.
+// DIQQAT: '/:id' dan OLDIN turishi shart, aks holda Express uni id='bulk' deb oladi.
+router.patch('/bulk',
+  [
+    body('ids').isArray({ min:1 }),
+    body('ids.*').isMongoId(),
+    body('status').isIn(['pending','submitted','reviewed','returned']),
+  ],
+  ok, asyncHandler(async (req, res) => {
+    const { ids, status } = req.body;
+    const filter = { _id: { $in: ids } };
+    if (req.user.role !== 'admin') {
+      if (req.user.role !== 'teacher' || !req.user.teacherRef) {
+        return res.status(403).json({ success:false, message:'Ruxsat yo\'q' });
+      }
+      filter.teacher = req.user.teacherRef;
+    }
+    const subs = await Submission.find(filter).select('homework teacher').lean();
+    const set = { status };
+    if (status === 'reviewed')  set.reviewedAt  = new Date();
+    if (status === 'submitted') set.submittedAt = new Date();
+    await Submission.updateMany(filter, { $set: set });
+
+    const hwIds = [...new Set(subs.map(s => String(s.homework)))];
+    await Promise.all(hwIds.map(id => Submission.recomputeHomework(id)));
+
+    // Gem awarding — har submission alohida hisoblanadi
+    try {
+      const Homework = require('../models/Homework');
+      const { applyGemForSubmission } = require('../utils/gemAward');
+      const subDocs = await Submission.find(filter);
+      const hwIdsList = [...new Set(subDocs.map(s => String(s.homework)))];
+      const hwList = await Homework.find({ _id:{ $in:hwIdsList } }).populate('group','name').select('title group kind').lean();
+      const hwMap = Object.fromEntries(hwList.map(h => [String(h._id), h]));
+      for (const sd of subDocs) {
+        await applyGemForSubmission(sd, hwMap[String(sd.homework)]);
+      }
+    } catch { /* gem xatosi belgilashni to'xtatmasin */ }
+
+    if (status === 'reviewed' || status === 'returned') {
+      const teacherIds = [...new Set(subs.map(s => String(s.teacher)))];
+      Teacher.updateMany({ _id:{ $in:teacherIds } }, { $set:{ lastReviewedAt:new Date() } }).catch(() => {});
+    }
+
+    res.json({ success:true, updated: subs.length });
+  })
+);
 
 // PATCH  /api/submissions/:id  — status / score / feedback
 router.patch('/:id',
@@ -200,56 +251,6 @@ router.patch('/:id',
     const updated = await Submission.findById(sub._id)
       .populate('student','name hue photoUrl').lean();
     res.json({ success:true, data: updated, gem: gemInfo });
-  })
-);
-
-// BULK PATCH  /api/submissions/bulk  — bir nechta submissionni birvarakayiga
-router.patch('/bulk',
-  [
-    body('ids').isArray({ min:1 }),
-    body('ids.*').isMongoId(),
-    body('status').isIn(['pending','submitted','reviewed','returned']),
-  ],
-  ok, asyncHandler(async (req, res) => {
-    const { ids, status } = req.body;
-    const filter = { _id: { $in: ids } };
-    if (req.user.role !== 'admin') {
-      if (req.user.role !== 'teacher' || !req.user.teacherRef) {
-        return res.status(403).json({ success:false, message:'Ruxsat yo\'q' });
-      }
-      filter.teacher = req.user.teacherRef;
-    }
-    const subs = await Submission.find(filter).select('homework teacher').lean();
-    const set = { status };
-    if (status === 'reviewed')  set.reviewedAt  = new Date();
-    if (status === 'submitted') set.submittedAt = new Date();
-    await Submission.updateMany(filter, { $set: set });
-
-    const hwIds = [...new Set(subs.map(s => String(s.homework)))];
-    await Promise.all(hwIds.map(id => Submission.recomputeHomework(id)));
-
-    // Gem awarding — har submission alohida hisoblanadi
-    const gemResults = [];
-    try {
-      const Homework = require('../models/Homework');
-      const { applyGemForSubmission } = require('../utils/gemAward');
-      const subDocs = await Submission.find(filter);
-      const hwIdsList = [...new Set(subDocs.map(s => String(s.homework)))];
-      const hwList = await Homework.find({ _id:{ $in:hwIdsList } }).populate('group','name').select('title group kind').lean();
-      const hwMap = Object.fromEntries(hwList.map(h => [String(h._id), h]));
-      for (const sd of subDocs) {
-        const hw = hwMap[String(sd.homework)];
-        const info = await applyGemForSubmission(sd, hw);
-        gemResults.push({ subId: String(sd._id), studentId: String(sd.student), hw, info });
-      }
-    } catch {}
-
-    if (status === 'reviewed' || status === 'returned') {
-      const teacherIds = [...new Set(subs.map(s => String(s.teacher)))];
-      Teacher.updateMany({ _id:{ $in:teacherIds } }, { $set:{ lastReviewedAt:new Date() } }).catch(() => {});
-    }
-
-    res.json({ success:true, updated: subs.length });
   })
 );
 

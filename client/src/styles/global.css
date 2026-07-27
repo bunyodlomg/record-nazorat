@@ -1321,21 +1321,34 @@ body.tg-app .status-screen {
 /* ══════════════════════════════════════════
    ACTIVITY GRID — topshirgan/topshirmagan jadval
    ══════════════════════════════════════════ */
+/* Sahifa to'liq balandlikni egallaydi: yuqoridagi boshqaruvlar qotib turadi,
+   faqat jadval ichi scroll bo'ladi. Shunda sanalar qatori hech qachon
+   tepaga chiqib ketmaydi. */
+.ag-page {
+  display:flex; flex-direction:column;
+  overflow:hidden;
+}
+.ag-top { flex-shrink:0; }
+.ag-card {
+  flex:1; min-height:0;
+  display:flex; flex-direction:column;
+  overflow:hidden;
+}
+
 .ag-legend {
-  display:flex; flex-wrap:wrap; gap:14px;
-  margin-bottom:12px; padding:0 2px;
-  font-size:12px; color:var(--text-2); font-weight:500;
+  display:flex; flex-wrap:wrap; gap:12px;
+  margin-bottom:10px; padding:0 2px;
+  font-size:11.5px; color:var(--text-2); font-weight:500;
 }
 .ag-legend > span { display:inline-flex; align-items:center; gap:6px; }
 
 /* Scroll konteyneri — Excel "freeze panes" uslubi.
    Ikkala o'q ham shu yerda scroll bo'ladi, shunda sticky sarlavha (sanalar) va
-   sticky ustun (ismlar) o'z joyida qotib turadi. Balandlik viewport bilan
-   cheklangan: jadval kalta bo'lsa ichki scroll umuman paydo bo'lmaydi. */
+   sticky ustun (ismlar) o'z joyida qotib turadi. */
 .ag-scroll {
+  flex:1; min-height:0;
   width:100%; overflow:auto;
-  max-height: calc(var(--tg-viewport, 100dvh) - var(--header-h) - var(--dock-h) - var(--dock-bottom) - 46px);
-  overscroll-behavior-x:contain;
+  overscroll-behavior:contain;
   -webkit-overflow-scrolling:touch;
 }
 .ag-table {
@@ -1465,6 +1478,43 @@ body.tg-app .status-screen {
 @media (prefers-reduced-motion: reduce) {
   .ag-dot.ag-done, .ag-dot.ag-missed { animation:none; }
 }
+
+/* ── Bosiladigan katakcha — jadvaldan turib belgilash ── */
+button.ag-cell {
+  width:100%; border:none; background:transparent;
+  cursor:pointer; padding:0;
+  border-radius:7px;
+  transition:background 140ms;
+  -webkit-tap-highlight-color:transparent;
+}
+button.ag-cell:disabled { cursor:default; }
+:where(html.can-hover) button.ag-cell:not(:disabled):hover { background:var(--bg-hover); }
+button.ag-cell:not(:disabled):active { background:var(--bg-hover); }
+button.ag-cell.ag-busy { opacity:0.45; cursor:progress; }
+
+/* Kompakt sarlavha — hero o'rniga, jadvalga ko'proq joy qolishi uchun */
+.ag-hd {
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  margin-bottom:10px;
+}
+.ag-hd-title {
+  font-family:var(--display); font-size:19px; font-weight:700;
+  letter-spacing:-0.02em; color:var(--text); margin-right:auto;
+}
+.ag-chip {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:5px 10px; border-radius:var(--r-full);
+  font-size:12px; font-weight:600;
+  font-variant-numeric:tabular-nums; white-space:nowrap;
+}
+/* Boshqaruvlar bir qatorda — balandligi o'zgarmasin */
+.ag-ctl {
+  display:flex; align-items:center; gap:6px;
+  overflow-x:auto; padding-bottom:2px; margin-bottom:10px;
+  scrollbar-width:none;
+}
+.ag-ctl::-webkit-scrollbar { display:none; }
+.ag-ctl > * { flex-shrink:0; }
 
 
 /* Animate UI ikonka o'rovi — inline joylashuv va to'g'ri tekislash */
