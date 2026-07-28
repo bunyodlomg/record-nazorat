@@ -235,7 +235,6 @@ router.get('/:id/submission-matrix', param('id').isMongoId(), ok, asyncHandler(a
     (dayMap[k] ||= { key: k, dueDate: h.dueDate, total: 0 });
     dayMap[k].total += 1;
   }
-  const dayKeys = Object.keys(dayMap).sort(); // o'sish tartibida
   const allHwIds = homeworks.map(h => h._id);
 
   const submissions = allHwIds.length
@@ -258,28 +257,49 @@ router.get('/:id/submission-matrix', param('id').isMongoId(), ok, asyncHandler(a
   const WD = ['Yak', 'Du', 'Se', 'Cho', 'Pay', 'Ju', 'Sha']; // Sun..Sat
   const todayKey = dayKeyTash(now);
 
-  const rows = dayKeys.map(k => {
-    const meta = dayMap[k];
-    const shifted = new Date(new Date(meta.dueDate).getTime() + TZ_MIN * 60000);
-    const cells = {};
-    for (const s of students) {
-      const joinedKey = dayKeyTash(s.joinedAt || s.createdAt || start);
-      // O'quvchi shu kundan keyin qo'shilgan bo'lsa — hisobga olinmaydi
-      if (joinedKey > k) { cells[String(s._id)] = { status: 'none' }; continue; }
-      const done = doneAgg[`${s._id}|${k}`] || 0;
-      let status;
-      if (done >= meta.total)      status = 'done';
-      else if (done > 0)           status = 'partial';
-      else if (k > todayKey)       status = 'upcoming';
-      else                         status = 'missed';
-      cells[String(s._id)] = { status, done, total: meta.total };
+  // start → bugungача BARCHA kunlarni ustun qilamiz. Vazifasiz kunlar (dam olish)
+  // alohida "off" holatida — jadval/rasmda kulrang ustun bo'lib chiqadi.
+  const allDayKeys = [];
+  {
+    let d = new Date(dayKeyTash(start) + 'T00:00:00Z');
+    for (let guard = 0; guard < 400; guard++) {
+      const k = d.toISOString().slice(0, 10);
+      allDayKeys.push(k);
+      if (k >= todayKey) break;
+      d = new Date(d.getTime() + 86400000);
     }
+  }
+
+  const rows = allDayKeys.map(k => {
+    const dt   = new Date(k + 'T00:00:00Z'); // k allaqachon Toshkent sanasi
+    const meta = dayMap[k];
+    const cells = {};
+
+    if (meta) {
+      for (const s of students) {
+        const joinedKey = dayKeyTash(s.joinedAt || s.createdAt || start);
+        // O'quvchi shu kundan keyin qo'shilgan bo'lsa — hisobga olinmaydi
+        if (joinedKey > k) { cells[String(s._id)] = { status: 'none' }; continue; }
+        const done = doneAgg[`${s._id}|${k}`] || 0;
+        let status;
+        if (done >= meta.total)      status = 'done';
+        else if (done > 0)           status = 'partial';
+        else if (k > todayKey)       status = 'upcoming';
+        else                         status = 'missed';
+        cells[String(s._id)] = { status, done, total: meta.total };
+      }
+    } else {
+      // Vazifasiz kun — dam olish. Butun ustun bir xil "off".
+      for (const s of students) cells[String(s._id)] = { status: 'off' };
+    }
+
     return {
       key:   k,
-      dom:   shifted.getUTCDate(),
-      month: shifted.getUTCMonth() + 1,
-      dow:   WD[shifted.getUTCDay()],
-      total: meta.total,
+      dom:   dt.getUTCDate(),
+      month: dt.getUTCMonth() + 1,
+      dow:   WD[dt.getUTCDay()],
+      off:   !meta,
+      total: meta ? meta.total : 0,
       cells,
     };
   });
@@ -290,7 +310,7 @@ router.get('/:id/submission-matrix', param('id').isMongoId(), ok, asyncHandler(a
     let done = 0, partial = 0, missed = 0;
     for (const r of rows) {
       const c = r.cells[String(s._id)];
-      if (!c || c.status === 'none' || c.status === 'upcoming') continue;
+      if (!c || c.status === 'none' || c.status === 'upcoming' || c.status === 'off') continue;
       if (c.status === 'done') done++;
       else if (c.status === 'partial') partial++;
       else if (c.status === 'missed') missed++;

@@ -1,7 +1,8 @@
 const express = require('express');
-const Teacher = require('../models/Teacher');
-const Student = require('../models/Student');
-const Group   = require('../models/Group');
+const Teacher    = require('../models/Teacher');
+const Student    = require('../models/Student');
+const Group      = require('../models/Group');
+const Submission = require('../models/Submission');
 const { getTeacherPhotoMap } = require('../utils/teacherPhotos');
 const { protect, requireActive } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
@@ -10,13 +11,34 @@ const router = express.Router();
 router.use(protect, requireActive);
 
 // GET /api/leaderboard/teachers
+// Ball = HAQIQIY tekshiruv foizi (tekshirilgan / jami topshiriq). Dashboard bilan bir xil
+// o'lchov. Ilgari statik `Teacher.score` (yaratilganda 80 qo'yilib hech yangilanmasdi)
+// ishlatilardi — shuning uchun reyting o'zgarmay 80 da turib qolardi.
 router.get('/teachers', asyncHandler(async (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 100, 500);
-  const teachers = await Teacher.find({ status: 'active' }).sort('-score').limit(limit).lean();
+  const teachers = await Teacher.find({ status: 'active' }).lean();
+
+  const subAgg = await Submission.aggregate([
+    { $group: { _id: '$teacher',
+      total:    { $sum: 1 },
+      reviewed: { $sum: { $cond: [{ $eq: ['$status', 'reviewed'] }, 1, 0] } },
+    } },
+  ]);
+  const compMap = {};
+  for (const r of subAgg) {
+    compMap[String(r._id)] = r.total > 0 ? Math.round((r.reviewed / r.total) * 100) : 0;
+  }
 
   // Teacher modelida photoUrl yo'q — u User'da. Bog'langan User'lardan rasmni qo'shamiz.
   const photoMap = await getTeacherPhotoMap(teachers.map(t => t._id));
-  const data = teachers.map(t => ({ ...t, photoUrl: photoMap[String(t._id)] || null }));
+  const data = teachers
+    .map(t => ({
+      ...t,
+      score:    compMap[String(t._id)] ?? 0,
+      photoUrl: photoMap[String(t._id)] || null,
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
 
   res.json({ success:true, data });
 }));

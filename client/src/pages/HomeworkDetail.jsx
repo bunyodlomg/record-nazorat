@@ -43,6 +43,7 @@ export default function HomeworkDetailPage({ homeworkId, onBack }) {
   const [tab, setTab]           = useStickyState(`hw:${homeworkId}:tab`, 'pending');
   const [search, setSearch]     = useState('');
   const [busy, setBusy]         = useState(false);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
 
   const load = async () => {
     setLoading(true); setError('');
@@ -68,6 +69,29 @@ export default function HomeworkDetailPage({ homeworkId, onBack }) {
     try {
       await api.submissions.update(id, data);
       await load();
+    } finally { setBusy(false); }
+  };
+
+  const clearSelect = () => setSelectedIds(new Set());
+
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+    sfx.click?.();
+  };
+
+  const bulkApply = async (status) => {
+    const ids = [...selectedIds];
+    if (ids.length === 0 || busy) return;
+    setBusy(true);
+    try {
+      await api.submissions.bulk(ids, status);
+      status === 'returned' ? sfx.error?.() : sfx.success?.();
+      await load();
+      clearSelect();
     } finally { setBusy(false); }
   };
 
@@ -128,7 +152,7 @@ export default function HomeworkDetailPage({ homeworkId, onBack }) {
           const isActive = tab === t.id;
           const n = t.id === 'reviewed' ? counts.reviewed : counts.pending;
           return (
-            <button key={t.id} className={`tab ${isActive?'active':''}`} onClick={() => setTab(t.id)}>
+            <button key={t.id} className={`tab ${isActive?'active':''}`} onClick={() => { setTab(t.id); clearSelect(); }}>
               <Icon name={t.icon} size={12} style={{ marginRight:5, verticalAlign:-1, color: isActive ? '#fff' : color }}/>
               {t.label}
               {n > 0 && (
@@ -144,15 +168,27 @@ export default function HomeworkDetailPage({ homeworkId, onBack }) {
         })}
       </div>
 
-      {/* Umumiy hisob */}
+      {/* Umumiy hisob + hammasini tanlash */}
       {canEdit && subs.length > 0 && (
         <div style={{
-          padding:'10px 13px', marginBottom:9,
+          display:'flex', alignItems:'center', justifyContent:'space-between', gap:8,
+          padding:'8px 10px 8px 13px', marginBottom:9,
           background:'var(--bg-subtle)', borderRadius:12,
           border:'1px solid var(--border)',
           fontSize:12.5, color:'var(--text-2)',
         }}>
-          {counts.reviewed} / {subs.length} belgilandi
+          <span>{counts.reviewed} / {subs.length} belgilandi</span>
+          {filtered.length > 0 && (
+            <button className="btn btn-ghost" style={{ height:30, fontSize:12 }}
+              onClick={() => {
+                const allSel = filtered.every(s => selectedIds.has(s._id));
+                setSelectedIds(allSel ? new Set() : new Set(filtered.map(s => s._id)));
+              }}>
+              {filtered.every(s => selectedIds.has(s._id))
+                ? 'Tanlovni bekor qilish'
+                : `Hammasini tanlash (${filtered.length})`}
+            </button>
+          )}
         </div>
       )}
 
@@ -191,11 +227,44 @@ export default function HomeworkDetailPage({ homeworkId, onBack }) {
           style={{ display:'flex', flexDirection:'column', gap:7 }}>
           <AnimatePresence initial={false}>
             {filtered.map(sub => (
-              <StudentRow key={sub._id} sub={sub} onUpdate={update} canEdit={canEdit} busy={busy}/>
+              <StudentRow key={sub._id} sub={sub} onUpdate={update} canEdit={canEdit} busy={busy}
+                selectMode selected={selectedIds.has(sub._id)} onSelectToggle={toggleSelect}/>
             ))}
           </AnimatePresence>
         </motion.div>
       )}
+
+      {/* Tanlangan o'quvchilar — pastdagi saqlash paneli */}
+      <AnimatePresence>
+        {canEdit && selectedIds.size > 0 && (
+          <motion.div
+            initial={{ y:80, opacity:0 }} animate={{ y:0, opacity:1 }} exit={{ y:80, opacity:0 }}
+            transition={{ duration:0.22, ease:[0.22,1,0.36,1] }}
+            style={{
+              position:'sticky', bottom:12, zIndex:20,
+              marginTop:12, display:'flex', alignItems:'center', gap:8,
+              padding:'10px 12px', borderRadius:14,
+              background:'var(--bg-card)', border:'1px solid var(--border-md)',
+              boxShadow:'0 8px 30px rgba(0,0,0,0.18)',
+            }}>
+            <span style={{ fontSize:13, fontWeight:700, color:'var(--text)', flexShrink:0 }}>
+              {selectedIds.size} tanlandi
+            </span>
+            <div style={{ flex:1 }}/>
+            <button className="btn btn-ghost" disabled={busy}
+              style={{ color:'var(--rose)' }}
+              onClick={() => bulkApply('returned')}>
+              <Icon name="alert" size={13} style={{ marginRight:5, verticalAlign:-2 }}/>
+              Qaytarish
+            </button>
+            <button className="btn btn-primary" disabled={busy}
+              onClick={() => bulkApply('reviewed')}>
+              <Icon name="check" size={13} style={{ marginRight:5, verticalAlign:-2 }}/>
+              {busy ? 'Saqlanmoqda...' : 'Saqlash'}
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

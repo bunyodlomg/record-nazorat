@@ -206,11 +206,12 @@ function CloseGroupModal({ open, group, onClose, onDone }) {
 const MONTHS_SHORT = ['Yan','Fev','Mar','Apr','May','Iyn','Iyl','Avg','Sen','Okt','Noy','Dek'];
 
 const CELL_TONE = {
-  done:     { bg:'var(--primary-bg)', fg:'var(--emerald-l)', ch:'✓' },
-  partial:  { bg:'var(--amber-bg)',   fg:'var(--amber)',     ch:'◑' },
-  missed:   { bg:'var(--rose-bg)',    fg:'var(--rose)',      ch:'✕' },
-  upcoming: { bg:'transparent',       fg:'var(--text-3)',    ch:'·' },
-  none:     { bg:'transparent',       fg:'var(--text-3)',    ch:'–' },
+  done:     { bg:'var(--primary-bg)',        fg:'var(--emerald-l)', ch:'✓' },
+  partial:  { bg:'var(--amber-bg)',          fg:'var(--amber)',     ch:'◑' },
+  missed:   { bg:'var(--rose-bg)',           fg:'var(--rose)',      ch:'✕' },
+  off:      { bg:'rgba(148,163,184,0.28)',   fg:'var(--text-3)',    ch:'' },
+  upcoming: { bg:'transparent',              fg:'var(--text-3)',    ch:'·' },
+  none:     { bg:'transparent',              fg:'var(--text-3)',    ch:'–' },
 };
 
 function MatrixLegend() {
@@ -218,7 +219,7 @@ function MatrixLegend() {
     { tone:'done',    label:'Topshirgan' },
     { tone:'partial', label:'Qisman' },
     { tone:'missed',  label:'Topshirmagan' },
-    { tone:'none',    label:"Yo'q / qo'shilmagan" },
+    { tone:'off',     label:'Dam olish' },
   ];
   return (
     <div style={{ display:'flex', flexWrap:'wrap', gap:10, marginBottom:10 }}>
@@ -244,15 +245,18 @@ const IMG_COLORS = {
   done:     '#12d112', // yashil — topshirgan
   partial:  '#ffe000', // sariq — qisman
   missed:   '#ff2a2a', // qizil — topshirmagan
+  off:      '#c4ccd3', // kulrang — dam olish (vazifasiz kun)
   upcoming: '#ffffff',
   none:     '#ffffff',
 };
 
 function buildMatrixCanvas({ students, cols }) {
-  const numW = 58, nameW = 340, dateW = 128, rowH = 50, headH = 64;
+  const numW = 54, nameW = 320, dateW = 96, rowH = 48, headH = 60;
   const width  = numW + nameW + dateW * cols.length;
   const height = headH + rowH * students.length;
-  const scale  = 2;
+  // Dam olish kunlari qo'shilgach ustunlar ko'payadi — rasm juda katta bo'lib
+  // Telegram limitidan (10000px) oshmasligi uchun masshtabni moslashtiramiz.
+  const scale  = Math.max(1, Math.min(2, 9200 / (width + height)));
 
   const canvas = document.createElement('canvas');
   canvas.width  = width  * scale;

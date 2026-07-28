@@ -63,7 +63,7 @@ export function ReviewCheckbox({ checked, onChange, disabled, size = 26 }) {
 }
 
 /* ── Bitta o'quvchi qatori (checkbox-fokusli) ── */
-export function StudentRow({ sub, onUpdate, canEdit, busy }) {
+export function StudentRow({ sub, onUpdate, canEdit, busy, selectMode = false, selected = false, onSelectToggle }) {
   const [open, setOpen] = useState(false);
   const [score, setScore] = useState(sub.score ?? '');
   const [feedback, setFeedback] = useState(sub.feedback || '');
@@ -108,8 +108,9 @@ export function StudentRow({ sub, onUpdate, canEdit, busy }) {
   const isSubmitted = localStatus === 'submitted';
   const isReturned  = localStatus === 'returned';
 
-  const rowBg     = isReviewed ? 'var(--primary-bg)' : isReturned ? 'var(--rose-bg)' : isSubmitted ? 'var(--amber-bg)' : 'var(--bg-subtle)';
-  const rowBorder = isReviewed ? 'var(--primary)'   : isReturned ? 'var(--rose)'    : isSubmitted ? 'var(--amber)'    : 'var(--border)';
+  const selecting = selectMode && canEdit;
+  const rowBg     = selecting && selected ? 'var(--primary-bg)' : isReviewed ? 'var(--primary-bg)' : isReturned ? 'var(--rose-bg)' : isSubmitted ? 'var(--amber-bg)' : 'var(--bg-subtle)';
+  const rowBorder = selecting && selected ? 'var(--primary)'    : isReviewed ? 'var(--primary)'   : isReturned ? 'var(--rose)'    : isSubmitted ? 'var(--amber)'    : 'var(--border)';
   const statusText  =
     isReviewed  ? 'Belgilandi · ✓'   :
     isReturned  ? 'Qaytarildi · ✕'   :
@@ -132,11 +133,16 @@ export function StudentRow({ sub, onUpdate, canEdit, busy }) {
         transition:'background 200ms, border-color 200ms',
       }}>
       <div
+        onClick={selecting ? () => onSelectToggle?.(sub._id) : undefined}
         style={{
           display:'flex', alignItems:'center', gap:11,
           padding:'11px 12px',
           userSelect:'none',
+          cursor: selecting ? 'pointer' : 'default',
         }}>
+        {selecting && (
+          <ReviewCheckbox checked={selected} onChange={() => onSelectToggle?.(sub._id)} disabled={busy} size={24}/>
+        )}
         <Avatar name={s.name || '?'} hue={s.hue ?? 200} size="sm" photoUrl={s.photoUrl}/>
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{
@@ -168,34 +174,38 @@ export function StudentRow({ sub, onUpdate, canEdit, busy }) {
         </div>
         {canEdit && (
           <div style={{ display:'flex', gap:5, flexShrink:0 }}>
-            <button
-              type="button"
-              onClick={() => setStatus(isReviewed ? 'pending' : 'reviewed')}
-              disabled={busy}
-              title="Qabul qildim (+olmos)"
-              style={{
-                width:34, height:34, borderRadius:9,
-                background: isReviewed ? 'linear-gradient(135deg, var(--primary), var(--primary-d))' : 'var(--bg-card)',
-                color: isReviewed ? '#fff' : 'var(--primary-l)',
-                border: isReviewed ? 'none' : '1.5px solid var(--border-md)',
-                fontSize:16, fontWeight:800, cursor:'pointer',
-                boxShadow: isReviewed ? '0 2px 10px rgba(99,102,241,0.35)' : 'none',
-              }}>+</button>
-            <button
-              type="button"
-              onClick={() => setStatus(isReturned ? 'pending' : 'returned')}
-              disabled={busy}
-              title="Qaytarish"
-              style={{
-                width:34, height:34, borderRadius:9,
-                background: isReturned ? 'var(--rose)' : 'var(--bg-card)',
-                color: isReturned ? '#fff' : 'var(--rose)',
-                border: isReturned ? 'none' : '1.5px solid var(--border-md)',
-                fontSize:18, fontWeight:800, cursor:'pointer',
-                boxShadow: isReturned ? '0 2px 10px rgba(244,63,94,0.30)' : 'none',
-              }}>−</button>
+            {!selecting && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setStatus(isReviewed ? 'pending' : 'reviewed')}
+                  disabled={busy}
+                  title="Qabul qildim (+olmos)"
+                  style={{
+                    width:34, height:34, borderRadius:9,
+                    background: isReviewed ? 'linear-gradient(135deg, var(--primary), var(--primary-d))' : 'var(--bg-card)',
+                    color: isReviewed ? '#fff' : 'var(--primary-l)',
+                    border: isReviewed ? 'none' : '1.5px solid var(--border-md)',
+                    fontSize:16, fontWeight:800, cursor:'pointer',
+                    boxShadow: isReviewed ? '0 2px 10px rgba(99,102,241,0.35)' : 'none',
+                  }}>+</button>
+                <button
+                  type="button"
+                  onClick={() => setStatus(isReturned ? 'pending' : 'returned')}
+                  disabled={busy}
+                  title="Qaytarish"
+                  style={{
+                    width:34, height:34, borderRadius:9,
+                    background: isReturned ? 'var(--rose)' : 'var(--bg-card)',
+                    color: isReturned ? '#fff' : 'var(--rose)',
+                    border: isReturned ? 'none' : '1.5px solid var(--border-md)',
+                    fontSize:18, fontWeight:800, cursor:'pointer',
+                    boxShadow: isReturned ? '0 2px 10px rgba(244,63,94,0.30)' : 'none',
+                  }}>−</button>
+              </>
+            )}
             <button className="btn btn-ghost btn-icon"
-              onClick={() => setOpen(o => !o)}
+              onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
               style={{ width:30, height:30 }}
               title="Izoh va ball">
               <Icon name={open ? 'chevronUp' : 'chevronDown'} size={13}/>
