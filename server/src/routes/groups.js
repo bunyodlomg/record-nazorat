@@ -220,11 +220,16 @@ router.get('/:id/submission-matrix', param('id').isMongoId(), ok, asyncHandler(a
 
   const now   = new Date();
   const start = new Date(g.startDate || g.createdAt || now);
+  // startDate vaqt komponenti bilan saqlangan bo'lishi mumkin (masalan 10:00).
+  // O'sha kunning yarim tundagi (00:00) dars vazifasi so'rovdan chetda qolib
+  // ustun kulrang "off" bo'lib chiqmasligi uchun quyi chegarani kun boshiga
+  // (TZ zaxirasi bilan) tushiramiz.
+  const startBound = new Date(new Date(dayKeyTash(start) + 'T00:00:00Z').getTime() - 12 * 3600 * 1000);
 
   const [students, homeworks] = await Promise.all([
     Student.find({ group: g._id, status: 'active' })
       .select('name hue photoUrl joinedAt createdAt').sort('name').lean(),
-    Homework.find({ group: g._id, dueDate: { $gte: start, $lte: now } })
+    Homework.find({ group: g._id, dueDate: { $gte: startBound, $lte: now } })
       .select('dueDate kind title').sort('dueDate').lean(),
   ]);
 

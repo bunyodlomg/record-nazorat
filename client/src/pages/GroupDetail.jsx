@@ -328,6 +328,7 @@ const offDayLabel = (key) => {
 function SubmissionMatrix({ groupId, groupName }) {
   const { data, loading, error, refetch } = useFetch(() => api.groups.submissionMatrix(groupId), [groupId]);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [imgCols, setImgCols]     = useState([]); // rasmga tushgan ustunlar (oxirgi 1 hafta)
   const [sending, setSending]     = useState(false);
   const [sendError, setSendError] = useState(null);
   const [offBusy, setOffBusy]     = useState(null); // toggle bo'layotgan sana kaliti
@@ -426,12 +427,15 @@ function SubmissionMatrix({ groupId, groupName }) {
         <MatrixLegend/>
         <button className="btn btn-primary" style={{ flexShrink:0 }}
           onClick={() => {
-            const canvas = buildMatrixCanvas({ students, cols });
+            // Oylik jadval juda enli va o'qilmaydi — rasmga faqat oxirgi 1 hafta.
+            const weekCols = cols.slice(-7);
+            const canvas = buildMatrixCanvas({ students, cols: weekCols });
             canvasRef.current = canvas;
+            setImgCols(weekCols);
             setPreviewUrl(canvas.toDataURL('image/png'));
           }}>
           <Icon name="send" size={14} style={{ marginRight:6, verticalAlign:-2 }}/>
-          📷 Rasm yuborish
+          📷 Rasm yuborish (1 hafta)
         </button>
       </div>
 
@@ -470,7 +474,7 @@ function SubmissionMatrix({ groupId, groupName }) {
           footer={<>
             <button className="btn btn-ghost" onClick={closePreview} disabled={sending}>Yopish</button>
             <button className="btn btn-primary" disabled={sending}
-              onClick={() => sendToTelegram(cols)}>
+              onClick={() => sendToTelegram(imgCols)}>
               <Icon name="send" size={14} style={{ marginRight:6, verticalAlign:-2 }}/>
               {sending ? 'Yuborilmoqda…' : '📤 Telegramga yuborish'}
             </button>
